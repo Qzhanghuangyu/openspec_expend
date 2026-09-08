@@ -1,0 +1,29 @@
+name: falla-task-driven
+version: 1
+description: Falla 可独立实施的子 change 工作流
+artifacts:
+  - id: tasks
+    generates: tasks.md
+    description: 子 change 的最小可验证任务清单
+    template: tasks.md
+    instruction: |
+      只描述当前子 change 的交付内容和验证方式。任务使用 checkbox，
+      不在 apply 阶段创建或继续拆分子 change。
+    requires: []
+
+  - id: comate
+    generates: comate.md
+    description: 子 change 的责任、依赖、状态和交接台账
+    template: comate.md
+    instruction: |
+      owner、status、depends-on、blocks、handoff 必须完整并与父 change 的 DAG 一致。
+      进入 in-progress 前设置 owner；blocked 写明原因和下一步；done 前完成全部任务和验证。
+    requires:
+      - tasks
+
+apply:
+  requires: [comate]
+  tracks: tasks.md
+  instruction: |
+    读取官方 contextFiles，并通过 Falla 协调映射补充父 change 的 proposal、specs、design 和 tasks。
+    只实施当前子 change；验证成功后才能勾选任务并更新 comate.md。

@@ -1,0 +1,40 @@
+name: falla-legacy-spec-driven
+version: 1
+description: 兼容迁移旧 Falla 父 change，不强制补建新 artifact
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: 旧父 change 提案
+    template: proposal.md
+    instruction: 保持原提案语义；只在用户确认后修正内容。
+    requires: []
+
+  - id: specs
+    generates: "specs/**/*.md"
+    description: 旧父 change delta specs
+    template: spec.md
+    instruction: 保留原有 delta spec；不得静默改写或丢弃需求。
+    requires:
+      - proposal
+
+  - id: design
+    generates: design.md
+    description: 旧父 change 技术设计
+    template: design.md
+    instruction: 保持原设计语义；只在继续实施确有需要时更新。
+    requires:
+      - proposal
+
+  - id: tasks
+    generates: tasks.md
+    description: 旧父 change 任务清单
+    template: tasks.md
+    instruction: 保留原 checkbox 任务和依赖顺序。
+    requires:
+      - specs
+      - design
+
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+  instruction: 继续旧 change 时读取全部现有 artifact，并按原任务状态实施。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Falla Preflight"
+  short_description: "在提案和编码前核对 PRD、现状、边界与兼容风险"
+  default_prompt: "Use $falla-preflight to analyze this PRD before proposal or implementation work."

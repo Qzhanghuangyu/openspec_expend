@@ -1,0 +1,77 @@
+name: falla-spec-driven
+version: 1
+description: Falla 父需求工作流：preflight、规格、设计、任务与协作台账
+artifacts:
+  - id: preflight
+    generates: preflight.md
+    description: PRD 实现状态、边界、异常与兼容性分析
+    template: preflight.md
+    instruction: |
+      完整读取 PRD，并用代码、接口、模型或测试证据核实现状。
+      分别检查 Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps。
+      每个问题标明 Missing Definition、Conflict、Implementation Risk 或 Decision Required，
+      并给出 Blocker、Major 或 Minor 阻塞级别。此阶段不得创建其他 artifact 或修改业务代码。
+    requires: []
+
+  - id: proposal
+    generates: proposal.md
+    description: 说明变更动机、范围和业务能力
+    template: proposal.md
+    instruction: |
+      基于 preflight 创建精简提案。能力必须是用户可观察、可测试的业务行为，
+      不得把 UI、ViewModel、控件或接口层等实现模块写成能力规格。
+    requires:
+      - preflight
+
+  - id: specs
+    generates: "specs/**/*.md"
+    description: 用户可观察行为的 delta specs
+    template: spec.md
+    instruction: |
+      为 proposal 中每项新增或修改能力创建 delta spec。
+      使用 ADDED、MODIFIED、REMOVED、RENAMED Requirements 标题；
+      每项 Requirement 至少包含一个使用四级标题的 Scenario，并使用 WHEN/THEN。
+      修改既有能力前读取 openspec/specs 中的完整原需求。
+    requires:
+      - proposal
+
+  - id: design
+    generates: design.md
+    description: 技术方案、MVVM 边界和 UI 人工校准计划
+    template: design.md
+    instruction: |
+      说明上下文、目标、非目标、决策、替代方案、风险、迁移和开放问题。
+      页面级变更先按 MVVM 划分 View 与 ViewModel；UI 再按可独立交付控件拆分。
+      AI 只搭建约 80% 的 UI 框架，明确记录留给人工校准的视觉细节。
+    requires:
+      - proposal
+
+  - id: tasks
+    generates: tasks.md
+    description: 可验证且体现依赖拓扑的任务清单
+    template: tasks.md
+    instruction: |
+      使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的前置依赖。
+      MVVM 契约优先，独立 UI 控件可并行，最后进行组装和联调。
+      propose 阶段必须据此创建可独立实施的子 change；apply 阶段不得重新拆分。
+    requires:
+      - specs
+      - design
+
+  - id: comate
+    generates: comate.md
+    description: 父 change 的责任、依赖、状态和交接台账
+    template: comate.md
+    instruction: |
+      建立父 change 协作台账并汇总子 change。owner、status、depends-on、blocks、handoff
+      必须完整；依赖边必须双向一致且不能形成环。父 change 完成前全部子 change
+      必须完成或有明确交接。
+    requires:
+      - tasks
+
+apply:
+  requires: [comate]
+  tracks: tasks.md
+  instruction: |
+    读取官方 contextFiles 和 Falla 协作上下文，按拓扑逐项实施并在验证成功后更新任务。
+    遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。

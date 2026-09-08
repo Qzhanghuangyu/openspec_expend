@@ -1,0 +1,156 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+import { FallaError } from '../errors.js';
+import { assertChangeSegment } from './naming.js';
+import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
+import { resolveChange } from './resolver.js';
+import { loadCoordination } from './store.js';
+
+function issue(kind, change, related = undefined, details = undefined) {
+  return {
+    kind,
+    change,
+    ...(related ? { related } : {}),
+    ...(details ? { details } : {}),
+  };
+}
+
+function findCycle(records) {
+  const state = new Map();
+  const stack = [];
+
+  function visit(logical) {
+    state.set(logical, 'visiting');
+    stack.push(logical);
+    const record = records.get(logical);
+    for (const dependency of record.dependsOn) {
+      if (!records.has(dependency)) continue;
+      if (state.get(dependency) === 'visiting') {
+        return [...stack.slice(stack.indexOf(dependency)), dependency];
+      }
+      if (state.get(dependency) !== 'done') {
+        const cycle = visit(dependency);
+        if (cycle) return cycle;
+      }
+    }
+    stack.pop();
+    state.set(logical, 'done');
+    return null;
+  }
+
+  for (const logical of records.keys()) {
+    if (!state.has(logical)) {
+      const cycle = visit(logical);
+      if (cycle) return cycle;
+    }
+  }
+  return null;
+}
+
+async function readNode(root, logical, mapping, statusProvider) {
+  const resolved = await resolveChange(root, logical);
+  let comate;
+  let tasks;
+  try {
+    comate = parseComate(
+      await readFile(path.join(resolved.path, 'comate.md'), 'utf8'),
+      `${logical}/comate.md`
+    );
+  } catch (error) {
+    if (error?.code === 'ENOENT') throw new FallaError(1, `缺少 comate.md：${logical}`);
+    throw error;
+  }
+  try {
+    tasks = parseTaskProgress(await readFile(path.join(resolved.path, 'tasks.md'), 'utf8'));
+  } catch (error) {
+    if (error?.code === 'ENOENT') throw new FallaError(1, `缺少 tasks.md：${logical}`);
+    throw error;
+  }
+
+  const officialStatus = statusProvider
+    ? await statusProvider(mapping.physical)
+    : null;
+  return { logical, mapping, resolved, comate, tasks, officialStatus };
+}
+
+export async function validateCoordination(root, options) {
+  const parent = assertChangeSegment(options.change, 'parent change');
+  const document = await loadCoordination(root);
+  const mappings = Object.entries(document.mappings)
+    .filter(([, mapping]) => mapping.parent === parent)
+    .sort(([left], [right]) => left.localeCompare(right));
+  const errors = [];
+  const warnings = [];
+  const nodes = new Map();
+
+  for (const [logical, mapping] of mappings) {
+    try {
+      const node = await readNode(root, logical, mapping, options.statusProvider);
+      nodes.set(logical, node.comate);
+      for (const localIssue of validateComateRecord(node.comate, {
+        pendingTasks: node.tasks.pending,
+      })) {
+        errors.push(issue(localIssue.kind, logical, undefined, localIssue.count
+          ? { count: localIssue.count }
+          : undefined));
+      }
+      if (node.comate.status === 'done' && node.officialStatus?.isComplete === false) {
+        errors.push(issue('artifacts-incomplete', logical));
+      }
+      if (node.resolved.lifecycle === 'archived' && node.comate.status !== 'done') {
+        warnings.push(issue('archived-not-done', logical));
+      }
+    } catch (error) {
+      errors.push(issue('invalid-node', logical, undefined, { message: error.message }));
+    }
+  }
+
+  for (const [logical, record] of nodes) {
+    for (const dependency of record.dependsOn) {
+      const upstream = nodes.get(dependency);
+      if (!upstream) {
+        errors.push(issue('missing-dependency', logical, dependency));
+        continue;
+      }
+      if (!upstream.blocks.includes(logical)) {
+        errors.push(issue('asymmetric-edge', logical, dependency));
+      }
+      if ((record.status === 'in-progress' || record.status === 'done') && upstream.status !== 'done') {
+        errors.push(issue('dependency-not-done', logical, dependency));
+      }
+    }
+    for (const blocked of record.blocks) {
+      const downstream = nodes.get(blocked);
+      if (!downstream) {
+        errors.push(issue('missing-blocked-change', logical, blocked));
+      } else if (!downstream.dependsOn.includes(logical)) {
+        errors.push(issue('asymmetric-edge', logical, blocked));
+      }
+    }
+  }
+
+  const cycle = findCycle(nodes);
+  if (cycle) errors.push(issue('cycle', cycle[0], undefined, { path: cycle }));
+
+  const ready = [];
+  const blocked = [];
+  for (const [logical, record] of nodes) {
+    const dependenciesDone = record.dependsOn.every(
+      (dependency) => nodes.get(dependency)?.status === 'done'
+    );
+    if (record.status === 'todo' && dependenciesDone) ready.push(logical);
+    if (record.status === 'blocked' || (record.status === 'todo' && !dependenciesDone)) {
+      blocked.push(logical);
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    parent,
+    errors,
+    warnings,
+    ready: ready.sort(),
+    blocked: blocked.sort(),
+  };
+}

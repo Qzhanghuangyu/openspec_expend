@@ -1,0 +1,4 @@
+interface:
+  display_name: "Falla Apply Change"
+  short_description: "按依赖实施已有父子 change，并维护任务和协作状态"
+  default_prompt: "Use $falla-apply-change to implement this existing Falla change safely."

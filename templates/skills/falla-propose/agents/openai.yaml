@@ -1,0 +1,4 @@
+interface:
+  display_name: "Falla Propose"
+  short_description: "把已分析需求规划为官方 artifacts 和并行子 change"
+  default_prompt: "Use $falla-propose to plan this preflighted change and create its child-change DAG."

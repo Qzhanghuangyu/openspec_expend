@@ -1,0 +1,32 @@
+# [任务选读] Archive（归档）阶段约束
+
+Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移动 change 目录。
+
+## 1. 前置检查
+
+1. `openspec validate "<physical>" --strict --json --no-interactive`。
+2. `openspec status --change "<physical>" --json`，汇总非 done artifact。
+3. 统计 `tasks.md` 中未完成 checkbox。
+4. 检查 `comate.md` 是否 done、handoff 是否完整。
+5. 父 change 归档前运行 coordination validate，确认所有子 change 完成或明确交接。
+
+这些结果是告警与决策材料，不得隐瞒。若存在问题，先展示问题及可能影响并请求用户
+明确确认；不能自行把任务改为完成，也不能臆造 abandoned/cancelled 等 OpenSpec 未提供的流程。
+
+## 2. Delta spec 与用户选择
+
+- 从官方 status 的 `artifactPaths.specs.existingOutputPaths` 获取 delta 文件。
+- 汇总将应用到 `openspec/specs/` 的新增、修改、移除和重命名，不输出无关正文。
+- 用户可以选择先修复、继续归档、或明确跳过 spec 同步。
+- 若 validate 失败但用户明确要求继续，官方命令必须显式使用 `--no-validate`；
+  若用户选择不同步规格，显式使用 `--skip-specs`。不得静默添加这些参数。
+- 不存在 `--skip-validate` 或 `--force` 例外；不得编造参数。
+
+## 3. 执行与完成
+
+- 调用 `openspec archive "<physical>" --json`；已取得对应例外确认时才追加
+  `--no-validate`、`--skip-specs` 或 `--yes`。
+- 子 change 与父 change 分别由官方命令归档。
+- 保留 coordination 映射和归档目录内的 `comate.md` 审计记录。
+- 官方命令失败时停止，不把错误解释为无 delta 或已归档。
+- 展示 change、schema、官方归档位置、spec 同步情况和仍存在的告警。

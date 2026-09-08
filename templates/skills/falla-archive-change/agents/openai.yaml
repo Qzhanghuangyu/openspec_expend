@@ -1,0 +1,4 @@
+interface:
+  display_name: "Falla Archive Change"
+  short_description: "检查协作收敛并用官方 OpenSpec 同步和归档 change"
+  default_prompt: "Use $falla-archive-change to validate, summarize, and archive this Falla change."
