@@ -14,6 +14,7 @@ import path from 'node:path';
 import { FallaError } from '../errors.js';
 
 const TEMPLATE_ROOT = fileURLToPath(new URL('../../templates/', import.meta.url));
+const DOCUMENT_ROOT = fileURLToPath(new URL('../../docs/', import.meta.url));
 const TOOL_DIRECTORIES = {
   claude: '.claude',
   codex: '.codex',
@@ -117,6 +118,10 @@ export async function collectManagedFiles(toolIds) {
   }
 
   const result = [];
+  result.push({
+    relativePath: '.falla/installation-and-update.md',
+    content: await readFile(path.join(DOCUMENT_ROOT, 'installation-and-update.md')),
+  });
   await addTree(result, path.join('openspec', 'schemas'), path.posix.join('openspec', 'schemas'));
   await addTree(result, 'skill-spec', path.posix.join('.falla', 'skill-spec'));
   for (const tool of tools) {

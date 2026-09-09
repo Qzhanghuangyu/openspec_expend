@@ -60,6 +60,10 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     /FallaOpenSpec 的灵魂/
   );
   assert.match(
+    await readFile(path.join(root, '.falla', 'installation-and-update.md'), 'utf8'),
+    /重复执行 install 完成更新/
+  );
+  assert.match(
     await readFile(path.join(root, '.falla', 'skill-spec', '[分析必读]preflight.md'), 'utf8'),
     /Stateful Interactions/
   );

@@ -7,7 +7,9 @@ artifacts:
     description: PRD 实现状态、边界、异常与兼容性分析
     template: preflight.md
     instruction: |
-      完整读取 PRD，并用代码、接口、模型或测试证据核实现状。
+      完整读取 PRD，并用当前代码、接口、模型或测试证据核实现状。
+      默认禁止读取 git log/show/blame/reflog/rev-list 等提交历史；只有用户明确要求分析变更沿革、
+      回归来源或具体提交时，才可对相关路径执行一次有界批量查询，不得重复或全仓扫描。
       分别检查 Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps。
       每个问题标明 Missing Definition、Conflict、Implementation Risk 或 Decision Required，
       并给出 Blocker、Major 或 Minor 阻塞级别。此阶段不得创建其他 artifact 或修改业务代码。

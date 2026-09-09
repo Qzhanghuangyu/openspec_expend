@@ -12,7 +12,8 @@ description: Use when an existing Falla preflight change needs proposal artifact
 1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
    `.falla/skill-spec/[架构必读]propose.md`；缺失时停止。
 2. 通过 `openspec status --change "<parent>" --json` 复用已有父 change；`preflight`
-   未 done 时停止，不能只检查目录。
+   未 done 时停止，不能只检查目录。阶段中收到或继续依赖设计稿链接时执行 Soul 的 MCP 门禁：
+   Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
 3. 按官方状态依次调用：
 
    ```bash

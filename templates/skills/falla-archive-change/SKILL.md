@@ -11,7 +11,8 @@ description: Use when closing and archiving a completed or explicitly accepted F
 
 1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
    `.falla/skill-spec/[任务选读]archive.md`；缺失时停止。
-2. 逻辑子 change 先用 coordination resolve 获取物理名。
+2. 逻辑子 change 先用 coordination resolve 获取物理名。阶段中收到或需要核对设计稿链接时
+   执行 Soul 的 MCP 门禁：Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
 3. 运行：
 
    ```bash

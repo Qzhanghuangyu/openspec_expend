@@ -13,7 +13,11 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 - 当前支持 OpenSpec `>=1.12.0 <1.13.0`，契约测试固定使用 `1.12.0`。
 - 安装不提供 `--force`，遇到用户修改或受管内容漂移会停止。
 
-## 本地安装
+## 初始化与更新
+
+完整操作说明见 [`docs/installation-and-update.md`](docs/installation-and-update.md)，包含首次初始化、
+Figma/Lark 可选集成、源码修改后的目标项目更新、受管文件冲突处理和会话重启要求。安装后同一
+手册也会写入目标项目的 `.falla/installation-and-update.md`，无需返回源码仓库即可查阅。
 
 要求 Node.js 20.19 或更高版本。
 
@@ -36,8 +40,19 @@ falla-openspec doctor /path/to/project --json
 `.falla/install-manifest.json` 记录受管文件哈希。重复安装是幂等的；marker 外的用户内容会保留，
 受管文件或 marker 内发生漂移时不会被静默覆盖。
 
+修改本仓库的工作流源码不会自动更新已经安装的目标项目。保持原 `tools` 选择并对目标项目重复
+执行 `falla-openspec install` 即可更新；更新前应读取目标项目的
+`.falla/install-manifest.json`，更新后运行 `doctor` 并重新创建 Agent 会话。当前机器更新
+`androidCopy` 的完整命令已放在手册第 0 节；注意文件名是 `install-manifest.json`，不是
+`install-mainfest.json`。
+
 交互终端下可省略 `--non-interactive` 选择工具。Figma MCP 和 Lark CLI 只有显式选择或传入
 `--with-figma`、`--with-lark` 时才会安装；非交互模式不会自动安装或登录外部工具。
+
+Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在当前对话中另行手动提供含明确
+node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少
+node id 时会要求重新选择节点并复制链接。浏览器、网页截图或抓取不能作为降级方案。若 MCP
+未安装、未认证或没有设计稿权限，依赖该设计的工作会明确停止。
 
 ## 标准工作流
 

@@ -19,7 +19,9 @@ description: Use when implementing or continuing an existing Falla parent or log
    falla-openspec coordination validate --change "<parent>" --json
    ```
 
-3. 上游依赖未 done、映射异常或 DAG 校验失败时停止，不绕过。
+3. 上游依赖未 done、映射异常或 DAG 校验失败时停止，不绕过。阶段中收到或继续依赖
+   设计稿链接时执行 Soul 的 MCP 门禁：Figma 链接只用 Figma MCP 读取，禁止用浏览器降级，
+   并核对当前节点，不能把早期截图或缓存当作最新设计。
 4. owner 为 unassigned 时先认领并把 comate 状态改为 in-progress。
 5. 使用物理名读取官方事实：
 
