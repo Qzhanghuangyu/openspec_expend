@@ -13,6 +13,11 @@ test('逻辑父子名映射为带固定 child 字面量的物理名', () => {
     parent: 'medal',
     child: 'view-model',
   });
+  assert.deepEqual(parseLogicalReference('0001-medal/02-detail'), {
+    logical: '0001-medal/02-detail',
+    parent: '0001-medal',
+    child: '02-detail',
+  });
 });
 
 test('物理名冲突时追加逻辑引用 SHA-256 前八位', () => {

@@ -17,10 +17,13 @@ description: Use when closing and archiving a completed or explicitly accepted F
    ```bash
    openspec validate "<physical>" --strict --json --no-interactive
    openspec status --change "<physical>" --json
+   openspec instructions archive --change "<physical>" --json
    falla-openspec coordination validate --change "<parent>" --json
    ```
 
-4. 汇总非 done artifact、未完成 tasks、非 done comate、未交接子 change，以及官方 status
+4. 应用 archive instructions 返回的 `context`，并只采纳适用且不冲突的 `operationGuidance`；
+   guidance 不能覆盖官方状态、安全门禁或用户选择，也不得原样写入报告。
+5. 汇总非 done/skipped artifact、未完成 tasks、非 done comate、未交接子 change，以及官方 status
    返回的 delta spec 路径与同步影响。
 
 ## 有告警时
@@ -32,6 +35,8 @@ description: Use when closing and archiving a completed or explicitly accepted F
 3. 明确跳过 spec 同步后继续。
 
 不要自行勾选任务、解除 blocked、编造 abandoned/cancelled 流程或猜测用户选择。
+若 delta 会移除某能力的最后一项 requirement，只有用户明确确认退役后才可设置
+`.openspec.yaml` 的 `retire_capabilities: true`；该操作会删除主规格，不得根据空结果自动推断。
 只有用户针对本次操作明确确认时，才可使用：
 
 - validate 失败继续：`--no-validate`；

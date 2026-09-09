@@ -30,6 +30,7 @@ apply:
 
   assert.equal(schema.artifacts[0].template, 'tasks.md');
   assert.equal(schema.artifacts[0].instruction, 'Read openspec/specs first.');
+  assert.equal(converted.skipSpecs, true);
   assert.deepEqual(converted.templates, [{ path: 'templates/tasks.md', content: '# Tasks\n- [ ] work\n' }]);
 });
 
@@ -60,5 +61,25 @@ test('父子 metadata 映射到 legacy Schema 并把 parent 移出官方元数�
   assert.equal(child.schema, 'falla-legacy-task-driven');
   assert.equal(child.parent, undefined);
   assert.equal(child.goal, 'detail');
+  assert.equal(child.skip_specs, true);
   assert.deepEqual(childResult.audit, { parent: 'medal' });
+});
+
+test('迁移保留 OpenSpec 1.12 的 skip_specs 和 retire_capabilities', () => {
+  const converted = YAML.parse(convertChangeMetadata(`schema: spec-driven
+skip_specs: true
+retire_capabilities: false
+`).content);
+
+  assert.equal(converted.skip_specs, true);
+  assert.equal(converted.retire_capabilities, false);
+  assert.throws(
+    () => convertChangeMetadata('schema: spec-driven\nskip_specs: yes\n'),
+    (error) => error.code === 1 && error.message.includes('skip_specs')
+  );
+
+  const custom = YAML.parse(convertChangeMetadata('schema: custom\n', {
+    schemasWithoutSpecs: ['custom'],
+  }).content);
+  assert.equal(custom.skip_specs, true);
 });

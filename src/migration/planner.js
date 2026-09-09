@@ -219,6 +219,9 @@ export async function planMigration(rootInput, inventory) {
   const destinations = new Map();
   const { mappings, existing } = await buildMappings(root, inventory);
   const schemas = await schemaDirectoryMap(root, inventory);
+  const schemasWithoutSpecs = [...schemas.values()]
+    .filter(({ skipSpecs }) => skipSpecs)
+    .map(({ name }) => name);
   const metadataAudit = [];
 
   for (const skipped of inventory.skipped) {
@@ -292,7 +295,10 @@ export async function planMigration(rootInput, inventory) {
     if (file.kind.endsWith('-change')) {
       const destination = changeDestination(file, mappings);
       if (file.path.endsWith('/.openspec.yaml')) {
-        const converted = convertChangeMetadata(await readVerifiedText(root, file), { source: file.path });
+        const converted = convertChangeMetadata(await readVerifiedText(root, file), {
+          source: file.path,
+          schemasWithoutSpecs,
+        });
         if (converted.audit.parent) metadataAudit.push({ source: file.path, parent: converted.audit.parent });
         await addOperation(root, operations, destinations, {
           kind: 'write',

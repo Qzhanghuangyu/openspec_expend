@@ -26,6 +26,11 @@ function assertArray(value, field) {
   if (!Array.isArray(value)) incompatible(field, 'array');
 }
 
+function assertStringArray(value, field) {
+  assertArray(value, field);
+  for (const [index, item] of value.entries()) assertString(item, `${field}[${index}]`);
+}
+
 function assertRoot(value, field) {
   assertRecord(value, field);
   assertString(value.path, `${field}.path`);
@@ -48,7 +53,11 @@ export function assertStatusContract(value) {
   assertRecord(value, 'status');
   assertString(value.changeName, 'status.changeName');
   assertString(value.schemaName, 'status.schemaName');
+  assertBoolean(value.isPlanningComplete, 'status.isPlanningComplete');
   assertBoolean(value.isComplete, 'status.isComplete');
+  if (value.isComplete !== value.isPlanningComplete) {
+    incompatible('status.isComplete', '与 status.isPlanningComplete 相同的 boolean');
+  }
   assertArray(value.artifacts, 'status.artifacts');
   for (const [index, artifact] of value.artifacts.entries()) {
     const field = `status.artifacts[${index}]`;
@@ -56,9 +65,35 @@ export function assertStatusContract(value) {
     assertString(artifact.id, `${field}.id`);
     assertString(artifact.outputPath, `${field}.outputPath`);
     assertString(artifact.status, `${field}.status`);
+    assertStringArray(artifact.requires, `${field}.requires`);
+    if (artifact.missingDeps !== undefined) {
+      assertStringArray(artifact.missingDeps, `${field}.missingDeps`);
+    }
   }
-  if (value.applyRequires !== undefined) assertArray(value.applyRequires, 'status.applyRequires');
+  assertStringArray(value.applyRequires, 'status.applyRequires');
   return value;
+}
+
+export function assertStatusAllContract(value) {
+  assertRecord(value, 'statusAll');
+  assertArray(value.changes, 'statusAll.changes');
+  const names = new Set();
+  for (const [index, status] of value.changes.entries()) {
+    assertStatusContract(status);
+    if (names.has(status.changeName)) {
+      incompatible(`statusAll.changes[${index}].changeName`, 'unique string');
+    }
+    names.add(status.changeName);
+  }
+  assertRoot(value.root, 'statusAll.root');
+  return value;
+}
+
+function assertOperationInputs(value) {
+  if (value.context !== undefined) assertString(value.context, 'instructions.context');
+  if (value.operationGuidance !== undefined) {
+    assertStringArray(value.operationGuidance, 'instructions.operationGuidance');
+  }
 }
 
 function assertArtifactInstructions(value) {
@@ -78,6 +113,7 @@ function assertApplyInstructions(value) {
   assertNumber(value.progress.remaining, 'instructions.progress.remaining');
   assertArray(value.tasks, 'instructions.tasks');
   assertString(value.state, 'instructions.state');
+  assertOperationInputs(value);
 }
 
 export function assertInstructionsContract(value) {
@@ -90,5 +126,13 @@ export function assertInstructionsContract(value) {
   } else {
     assertApplyInstructions(value);
   }
+  return value;
+}
+
+export function assertArchiveInstructionsContract(value) {
+  assertRecord(value, 'instructions');
+  assertString(value.changeName, 'instructions.changeName');
+  assertRoot(value.root, 'instructions.root');
+  assertOperationInputs(value);
   return value;
 }

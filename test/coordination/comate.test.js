@@ -59,10 +59,16 @@ test('校验负责人、blocked 交接和 done 任务门禁', () => {
   );
 });
 
-test('任务进度只统计标准 checkbox', () => {
-  assert.deepEqual(parseTaskProgress('- [x] 1.1 done\n- [X] 1.2 done\n- [ ] 1.3 pending\n- item\n'), {
-    total: 3,
-    complete: 2,
-    pending: 1,
+test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbox', () => {
+  assert.deepEqual(parseTaskProgress(`- [x] 1.1 done
+  - [ ] 1.1.1 nested pending
+* [X] 1.2 done
+-[x] 1.3 compact done
+- [\t] 1.4 tab pending
+- item
+`), {
+    total: 5,
+    complete: 3,
+    pending: 2,
   });
 });

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { FallaError } from '../errors.js';
 
-const SEGMENT_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const SEGMENT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function assertChangeSegment(value, field = 'change') {
   if (typeof value !== 'string' || !SEGMENT_PATTERN.test(value)) {

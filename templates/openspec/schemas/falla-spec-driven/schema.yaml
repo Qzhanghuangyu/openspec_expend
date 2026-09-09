@@ -20,6 +20,8 @@ artifacts:
     instruction: |
       基于 preflight 创建精简提案。能力必须是用户可观察、可测试的业务行为，
       不得把 UI、ViewModel、控件或接口层等实现模块写成能力规格。
+      纯重构、工具或文档变更且没有规格级行为变化时，必须在 `.openspec.yaml`
+      显式设置 `skip_specs: true`，不得创建虚假的空能力或 requirement。
     requires:
       - preflight
 
@@ -32,6 +34,8 @@ artifacts:
       使用 ADDED、MODIFIED、REMOVED、RENAMED Requirements 标题；
       每项 Requirement 至少包含一个使用四级标题的 Scenario，并使用 WHEN/THEN。
       修改既有能力前读取 openspec/specs 中的完整原需求。
+      若 change 已设置 `skip_specs: true`，官方 status 会把本 artifact 标为 skipped，
+      此时不得创建 specs 文件。
     requires:
       - proposal
 

@@ -1,7 +1,8 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-import { assertListContract, assertStatusContract } from '../openspec/contract.js';
+import { FallaError } from '../errors.js';
+import { assertListContract, assertStatusAllContract } from '../openspec/contract.js';
 import { runOpenSpec, runOpenSpecJson } from '../openspec/runner.js';
 import { assertSupportedVersion, SUPPORTED_OPENSPEC_RANGE } from '../openspec/version.js';
 import { validateCoordination } from '../coordination/dag.js';
@@ -55,11 +56,16 @@ export async function doctorProject(options) {
     }));
     checks.push({ id: 'openspec-list', ok: true, count: list.changes.length });
 
-    for (const change of list.changes) {
-      const status = assertStatusContract(await runOpenSpecJson([
-        'status', '--change', change.name, '--json',
-      ], { cwd: root, executable, env: options.env }));
-      statusByChange.set(change.name, status);
+    const batchStatus = assertStatusAllContract(await runOpenSpecJson([
+      'status', '--all', '--json',
+    ], { cwd: root, executable, env: options.env }));
+    for (const status of batchStatus.changes) {
+      statusByChange.set(status.changeName, status);
+    }
+    const listedNames = list.changes.map(({ name }) => name).sort();
+    const statusNames = [...statusByChange.keys()].sort();
+    if (JSON.stringify(listedNames) !== JSON.stringify(statusNames)) {
+      throw new FallaError(3, 'OpenSpec list 与 status --all 的 change 集合不一致');
     }
     checks.push({ id: 'openspec-status', ok: true, count: list.changes.length });
   }

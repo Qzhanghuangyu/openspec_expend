@@ -77,8 +77,8 @@ test('初装写入四套 Schema、规则、双工具 Skill、Hook 和安全 mani
   assert.deepEqual(Object.keys(manifest).sort(), [
     'fallaVersion', 'files', 'formatVersion', 'installedAt', 'openSpecVersion',
   ]);
-  assert.equal(manifest.fallaVersion, '0.1.0');
-  assert.equal(manifest.openSpecVersion, '1.5.0');
+  assert.equal(manifest.fallaVersion, '0.2.0');
+  assert.equal(manifest.openSpecVersion, '1.12.0');
   assert.equal(manifest.installedAt, FIXED_TIME);
   assert.ok(Object.keys(manifest.files).every((entry) => !path.isAbsolute(entry)));
   assert.ok(Object.values(manifest.files).every((digest) => /^[a-f0-9]{64}$/.test(digest)));

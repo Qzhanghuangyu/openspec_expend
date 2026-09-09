@@ -95,7 +95,7 @@ export async function validateCoordination(root, options) {
           ? { count: localIssue.count }
           : undefined));
       }
-      if (node.comate.status === 'done' && node.officialStatus?.isComplete === false) {
+      if (node.comate.status === 'done' && node.officialStatus?.isPlanningComplete === false) {
         errors.push(issue('artifacts-incomplete', logical));
       }
       if (node.resolved.lifecycle === 'archived' && node.comate.status !== 'done') {

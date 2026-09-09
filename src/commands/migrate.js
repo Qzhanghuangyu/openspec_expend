@@ -1,6 +1,6 @@
 import { FallaError } from '../errors.js';
 import { doctorProject } from './doctor.js';
-import { assertListContract, assertStatusContract } from '../openspec/contract.js';
+import { assertListContract, assertStatusAllContract } from '../openspec/contract.js';
 import { runOpenSpec, runOpenSpecJson } from '../openspec/runner.js';
 import { assertSupportedVersion } from '../openspec/version.js';
 import { planMigration } from '../migration/planner.js';
@@ -28,12 +28,16 @@ async function validateWithOpenSpec(root, options) {
   for (const schema of FALLA_SCHEMAS) {
     await runOpenSpec(['schema', 'validate', schema], runnerOptions);
   }
-  await runOpenSpec(['validate', '--all', '--strict'], runnerOptions);
+  await runOpenSpec([
+    'validate', '--all', '--strict', '--report', 'findings', '--json',
+  ], runnerOptions);
   const list = assertListContract(await runOpenSpecJson(['list', '--json'], runnerOptions));
-  for (const change of list.changes) {
-    assertStatusContract(await runOpenSpecJson([
-      'status', '--change', change.name, '--json',
-    ], runnerOptions));
+  const status = assertStatusAllContract(await runOpenSpecJson([
+    'status', '--all', '--json',
+  ], runnerOptions));
+  if (JSON.stringify(list.changes.map(({ name }) => name).sort())
+    !== JSON.stringify(status.changes.map(({ changeName }) => changeName).sort())) {
+    throw new FallaError(3, 'OpenSpec list 与 status --all 的 change 集合不一致');
   }
 }
 

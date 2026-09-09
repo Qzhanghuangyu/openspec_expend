@@ -62,3 +62,15 @@ test('规则模板使用标准 OpenSpec 路径且没有旧核心命令', async (
   assert.match(content, /openspec\/specs/);
   assert.match(content, /\.falla\/coordination\.yaml/);
 });
+
+test('Skill 覆盖 OpenSpec 1.12 操作上下文与 change 元数据', async () => {
+  const apply = await readFile(path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'), 'utf8');
+  const archive = await readFile(path.join(root, 'skills', 'falla-archive-change', 'SKILL.md'), 'utf8');
+  const propose = await readFile(path.join(root, 'skills', 'falla-propose', 'SKILL.md'), 'utf8');
+
+  assert.match(apply, /operationGuidance/);
+  assert.match(archive, /instructions archive/);
+  assert.match(archive, /retire_capabilities: true/);
+  assert.match(propose, /skip_specs: true/);
+  assert.match(propose, /允许数字开头/);
+});

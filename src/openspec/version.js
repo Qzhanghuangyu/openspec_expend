@@ -1,6 +1,6 @@
 import { FallaError } from '../errors.js';
 
-export const SUPPORTED_OPENSPEC_RANGE = '>=1.5.0 <1.6.0';
+export const SUPPORTED_OPENSPEC_RANGE = '>=1.12.0 <1.13.0';
 
 export function parseOpenSpecVersion(text) {
   const raw = String(text).trim();
@@ -19,7 +19,7 @@ export function parseOpenSpecVersion(text) {
 
 export function assertSupportedVersion(text) {
   const version = parseOpenSpecVersion(text);
-  if (version.major !== 1 || version.minor !== 5) {
+  if (version.major !== 1 || version.minor !== 12) {
     throw new FallaError(
       2,
       `OpenSpec ${version.raw} 不在支持范围 ${SUPPORTED_OPENSPEC_RANGE}`,

@@ -21,8 +21,8 @@ test('doctor 只读报告官方版本、项目和未安装扩展', async () => {
   const root = await createOpenSpecProject();
   const report = await doctorProject({ root });
 
-  assert.equal(report.openSpec.version, '1.5.0');
-  assert.equal(report.openSpec.supportedRange, '>=1.5.0 <1.6.0');
+  assert.equal(report.openSpec.version, '1.12.0');
+  assert.equal(report.openSpec.supportedRange, '>=1.12.0 <1.13.0');
   assert.equal(report.project.initialized, true);
   assert.equal(report.schemas.installed, 0);
   assert.equal(report.install.manifest, false);

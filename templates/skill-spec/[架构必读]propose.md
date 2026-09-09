@@ -16,6 +16,8 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
 - UI 再拆顶部栏、列表项、底部栏、空状态、弹窗等独立模块控件。
 - tasks 使用 checkbox，并显式标出依赖；契约先行、控件并行、组装和联调最后收敛。
 - `specs/` 只承载用户可观察、可测试的业务行为，不承载实现模块。
+- 纯重构、工具或文档变更且没有规格级行为变化时，在 `.openspec.yaml` 显式设置
+  `skip_specs: true`；官方 status 中 `skipped` 表示依赖已满足，不创建空 delta spec。
 - design 明确 AI 搭建的 UI 框架和留给人工校准的约 20% 视觉项。
 
 ## 3. 子 change 落盘
@@ -27,7 +29,8 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
 2. 使用 `falla-openspec coordination register "<parent>/<child>" --json` 获得唯一物理名。
    默认物理名中间的 `child` 是固定字面量；例如 `medal/view-model` 映射为
    `medal-child-view-model`，`medal/top-bar` 映射为 `medal-child-top-bar`。
-   每段使用小写 kebab-case。只有冲突时工具才追加逻辑引用 SHA-256 的前 8 位；
+   每段只使用小写字母、数字和单连字符，并允许数字开头。只有冲突时工具才追加逻辑引用
+   SHA-256 的前 8 位；
    agent 不得自行编造后缀。
 3. 使用官方 `openspec new change "<physical>" --schema falla-task-driven --json` 创建 change。
 4. 用官方 instructions 创建子 change 的 `tasks.md` 和 `comate.md`。

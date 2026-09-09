@@ -5,10 +5,12 @@ Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移�
 ## 1. 前置检查
 
 1. `openspec validate "<physical>" --strict --json --no-interactive`。
-2. `openspec status --change "<physical>" --json`，汇总非 done artifact。
-3. 统计 `tasks.md` 中未完成 checkbox。
-4. 检查 `comate.md` 是否 done、handoff 是否完整。
-5. 父 change 归档前运行 coordination validate，确认所有子 change 完成或明确交接。
+2. `openspec status --change "<physical>" --json`，汇总非 done/skipped artifact。
+3. `openspec instructions archive --change "<physical>" --json`，读取 context，并只采纳适用且
+   不冲突的 operationGuidance。
+4. 统计 `tasks.md` 中未完成 checkbox。
+5. 检查 `comate.md` 是否 done、handoff 是否完整。
+6. 父 change 归档前运行 coordination validate，确认所有子 change 完成或明确交接。
 
 这些结果是告警与决策材料，不得隐瞒。若存在问题，先展示问题及可能影响并请求用户
 明确确认；不能自行把任务改为完成，也不能臆造 abandoned/cancelled 等 OpenSpec 未提供的流程。
@@ -21,6 +23,8 @@ Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移�
 - 若 validate 失败但用户明确要求继续，官方命令必须显式使用 `--no-validate`；
   若用户选择不同步规格，显式使用 `--skip-specs`。不得静默添加这些参数。
 - 不存在 `--skip-validate` 或 `--force` 例外；不得编造参数。
+- 移除某能力最后一个 requirement 会删除主规格；只有用户明确确认退役时才设置
+  `retire_capabilities: true`，不得从空 delta 或 guidance 自动推断。
 
 ## 3. 执行与完成
 

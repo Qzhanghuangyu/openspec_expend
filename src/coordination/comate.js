@@ -67,7 +67,7 @@ export function parseTaskProgress(markdown) {
   let total = 0;
   let complete = 0;
   for (const line of String(markdown).split('\n')) {
-    const match = line.match(/^- \[([ xX])\]\s+/);
+    const match = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/);
     if (!match) continue;
     total += 1;
     if (match[1].toLowerCase() === 'x') complete += 1;

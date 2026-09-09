@@ -10,7 +10,7 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
   `validate` 或 `archive` 的替代实现。
 - 不导入 `@fission-ai/openspec/dist` 等内部模块，不复制官方 artifact graph 或 Schema 解析器。
 - 新工作流只写入 `openspec/`；旧 `mercuryspec/` 仅作为迁移时的只读来源。
-- 首版支持 OpenSpec `>=1.5.0 <1.6.0`，契约测试固定使用 `1.5.0`。
+- 当前支持 OpenSpec `>=1.12.0 <1.13.0`，契约测试固定使用 `1.12.0`。
 - 安装和迁移均不提供 `--force`，遇到用户修改或目标冲突会停止。
 
 ## 本地安装
@@ -18,7 +18,7 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 要求 Node.js 20.19 或更高版本。
 
 ```bash
-npm install -g @fission-ai/openspec@1.5.0
+npm install -g @fission-ai/openspec@1.12.0
 cd /path/to/falla-openspec
 npm install
 npm link
@@ -63,6 +63,18 @@ falla-openspec coordination validate --change "medal" --json
 `comate.md` 为唯一事实来源；`coordination validate` 检查依赖对称性、缺失节点、环、前置状态、
 tasks 完成度和 OpenSpec artifact 状态。
 
+## OpenSpec 1.12 兼容
+
+- doctor 和迁移验证使用 `openspec status --all --json` 批量读取状态，避免逐 change 启动进程。
+- 以 `isPlanningComplete` 为规划完成态；`skip_specs: true` 产生的 `skipped` artifact 视为已满足，
+  不要求创建空 delta spec。
+- change 名遵循新版 kebab-id，可由数字开头；tasks 中的嵌套 checkbox 与 `*` checkbox 同样计入门禁。
+- apply/archive Skill 会分别读取 `context` 与 `operationGuidance`，后者只作为操作建议，不能覆盖
+  官方状态、路径、安全门禁或用户明确选择。
+- `.openspec.yaml` 支持官方 `skip_specs` 和 `retire_capabilities`；能力退役会删除主规格，仍需用户
+  针对本次归档明确确认。
+- 迁移严格校验使用 `validate --report findings --json`，保留完整退出码并减少无关输出。
+
 ## 从 MercurySpec 迁移
 
 先完成 FallaOpenSpec 安装，再始终从只读预演开始：
@@ -78,7 +90,8 @@ falla-openspec migrate /path/to/project --json
 falla-openspec migrate /path/to/project --apply --json
 ```
 
-迁移先在候选目录运行四套 Schema 校验及 `openspec validate --all --strict`，写入后再次运行
+迁移先在候选目录运行四套 Schema 校验及
+`openspec validate --all --strict --report findings --json`，写入后再次运行
 官方校验和 `doctor`。任一步失败都会自动回滚。成功结果中的 `id` 可用于显式回滚：
 
 ```bash

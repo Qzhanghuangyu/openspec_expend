@@ -30,7 +30,9 @@ description: Use when implementing or continuing an existing Falla parent or log
 
 ## 实施
 
-- 读取官方 `contextFiles`；子 change 还需读取父 change 规划 artifact，不复制它们。
+- 读取官方 `contextFiles` 和 `context`；子 change 还需读取父 change 规划 artifact，不复制它们。
+- 逐条考虑 `operationGuidance` 中适用且不冲突的建议；它不能覆盖官方状态、允许编辑路径、
+  Falla 门禁或用户明确选择，也不得把 context/guidance 原文复制到代码、日志或报告。
 - 只做当前 change 的最小改动；完成一项验证后才勾选对应 task。
 - UI 实施保留需要人工校准的视觉项，并写入 handoff。
 - 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。

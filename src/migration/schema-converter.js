@@ -85,6 +85,9 @@ export function convertLegacySchema(content, options = {}) {
     name: document.name,
     schemaYaml: YAML.stringify(document, { lineWidth: 0 }),
     templates,
+    skipSpecs: !document.artifacts.some((artifact) =>
+      typeof artifact.generates === 'string'
+      && (artifact.generates === 'specs' || artifact.generates.startsWith('specs/'))),
   };
 }
 
@@ -93,6 +96,11 @@ export function convertChangeMetadata(content, options = {}) {
   const document = parseYaml(content, source);
   if (!isRecord(document) || typeof document.schema !== 'string') {
     throw new FallaError(1, `change metadata 缺少 schema：${source}`);
+  }
+  for (const field of ['skip_specs', 'retire_capabilities']) {
+    if (document[field] !== undefined && typeof document[field] !== 'boolean') {
+      throw new FallaError(1, `change metadata ${field} 必须是 boolean：${source}`);
+    }
   }
   const audit = {};
   if (document.parent !== undefined) {
@@ -103,5 +111,13 @@ export function convertChangeMetadata(content, options = {}) {
     delete document.parent;
   }
   document.schema = SCHEMA_NAMES[document.schema] ?? document.schema;
+  const schemasWithoutSpecs = new Set([
+    'falla-task-driven',
+    'falla-legacy-task-driven',
+    ...(options.schemasWithoutSpecs ?? []),
+  ]);
+  if (document.skip_specs === undefined && schemasWithoutSpecs.has(document.schema)) {
+    document.skip_specs = true;
+  }
   return { content: YAML.stringify(document, { lineWidth: 0 }), audit };
 }

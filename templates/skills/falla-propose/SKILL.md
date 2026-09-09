@@ -22,6 +22,8 @@ description: Use when an existing Falla preflight change needs proposal artifact
    使用返回的模板、依赖和 `resolvedOutputPath`，不猜路径。
 4. proposal/specs 只描述用户可观察的业务能力；design/tasks 先按 MVVM 拆 ViewModel 与
    View，再把 UI 拆到模块控件，并明确人工视觉校准项。
+   若是纯重构、工具或文档变更且没有规格级行为变化，在 `.openspec.yaml` 显式设置
+   `skip_specs: true`，并接受官方 status 将 specs 标为 `skipped`；不得伪造空 requirement。
 5. tasks 使用 checkbox 和逻辑依赖，形成“契约 → 控件并行 → 组装 → 联调”的 DAG。
 6. 在 propose 阶段为每个可交付单元创建子 change：
 
@@ -29,7 +31,8 @@ description: Use when an existing Falla preflight change needs proposal artifact
    不能再形成第三层；例如 `medal/view-model`、`medal/top-bar`、`medal/list-card`。
    默认物理名格式中间的 `child` 是固定字面量：`<parent>-child-<child>`。
    例如 `medal/view-model` → `medal-child-view-model`，
-   `medal/top-bar` → `medal-child-top-bar`。名称每段都使用小写 kebab-case。
+   `medal/top-bar` → `medal-child-top-bar`。名称每段只使用小写字母、数字和单连字符，
+   与 OpenSpec 1.12 一致允许数字开头。
    仅同名冲突时由协调工具追加 8 位哈希。
    不自行生成后缀，最终物理名只能采用 register 的 JSON 返回值。
 
