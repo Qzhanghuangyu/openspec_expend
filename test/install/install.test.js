@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { execFile, spawn } from 'node:child_process';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  symlink,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -40,6 +48,21 @@ function installOptions(root, overrides = {}) {
   };
 }
 
+function runShell(command, { cwd, input }) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, { cwd, shell: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.once('error', reject);
+    child.once('close', (code) => resolve({ code, stdout, stderr }));
+    child.stdin.end(input);
+  });
+}
+
 test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 manifest', async () => {
   const root = await createProject();
   const report = await installProject(installOptions(root));
@@ -59,10 +82,12 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     await readFile(path.join(root, '.falla', 'skill-spec', '[Must Read]soul.md'), 'utf8'),
     /FallaOpenSpec 的灵魂/
   );
-  assert.match(
-    await readFile(path.join(root, '.falla', 'installation-and-update.md'), 'utf8'),
-    /重复执行 install 完成更新/
+  const installedManual = await readFile(
+    path.join(root, '.falla', 'installation-and-update.md'),
+    'utf8'
   );
+  assert.match(installedManual, /重复执行 install 完成更新/);
+  assert.doesNotMatch(installedManual, /androidCopy|\$HOME\/android\/|\/Users\/|\/home\//);
   assert.match(
     await readFile(path.join(root, '.falla', 'skill-spec', '[分析必读]preflight.md'), 'utf8'),
     /Stateful Interactions/
@@ -95,6 +120,66 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   assert.ok(Object.keys(manifest.files).every((entry) => !path.isAbsolute(entry)));
   assert.ok(Object.values(manifest.files).every((digest) => /^[a-f0-9]{64}$/.test(digest)));
   assert.doesNotMatch(manifestText, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(JSON.stringify(report), new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('Codex Hook 注册在项目移动后仍能从子目录启动', async () => {
+  const root = await createProject();
+  await installProject(installOptions(root, { tools: ['codex'] }));
+  const config = await readFile(path.join(root, '.codex', 'config.toml'), 'utf8');
+  const commandLine = config.match(/^command = (.+)$/m);
+  assert.ok(commandLine);
+  const command = JSON.parse(commandLine[1]);
+  assert.doesNotMatch(command, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+
+  const movedRoot = `${root}-moved`;
+  await rename(root, movedRoot);
+  const nested = path.join(movedRoot, 'feature', 'nested');
+  await mkdir(nested, { recursive: true });
+  const result = await runShell(command, {
+    cwd: os.tmpdir(),
+    input: JSON.stringify({ cwd: nested }),
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(JSON.parse(result.stdout).hookSpecificOutput.additionalContext, /FallaOpenSpec/);
+
+  await unlink(path.join(movedRoot, '.codex', 'hooks', 'falla-spec-session.mjs'));
+  const missing = await runShell(command, {
+    cwd: os.tmpdir(),
+    input: JSON.stringify({ cwd: nested }),
+  });
+  assert.equal(missing.code, 2);
+  assert.match(missing.stderr, /Hook 启动失败/);
+  assert.doesNotMatch(missing.stderr, new RegExp(
+    movedRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  ));
+});
+
+test('Codex Hook 启动器拒绝通过符号链接执行项目外脚本', async () => {
+  const root = await createProject();
+  await installProject(installOptions(root, { tools: ['codex'] }));
+  const config = await readFile(path.join(root, '.codex', 'config.toml'), 'utf8');
+  const commandLine = config.match(/^command = (.+)$/m);
+  assert.ok(commandLine);
+  const command = JSON.parse(commandLine[1]);
+
+  const hooks = path.join(root, '.codex', 'hooks');
+  await rename(hooks, path.join(root, '.codex', 'managed-hooks'));
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'falla-outside-hooks-'));
+  await writeFile(
+    path.join(outside, 'falla-spec-session.mjs'),
+    "process.stdout.write('OUTSIDE_SCRIPT_EXECUTED')\n"
+  );
+  await symlink(outside, hooks, 'dir');
+
+  const result = await runShell(command, {
+    cwd: os.tmpdir(),
+    input: JSON.stringify({ cwd: root }),
+  });
+  assert.equal(result.code, 2);
+  assert.match(result.stderr, /Hook 启动失败/);
+  assert.doesNotMatch(result.stdout, /OUTSIDE_SCRIPT_EXECUTED/);
 });
 
 test('重复安装保持 manifest 和 marker 幂等', async () => {

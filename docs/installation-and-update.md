@@ -9,31 +9,34 @@
 修改工作流源码后，目标项目不会自动变化。必须对目标项目重新执行 `install`；该命令同时承担
 首次安装和后续更新，不需要单独的 `update` 命令。
 
-## 0. 当前机器最常用的完整命令
+## 0. 完整使用实例
 
-当前工作流源码位于 `$HOME/android/workflow/falla-openspec`，目标项目位于
-`$HOME/android/androidCopy`。更新该项目时可直接逐条复制以下命令，不需要先设置环境变量，
-也不要求已经执行过 `npm link`。
+下面是一组可独立复制的更新实例。先把两个占位路径替换为实际目录；本例假设目标项目
+同时使用 Claude Code 和 Codex，且不依赖已执行 `npm link`。
 
 ```bash
-# 1. 查看上次安装时选择的 Agent 工具；文件名是 install-manifest，不是 install-mainfest
-cat "$HOME/android/androidCopy/.falla/install-manifest.json"
+# 0. 设置当前环境的实际路径
+export FALLA_HOME="/path/to/falla-openspec"
+export TARGET_PROJECT="/path/to/project"
 
-# 2. 使用当前工作流源码更新目标项目；该项目当前同时使用 claude 和 codex
-node "$HOME/android/workflow/falla-openspec/bin/falla-openspec.js" install "$HOME/android/androidCopy" --tools claude,codex --non-interactive
+# 1. 查看上次安装时选择的 Agent 工具；文件名是 install-manifest，不是 install-mainfest
+cat "$TARGET_PROJECT/.falla/install-manifest.json"
+
+# 2. 使用当前工作流源码更新目标项目
+node "$FALLA_HOME/bin/falla-openspec.js" install "$TARGET_PROJECT" --tools claude,codex --non-interactive
 
 # 3. 检查更新结果
-node "$HOME/android/workflow/falla-openspec/bin/falla-openspec.js" doctor "$HOME/android/androidCopy" --json
+node "$FALLA_HOME/bin/falla-openspec.js" doctor "$TARGET_PROJECT" --json
 
 # 4. 更新成功后，在目标项目内查看本手册
-cat "$HOME/android/androidCopy/.falla/installation-and-update.md"
+cat "$TARGET_PROJECT/.falla/installation-and-update.md"
 ```
 
-上述更新命令故意没有附加 `--with-figma` 或 `--with-lark`，因为普通规则更新不需要重复安装或
-登录已有外部工具。如果 Figma MCP 尚未安装，才使用下面的完整命令：
+上述命令故意没有附加 `--with-figma` 或 `--with-lark`，因为普通规则更新不需要重复安装或
+登录已有外部工具。如果 Figma MCP 尚未安装，才使用：
 
 ```bash
-node "$HOME/android/workflow/falla-openspec/bin/falla-openspec.js" install "$HOME/android/androidCopy" --tools claude,codex --with-figma --non-interactive
+node "$FALLA_HOME/bin/falla-openspec.js" install "$TARGET_PROJECT" --tools claude,codex --with-figma --non-interactive
 ```
 
 ## 1. 前置条件
@@ -45,9 +48,9 @@ node "$HOME/android/workflow/falla-openspec/bin/falla-openspec.js" install "$HOM
 ```bash
 npm install -g @fission-ai/openspec@1.12.0
 
-# 根据实际位置替换下面两个绝对路径；等号两侧不能有空格
-export FALLA_HOME="$HOME/android/workflow/falla-openspec"
-export TARGET_PROJECT="$HOME/android/androidCopy"
+# 根据实际位置替换下面两个路径；等号两侧不能有空格
+export FALLA_HOME="/path/to/falla-openspec"
+export TARGET_PROJECT="/path/to/project"
 
 cd "$FALLA_HOME"
 npm install
@@ -166,19 +169,13 @@ npm test
 完整命令如下。注意文件名必须是 `install-manifest.json`，不要写成 `install-mainfest.json`：
 
 ```bash
-cat "$HOME/android/androidCopy/.falla/install-manifest.json"
-```
-
-使用前面设置的变量时，等价命令是：
-
-```bash
 cat "$TARGET_PROJECT/.falla/install-manifest.json"
 ```
 
 如果提示 `No such file or directory`，先检查目录和文件名：
 
 ```bash
-ls -la "$HOME/android/androidCopy/.falla"
+ls -la "$TARGET_PROJECT/.falla"
 ```
 
 查看 `tools` 字段，例如：
@@ -194,10 +191,10 @@ ls -la "$HOME/android/androidCopy/.falla"
 
 ### 3.3 重复执行 install 完成更新
 
-当前机器不依赖全局链接、同时使用 Claude Code 和 Codex 的完整命令：
+不依赖全局链接、同时使用 Claude Code 和 Codex 的完整命令：
 
 ```bash
-node "$HOME/android/workflow/falla-openspec/bin/falla-openspec.js" install "$HOME/android/androidCopy" --tools claude,codex --non-interactive
+node "$FALLA_HOME/bin/falla-openspec.js" install "$TARGET_PROJECT" --tools claude,codex --non-interactive
 ```
 
 已经执行过 `npm link` 时，等价的简写命令是：
@@ -230,10 +227,10 @@ falla-openspec install "$TARGET_PROJECT" \
 
 ### 3.4 更新后验证并重启会话
 
-当前机器的完整命令：
+未建立全局链接时：
 
 ```bash
-node "$HOME/android/workflow/falla-openspec/bin/falla-openspec.js" doctor "$HOME/android/androidCopy" --json
+node "$FALLA_HOME/bin/falla-openspec.js" doctor "$TARGET_PROJECT" --json
 ```
 
 已经执行过 `npm link` 时，等价的简写命令是：

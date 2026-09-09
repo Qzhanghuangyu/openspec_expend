@@ -42,8 +42,8 @@ falla-openspec doctor /path/to/project --json
 
 修改本仓库的工作流源码不会自动更新已经安装的目标项目。保持原 `tools` 选择并对目标项目重复
 执行 `falla-openspec install` 即可更新；更新前应读取目标项目的
-`.falla/install-manifest.json`，更新后运行 `doctor` 并重新创建 Agent 会话。当前机器更新
-`androidCopy` 的完整命令已放在手册第 0 节；注意文件名是 `install-manifest.json`，不是
+`.falla/install-manifest.json`，更新后运行 `doctor` 并重新创建 Agent 会话。详细命令见安装手册；
+第 0 节提供了可独立复制的完整使用实例。注意文件名是 `install-manifest.json`，不是
 `install-mainfest.json`。
 
 交互终端下可省略 `--non-interactive` 选择工具。Figma MCP 和 Lark CLI 只有显式选择或传入

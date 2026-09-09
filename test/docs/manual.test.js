@@ -14,11 +14,16 @@ test('初始化与更新手册随包分发并由 README 入口引用', async () 
 
 test('手册覆盖初始化、幂等更新、工具选择和安全失败处理', async () => {
   const manual = await readText('docs/installation-and-update.md');
+  const example = manual.match(/## 0\. 完整使用实例([\s\S]*?)## 1\. 前置条件/);
 
+  assert.ok(example);
+  assert.match(example[1], /cat "\$TARGET_PROJECT\/\.falla\/install-manifest\.json"/);
+  assert.match(example[1], /node "\$FALLA_HOME\/bin\/falla-openspec\.js" install "\$TARGET_PROJECT"/);
+  assert.match(example[1], /node "\$FALLA_HOME\/bin\/falla-openspec\.js" doctor "\$TARGET_PROJECT" --json/);
   assert.match(manual, /openspec init --tools none/);
-  assert.match(manual, /cat "\$HOME\/android\/androidCopy\/\.falla\/install-manifest\.json"/);
-  assert.match(manual, /node "\$HOME\/android\/workflow\/falla-openspec\/bin\/falla-openspec\.js" install "\$HOME\/android\/androidCopy" --tools claude,codex --non-interactive/);
-  assert.match(manual, /node "\$HOME\/android\/workflow\/falla-openspec\/bin\/falla-openspec\.js" doctor "\$HOME\/android\/androidCopy" --json/);
+  assert.match(manual, /export FALLA_HOME="\/path\/to\/falla-openspec"/);
+  assert.match(manual, /export TARGET_PROJECT="\/path\/to\/project"/);
+  assert.doesNotMatch(manual, /androidCopy|\$HOME\/android\/|\/Users\/|\/home\//);
   assert.match(manual, /install-mainfest\.json/);
   assert.match(manual, /falla-openspec install/);
   assert.match(manual, /重复执行 install 完成更新/);

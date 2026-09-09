@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 
 import { doctorProject } from '../../src/commands/doctor.js';
 import { installProject } from '../../src/commands/install.js';
+import { sha256 } from '../../src/install/files.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,11 +32,12 @@ test('doctor 只读报告官方版本、项目和未安装扩展', async () => {
   assert.equal(report.checks.some((check) => check.id === 'openspec-list' && check.ok), true);
 });
 
-test('doctor 报告不包含环境变量或规格正文', async () => {
+test('doctor 报告不包含环境变量、规格正文或项目绝对路径', async () => {
   const root = await createOpenSpecProject();
   const reportText = JSON.stringify(await doctorProject({ root }));
 
   assert.doesNotMatch(reportText, /processEnv|documentBody|OPENAI_API_KEY/);
+  assert.doesNotMatch(reportText, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
 test('doctor 校验官方 Schema、manifest/Hook 哈希和用户修改漂移', async () => {
@@ -71,5 +73,39 @@ test('doctor 校验官方 Schema、manifest/Hook 哈希和用户修改漂移', a
   assert.deepEqual(
     hookDrift.checks.find(({ id }) => id === 'falla-install-integrity').paths,
     ['AGENTS.md']
+  );
+});
+
+test('doctor 拒绝 manifest 哈希一致但绑定旧项目根的 Codex Hook', async () => {
+  const root = await createOpenSpecProject();
+  await installProject({ root, tools: ['codex'], interactive: false });
+  const configPath = path.join(root, '.codex', 'config.toml');
+  const portableConfig = await readFile(configPath, 'utf8');
+  const portableCommandLine = portableConfig.match(/^command = .+$/m);
+  assert.ok(portableCommandLine);
+  const legacyCommand = `node '${root}/.codex/hooks/falla-spec-session.mjs'`;
+  const legacyConfig = portableConfig.replace(
+    /^command = .+$/m,
+    `command = ${JSON.stringify(legacyCommand)}`
+  ).replace(
+    '# falla-spec-session:end',
+    `# ${portableCommandLine[0]}\n# falla-spec-session:end`
+  );
+  await writeFile(configPath, legacyConfig);
+
+  const marker = legacyConfig.match(
+    /# falla-spec-session:start[\s\S]*# falla-spec-session:end/
+  );
+  assert.ok(marker);
+  const manifestPath = path.join(root, '.falla', 'install-manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.files['.codex/config.toml'] = sha256(marker[0]);
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const report = await doctorProject({ root });
+  assert.equal(report.ok, false);
+  assert.deepEqual(
+    report.checks.find(({ id }) => id === 'falla-install-integrity').paths,
+    ['.codex/config.toml']
   );
 });

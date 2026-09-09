@@ -178,7 +178,7 @@ export async function doctorProject(options) {
       supportedRange: SUPPORTED_OPENSPEC_RANGE,
     },
     node: { version: process.versions.node },
-    project: { root, initialized },
+    project: { initialized },
     schemas: {
       expected: SCHEMA_NAMES.length,
       installed: installedSchemas,

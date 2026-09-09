@@ -45,8 +45,31 @@ function stableHash(value) {
   return sha256(JSON.stringify(stableValue(value)));
 }
 
-function shellQuote(value) {
-  return `'${String(value).replaceAll("'", "'\\''")}'`;
+const CODEX_HOOK_LAUNCHER = [
+  "import{lstatSync,readSync}from'node:fs';",
+  "import{spawnSync}from'node:child_process';",
+  "import path from'node:path';",
+  "const isDirectory=(candidate)=>{try{const entry=lstatSync(candidate);return !entry.isSymbolicLink()&&entry.isDirectory()}catch(error){if(error?.code==='ENOENT'||error?.code==='ENOTDIR')return false;throw error}};",
+  "const fail=(message)=>{process.stderr.write('[FallaOpenSpec] '+message+'\\n');process.exitCode=2};",
+  'try{',
+  'const chunks=[];let bytes=0;',
+  "for(;;){const buffer=Buffer.allocUnsafe(Math.min(65536,1048577-bytes));const count=readSync(0,buffer,0,buffer.length,null);if(count===0)break;bytes+=count;if(bytes>1048576)throw new Error('INPUT_TOO_LARGE');chunks.push(buffer.subarray(0,count))}",
+  "const input=Buffer.concat(chunks).toString('utf8');",
+  "let payload;try{payload=input?JSON.parse(input):{}}catch{throw new Error('INVALID_INPUT')}",
+  'let current=path.resolve(payload.cwd||process.cwd());',
+  "for(;;){if(isDirectory(path.join(current,'openspec'))&&isDirectory(path.join(current,'.falla'))&&isDirectory(path.join(current,'.falla','skill-spec')))break;const parent=path.dirname(current);if(parent===current)throw new Error('ROOT_NOT_FOUND');current=parent}",
+  "if(!isDirectory(path.join(current,'.codex'))||!isDirectory(path.join(current,'.codex','hooks')))throw new Error('INVALID_HOOK');",
+  "const script=path.join(current,'.codex','hooks','falla-spec-session.mjs');",
+  "const entry=lstatSync(script);if(entry.isSymbolicLink()||!entry.isFile())throw new Error('INVALID_HOOK');",
+  "const result=spawnSync(process.execPath,[script],{input,encoding:'utf8',maxBuffer:2097152});",
+  'if(result.stdout)process.stdout.write(result.stdout);if(result.stderr)process.stderr.write(result.stderr);',
+  'if(result.error)throw result.error;process.exitCode=result.status??2;',
+  "}catch(error){const message=error?.message==='INVALID_INPUT'?'Hook 输入不是有效 JSON':error?.message==='INPUT_TOO_LARGE'?'Hook 输入超过 1 MiB 限制':'Hook 启动失败';fail(message)}",
+].join('');
+const CODEX_HOOK_COMMAND = `node --input-type=module --eval ${JSON.stringify(CODEX_HOOK_LAUNCHER)}`;
+
+function codexHookBody() {
+  return `[[hooks.SessionStart]]\n\n[[hooks.SessionStart.hooks]]\ntype = "command"\ncommand = ${JSON.stringify(CODEX_HOOK_COMMAND)}`;
 }
 
 function markedSection(start, body, end) {
@@ -148,7 +171,10 @@ export async function getHookRegistrationHash(root, relativePath) {
   }
   if (relativePath === CODEX_CONFIG_PATH) {
     const section = extractMarkedSection(content, CODEX_START, CODEX_END, relativePath);
-    return section === null ? null : sha256(section);
+    if (section !== markedSection(CODEX_START, codexHookBody(), CODEX_END)) {
+      return null;
+    }
+    return sha256(section);
   }
 
   let settings;
@@ -254,13 +280,11 @@ export async function planHookRegistrations(root, toolIds, previousFiles = {}) {
     plans.push(await planClaudeSettings(root, previousFiles[CLAUDE_SETTINGS_PATH]));
   }
   if (toolIds.includes('codex')) {
-    const hookPath = `${root}/.codex/hooks/falla-spec-session.mjs`;
-    const command = `node ${shellQuote(hookPath)}`;
     plans.push(await planMarker(
       root,
       CODEX_CONFIG_PATH,
       CODEX_START,
-      `[[hooks.SessionStart]]\n\n[[hooks.SessionStart.hooks]]\ntype = "command"\ncommand = ${JSON.stringify(command)}`,
+      codexHookBody(),
       CODEX_END,
       previousFiles[CODEX_CONFIG_PATH]
     ));

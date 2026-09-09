@@ -63,10 +63,18 @@ test('协调命令串联 register、官方 change、validate 和 resolve', async
   assert.deepEqual(validation.ready, ['medal/list-card']);
 
   const resolveIo = memoryIo(root);
-  await coordinationCommand(['resolve', 'medal/list-card', '--json'], resolveIo);
+  const resolvedResult = await coordinationCommand(
+    ['resolve', 'medal/list-card', '--json'],
+    resolveIo
+  );
   const resolved = JSON.parse(resolveIo.output().stdout);
   assert.equal(resolved.lifecycle, 'active');
   assert.equal(resolved.physical, registered.physical);
+  assert.equal(resolved.path, `openspec/changes/${registered.physical}`);
+  assert.equal(resolvedResult.path, changeDir);
+  assert.doesNotMatch(resolveIo.output().stdout, new RegExp(
+    root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  ));
 });
 
 test('协调命令拒绝未知参数和缺失 change', async () => {

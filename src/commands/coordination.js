@@ -83,7 +83,11 @@ export async function coordinationCommand(argv, io) {
   if (command === 'resolve') {
     const reference = requireSingleReference(command, options);
     const result = await resolveChange(root, reference);
-    writeResult(io, result, options.json, `${result.logical} -> ${result.physical} (${result.lifecycle})`);
+    const output = {
+      ...result,
+      path: path.relative(root, result.path).split(path.sep).join('/'),
+    };
+    writeResult(io, output, options.json, `${result.logical} -> ${result.physical} (${result.lifecycle})`);
     return result;
   }
 

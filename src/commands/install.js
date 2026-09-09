@@ -177,7 +177,6 @@ export async function installProject(options) {
 
   return {
     ok: doctor.ok,
-    root,
     tools,
     written: [
       ...managedPlan.filter(({ action }) => action === 'write').map(({ relativePath }) => relativePath),
