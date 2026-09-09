@@ -43,6 +43,15 @@ description: Use when an existing Falla preflight change needs proposal artifact
    openspec instructions comate --change "<physical>" --json
    ```
 
+   若官方 `new change` 失败，先检查返回的物理 change 是否已经落盘。只有物理 change
+   完全不存在时才可显式运行：
+
+   ```bash
+   falla-openspec coordination unregister "<parent>/<child>" --json
+   ```
+
+   物理 change 已存在时 unregister 会拒绝，不能删除文件或使用 force。
+
 7. `comate.md` 使用逻辑名记录双向 `depends-on` / `blocks`，并执行：
 
    ```bash

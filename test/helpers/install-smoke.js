@@ -27,8 +27,6 @@ for (const relative of [
   '.codex/skills/falla-archive-change/SKILL.md',
   'openspec/schemas/falla-spec-driven/schema.yaml',
   'openspec/schemas/falla-task-driven/schema.yaml',
-  'openspec/schemas/falla-legacy-spec-driven/schema.yaml',
-  'openspec/schemas/falla-legacy-task-driven/schema.yaml',
 ]) {
   await access(path.join(root, relative));
 }

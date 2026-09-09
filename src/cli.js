@@ -4,8 +4,6 @@ import { FallaError } from './errors.js';
 import { coordinationCommand } from './commands/coordination.js';
 import { doctorProject } from './commands/doctor.js';
 import { installProject } from './commands/install.js';
-import { migrateProject } from './commands/migrate.js';
-import { renderMigrationReport } from './migration/report.js';
 
 export function usage() {
   return [
@@ -14,8 +12,8 @@ export function usage() {
     'Commands:',
     '  install <project>                 安装 Falla 工作流扩展',
     '  doctor [project]                  检查 OpenSpec 与 Falla 契约',
-    '  migrate <project>                 预览或执行旧项目迁移',
     '  coordination register <change>    注册逻辑父子 change 映射',
+    '  coordination unregister <change>  清理未落盘的孤儿 change 映射',
     '  coordination resolve <change>     解析逻辑 change 引用',
     '  coordination validate --change X  校验协作依赖图',
   ].join('\n');
@@ -75,7 +73,12 @@ async function install(argv, io) {
     executable: io.openSpecExecutable ?? 'openspec',
     env: io.env,
   });
-  writeOutput(io, report, options.json, `安装完成：${report.written.length} 个写入，${report.warnings.length} 个警告`);
+  writeOutput(
+    io,
+    report,
+    options.json,
+    `安装完成：${report.written.length} 个写入，${report.removed.length} 个清理，${report.warnings.length} 个警告`
+  );
   return report.ok ? 0 : 1;
 }
 
@@ -91,33 +94,6 @@ async function doctor(argv, io) {
   return report.ok ? 0 : 1;
 }
 
-async function migrate(argv, io) {
-  const options = parseOptions(argv, {
-    '--apply': 'boolean',
-    '--rollback': 'value',
-    '--json': 'boolean',
-  });
-  const root = requireProject(options, io.cwd, true);
-  if (options.apply && options.rollback) {
-    throw new FallaError(1, '--apply 与 --rollback 不能同时使用');
-  }
-  const result = await migrateProject({
-    root,
-    apply: options.apply === true,
-    rollback: options.rollback,
-    executable: io.openSpecExecutable ?? 'openspec',
-    env: io.env,
-  });
-  const output = options.apply || options.rollback ? result : renderMigrationReport(result);
-  const human = options.rollback
-    ? `迁移已回滚：${result.id}`
-    : options.apply
-      ? `迁移完成：${result.id}`
-      : `dry-run：${output.counts.conflict} 个冲突`;
-  writeOutput(io, output, options.json, human);
-  return 0;
-}
-
 export async function main(argv, io) {
   if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
     io.stdout.write(`${usage()}\n`);
@@ -127,7 +103,6 @@ export async function main(argv, io) {
   const [command, ...rest] = argv;
   if (command === 'install') return install(rest, io);
   if (command === 'doctor') return doctor(rest, io);
-  if (command === 'migrate') return migrate(rest, io);
   if (command === 'coordination') {
     const result = await coordinationCommand(rest, io);
     return result.ok === false ? 1 : 0;

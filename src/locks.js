@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { FallaError } from './errors.js';
 
-const ALLOWED_KINDS = new Set(['install', 'migration']);
+const ALLOWED_KINDS = new Set(['install']);
 
 function isAlive(pid) {
   try {
@@ -79,9 +79,7 @@ export async function withProjectLock(rootInput, kind, operation) {
     kind,
   })}\n`;
 
-  const files = kind === 'migration'
-    ? [path.join(falla, 'install.lock'), file]
-    : [file];
+  const files = [file];
   const acquired = [];
   try {
     for (const lockFile of files) {

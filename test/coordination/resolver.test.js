@@ -4,7 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { registerMapping, resolveChange } from '../../src/coordination/resolver.js';
+import {
+  registerMapping,
+  resolveChange,
+  unregisterMapping,
+} from '../../src/coordination/resolver.js';
 
 async function project() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'falla-coordination-resolve-'));
@@ -62,4 +66,46 @@ test('active 缺失时从标准 archive 定位且拒绝多个候选', async () =
     () => resolveChange(root, 'medal/detail'),
     (error) => error.code === 1 && error.message.includes('多个归档')
   );
+});
+
+test('注册时避开 active 和 archive 中已占用的物理名', async () => {
+  const activeRoot = await project();
+  await mkdir(path.join(activeRoot, 'openspec', 'changes', 'medal'));
+  await mkdir(path.join(activeRoot, 'openspec', 'changes', 'medal-child-detail'));
+  assert.equal(
+    (await registerMapping(activeRoot, 'medal/detail')).physical,
+    'medal-child-detail-d68471dc'
+  );
+
+  const archivedRoot = await project();
+  await mkdir(path.join(archivedRoot, 'openspec', 'changes', 'medal'));
+  await mkdir(
+    path.join(archivedRoot, 'openspec', 'changes', 'archive', '2026-09-09-medal-child-detail'),
+    { recursive: true }
+  );
+  assert.equal(
+    (await registerMapping(archivedRoot, 'medal/detail')).physical,
+    'medal-child-detail-d68471dc'
+  );
+});
+
+test('只允许清理没有真实物理 change 的孤儿映射', async () => {
+  const root = await project();
+  await mkdir(path.join(root, 'openspec', 'changes', 'medal'));
+  const mapping = await registerMapping(root, 'medal/detail');
+
+  assert.deepEqual(await unregisterMapping(root, 'medal/detail'), {
+    logical: 'medal/detail',
+    physical: mapping.physical,
+    parent: 'medal',
+    removed: true,
+  });
+  assert.equal((await registerMapping(root, 'medal/detail')).created, true);
+
+  await mkdir(path.join(root, 'openspec', 'changes', mapping.physical));
+  await assert.rejects(
+    () => unregisterMapping(root, 'medal/detail'),
+    (error) => error.code === 1 && error.message.includes('物理 change 已存在')
+  );
+  assert.equal((await resolveChange(root, 'medal/detail')).physical, mapping.physical);
 });

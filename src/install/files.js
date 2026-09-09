@@ -173,6 +173,24 @@ export async function planManagedFiles(root, files, previousFiles = {}) {
   return plan;
 }
 
+export async function planManagedFileRemovals(root, relativePaths, previousFiles = {}) {
+  const plan = [];
+  for (const candidate of [...new Set(relativePaths)].sort()) {
+    const relativePath = assertRelativePath(candidate);
+    const expectedHash = previousFiles[relativePath];
+    const current = await readProjectFile(root, relativePath);
+    if (current === null) {
+      plan.push({ relativePath, expectedHash, action: 'skip' });
+      continue;
+    }
+    if (sha256(current) !== expectedHash) {
+      throw new FallaError(1, `用户修改的受管文件不能删除：${relativePath}`);
+    }
+    plan.push({ relativePath, expectedHash, action: 'delete' });
+  }
+  return plan;
+}
+
 export async function writeAtomicFile(root, relativePath, content) {
   const safe = assertRelativePath(relativePath);
   await assertSafeAncestors(root, safe);
@@ -203,5 +221,17 @@ export async function applyManagedFilePlan(root, plan) {
     if (item.action === 'write') {
       await writeAtomicFile(root, item.relativePath, item.content);
     }
+  }
+}
+
+export async function applyManagedFileRemovalPlan(root, plan) {
+  for (const item of plan) {
+    if (item.action !== 'delete') continue;
+    const current = await readProjectFile(root, item.relativePath);
+    if (current === null) continue;
+    if (sha256(current) !== item.expectedHash) {
+      throw new FallaError(1, `用户修改的受管文件不能删除：${item.relativePath}`);
+    }
+    await unlink(targetPath(root, item.relativePath));
   }
 }

@@ -15,8 +15,6 @@ const schemaRoot = path.resolve('templates/openspec/schemas');
 const schemas = [
   ['falla-spec-driven', 'preflight'],
   ['falla-task-driven', 'tasks'],
-  ['falla-legacy-spec-driven', 'proposal'],
-  ['falla-legacy-task-driven', 'tasks'],
 ];
 
 async function createProject() {
@@ -25,7 +23,7 @@ async function createProject() {
   return root;
 }
 
-test('四套 Falla Schema 均通过官方 OpenSpec 校验', async () => {
+test('两套 Falla Schema 均通过官方 OpenSpec 校验', async () => {
   const root = await createProject();
 
   for (const [name] of schemas) {

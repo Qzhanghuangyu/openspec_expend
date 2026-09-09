@@ -56,6 +56,31 @@ async function locateChange(root, physical) {
   throw new FallaError(1, `找不到物理 change：${physical}`);
 }
 
+async function occupiedPhysicalNames(root) {
+  const changes = path.join(path.resolve(root), 'openspec', 'changes');
+  const occupied = new Set();
+  try {
+    for (const entry of await readdir(changes, { withFileTypes: true })) {
+      if (entry.name !== 'archive') occupied.add(entry.name);
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') throw error;
+  }
+  try {
+    for (const entry of await readdir(path.join(changes, 'archive'), { withFileTypes: true })) {
+      const match = entry.name.match(/^\d{4}-\d{2}-\d{2}-(.+)$/);
+      if (match) occupied.add(match[1]);
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') throw error;
+  }
+  return occupied;
+}
+
+async function physicalChangeExists(root, physical) {
+  return (await occupiedPhysicalNames(root)).has(physical);
+}
+
 export async function registerMapping(root, reference) {
   const parsed = parseLogicalReference(reference);
   const parentPath = path.join(path.resolve(root), 'openspec', 'changes', parsed.parent);
@@ -69,12 +94,33 @@ export async function registerMapping(root, reference) {
     return { logical: parsed.logical, ...existing, created: false };
   }
 
-  const occupied = new Set(Object.values(snapshot.document.mappings).map(({ physical }) => physical));
+  const occupied = await occupiedPhysicalNames(root);
+  for (const mapping of Object.values(snapshot.document.mappings)) occupied.add(mapping.physical);
   const physical = toPhysicalName(parsed.parent, parsed.child, occupied);
   const document = structuredClone(snapshot.document);
   document.mappings[parsed.logical] = { physical, parent: parsed.parent };
   await saveCoordination(root, document, { expectedHash: snapshot.hash });
   return { logical: parsed.logical, physical, parent: parsed.parent, created: true };
+}
+
+export async function unregisterMapping(root, reference) {
+  const parsed = parseLogicalReference(reference);
+  const snapshot = await loadCoordinationSnapshot(root);
+  const mapping = snapshot.document.mappings[parsed.logical];
+  if (!mapping) throw new FallaError(1, `找不到逻辑 change 映射：${parsed.logical}`);
+  if (await physicalChangeExists(root, mapping.physical)) {
+    throw new FallaError(1, `物理 change 已存在，拒绝移除映射：${mapping.physical}`);
+  }
+
+  const document = structuredClone(snapshot.document);
+  delete document.mappings[parsed.logical];
+  await saveCoordination(root, document, { expectedHash: snapshot.hash });
+  return {
+    logical: parsed.logical,
+    physical: mapping.physical,
+    parent: mapping.parent,
+    removed: true,
+  };
 }
 
 export async function resolveChange(root, reference) {

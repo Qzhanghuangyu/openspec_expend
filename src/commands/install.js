@@ -4,12 +4,17 @@ import path from 'node:path';
 import { FallaError } from '../errors.js';
 import { doctorProject } from './doctor.js';
 import {
+  applyManagedFileRemovalPlan,
   applyManagedFilePlan,
   collectManagedFiles,
+  planManagedFileRemovals,
   planManagedFiles,
 } from '../install/files.js';
 import {
+  applyHookRemovalPlan,
   applyHookRegistrationPlan,
+  isHookRegistrationPath,
+  planHookRemovals,
   planHookRegistrations,
 } from '../install/hooks.js';
 import {
@@ -113,19 +118,35 @@ export async function installProject(options) {
   const managedFiles = await collectManagedFiles(tools);
   const managedPlan = await planManagedFiles(root, managedFiles, previousFiles);
   const hookPlan = await planHookRegistrations(root, tools, previousFiles);
+  const desiredPaths = new Set([
+    ...managedPlan.map(({ relativePath }) => relativePath),
+    ...hookPlan.map(({ relativePath }) => relativePath),
+  ]);
+  const obsoletePaths = Object.keys(previousFiles).filter((relativePath) =>
+    !desiredPaths.has(relativePath));
+  const hookRemovalPaths = obsoletePaths.filter(isHookRegistrationPath);
+  const fileRemovalPaths = obsoletePaths.filter((relativePath) =>
+    !isHookRegistrationPath(relativePath));
+  const fileRemovalPlan = await planManagedFileRemovals(
+    root, fileRemovalPaths, previousFiles
+  );
+  const hookRemovalPlan = await planHookRemovals(root, hookRemovalPaths, previousFiles);
 
   await applyManagedFilePlan(root, managedPlan);
   await applyHookRegistrationPlan(root, hookPlan);
+  await applyManagedFileRemovalPlan(root, fileRemovalPlan);
+  await applyHookRemovalPlan(root, hookRemovalPlan);
 
-  const files = { ...previousFiles };
+  const files = {};
   for (const item of managedPlan) files[item.relativePath] = item.desiredHash;
   for (const item of hookPlan) files[item.relativePath] = item.managedHash;
 
   const candidateManifest = {
-    formatVersion: 1,
+    formatVersion: 2,
     fallaVersion: await getFallaVersion(),
     openSpecVersion: version.raw,
     installedAt: String(options.now?.() ?? new Date().toISOString()),
+    tools: [...tools].sort(),
     files: sortedFiles(files),
   };
   if (manifestsMatch(previous, candidateManifest)) {
@@ -166,6 +187,12 @@ export async function installProject(options) {
     skipped: [
       ...managedPlan.filter(({ action }) => action === 'skip').map(({ relativePath }) => relativePath),
       ...hookPlan.filter(({ action }) => action === 'skip').map(({ relativePath }) => relativePath),
+    ].sort(),
+    removed: [
+      ...fileRemovalPlan.filter(({ action }) => action === 'delete')
+        .map(({ relativePath }) => relativePath),
+      ...hookRemovalPlan.filter(({ action }) => action === 'write')
+        .map(({ relativePath }) => relativePath),
     ].sort(),
     warnings,
     doctor,

@@ -17,8 +17,6 @@ import { loadInstallManifest } from '../install/manifest.js';
 const SCHEMA_NAMES = [
   'falla-spec-driven',
   'falla-task-driven',
-  'falla-legacy-spec-driven',
-  'falla-legacy-task-driven',
 ];
 
 async function exists(candidate, kind) {

@@ -2,7 +2,11 @@ import path from 'node:path';
 
 import { FallaError } from '../errors.js';
 import { validateCoordination } from '../coordination/dag.js';
-import { registerMapping, resolveChange } from '../coordination/resolver.js';
+import {
+  registerMapping,
+  resolveChange,
+  unregisterMapping,
+} from '../coordination/resolver.js';
 import { assertStatusContract } from '../openspec/contract.js';
 import { findProjectRoot } from '../openspec/locator.js';
 import { runOpenSpecJson } from '../openspec/runner.js';
@@ -66,6 +70,13 @@ export async function coordinationCommand(argv, io) {
     const reference = requireSingleReference(command, options);
     const result = await registerMapping(root, reference);
     writeResult(io, result, options.json, `${result.logical} -> ${result.physical}`);
+    return result;
+  }
+
+  if (command === 'unregister') {
+    const reference = requireSingleReference(command, options);
+    const result = await unregisterMapping(root, reference);
+    writeResult(io, result, options.json, `已移除映射：${result.logical}`);
     return result;
   }
 
