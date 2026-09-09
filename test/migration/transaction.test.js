@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -138,4 +138,44 @@ test('最终校验期间目标被人工修改时自动回滚拒绝覆盖', async
     (error) => error.code === 5 && error.message.includes('目标又被修改')
   );
   assert.equal(await readFile(target, 'utf8'), userEdit);
+});
+
+test('最终校验期间 journal 为 validating 且成功后才 committed', async () => {
+  const root = await makeLegacyProject();
+  let validatingJournal;
+
+  const migration = await applyMigration(root, await migrationPlan(root), {
+    validateCandidate: async () => {},
+    validateTarget: async () => {
+      const entries = await readdir(path.join(root, '.falla', 'migration'));
+      assert.equal(entries.length, 1);
+      validatingJournal = JSON.parse(await readFile(
+        path.join(root, '.falla', 'migration', entries[0], 'journal.json'),
+        'utf8'
+      ));
+    },
+  });
+
+  assert.equal(validatingJournal.phase, 'validating');
+  assert.equal(validatingJournal.appliedCount, validatingJournal.operations.length);
+  const committed = JSON.parse(await readFile(
+    path.join(root, '.falla', 'migration', migration.id, 'journal.json'),
+    'utf8'
+  ));
+  assert.equal(committed.phase, 'committed');
+});
+
+test('残留 validating journal 在下一次操作前自动恢复', async () => {
+  const root = await makeLegacyProject();
+  const before = await snapshotTree(root);
+  const migration = await applyMigration(root, await migrationPlan(root), {
+    validateCandidate: async () => {},
+  });
+  const journalPath = path.join(root, '.falla', 'migration', migration.id, 'journal.json');
+  const journal = JSON.parse(await readFile(journalPath, 'utf8'));
+  journal.phase = 'validating';
+  await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`);
+
+  assert.deepEqual(await recoverInterruptedMigrations(root), [migration.id]);
+  assert.deepEqual(await snapshotTree(root), before);
 });

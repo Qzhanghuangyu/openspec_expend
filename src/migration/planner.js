@@ -67,7 +67,9 @@ async function existingChangeNames(root) {
 }
 
 function childDescriptor(filePath, kind) {
-  const parts = filePath.split('/');
+  if (typeof filePath === 'object' && filePath.change) return filePath.change;
+  const sourcePath = typeof filePath === 'object' ? filePath.path : filePath;
+  const parts = sourcePath.split('/');
   if (kind === 'active-child-change') {
     const parent = parts[2];
     const child = parts[4];
@@ -94,7 +96,7 @@ async function buildMappings(root, inventory) {
   const descriptors = new Map();
   for (const file of inventory.files) {
     if (file.kind !== 'active-child-change' && file.kind !== 'archived-child-change') continue;
-    const descriptor = childDescriptor(file.path, file.kind);
+    const descriptor = childDescriptor(file, file.kind);
     const existing = descriptors.get(descriptor.logical);
     if (existing && existing.lifecycle !== descriptor.lifecycle) {
       throw new FallaError(1, `逻辑子 change 同时存在 active 和 archive：${descriptor.logical}`);
@@ -120,14 +122,17 @@ function changeDestination(file, mappings) {
     return `openspec/changes/${parts[2]}/${parts.slice(3).join('/')}`;
   }
   if (file.kind === 'active-child-change') {
-    const descriptor = childDescriptor(file.path, file.kind);
+    const descriptor = childDescriptor(file, file.kind);
     return `openspec/changes/${mappings[descriptor.logical].physical}/${parts.slice(5).join('/')}`;
   }
   if (file.kind === 'archived-parent-change') {
     return `openspec/changes/archive/${parts[3]}/${parts.slice(4).join('/')}`;
   }
-  const descriptor = childDescriptor(file.path, file.kind);
-  return `openspec/changes/archive/${descriptor.date}-${mappings[descriptor.logical].physical}/${parts.slice(6).join('/')}`;
+  const descriptor = childDescriptor(file, file.kind);
+  const tail = file.change
+    ? file.path.slice(`mercuryspec/changes/archive/${descriptor.date}-${descriptor.child}/`.length)
+    : parts.slice(6).join('/');
+  return `openspec/changes/archive/${descriptor.date}-${mappings[descriptor.logical].physical}/${tail}`;
 }
 
 async function addOperation(root, operations, destinations, operation) {

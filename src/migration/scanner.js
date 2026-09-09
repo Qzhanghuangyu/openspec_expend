@@ -3,19 +3,23 @@ import { createReadStream } from 'node:fs';
 import {
   lstat,
   open,
+  readFile,
   readdir,
   realpath,
   stat,
 } from 'node:fs/promises';
 import path from 'node:path';
+import YAML from 'yaml';
 
 import { FallaError } from '../errors.js';
+import { assertChangeSegment } from '../coordination/naming.js';
 
 const RULE_PREFIX = /^\[(?:Must Read|分析必读|架构必读|模块选读|任务选读)\]/;
 const SKIPPED_SYSTEM_FILES = new Set(['.DS_Store', 'Thumbs.db']);
 const ALLOWED_BINARY_EXTENSIONS = new Set([
   '.gif', '.jpeg', '.jpg', '.pdf', '.png', '.webp',
 ]);
+const MAX_CHANGE_METADATA_BYTES = 128 * 1024;
 
 function toPosix(value) {
   return value.split(path.sep).join('/');
@@ -144,6 +148,71 @@ async function optionalDirectory(root, relative) {
   }
 }
 
+function flatArchiveRoot(relativePath) {
+  const match = relativePath.match(
+    /^(mercuryspec\/changes\/archive\/(\d{4}-\d{2}-\d{2})-([^/]+))\/(.+)$/
+  );
+  if (!match) return null;
+  return { root: match[1], date: match[2], child: match[3], tail: match[4] };
+}
+
+function parseChangeMetadata(content, source) {
+  try {
+    const document = YAML.parse(content, { maxAliasCount: 100 });
+    if (!document || typeof document !== 'object' || Array.isArray(document)) {
+      throw new Error('not an object');
+    }
+    return document;
+  } catch {
+    throw new FallaError(1, `change metadata 无法解析：${source}`);
+  }
+}
+
+async function classifyFlatArchivedChildren(root, files) {
+  const archiveRoots = new Map();
+  for (const file of files) {
+    const archive = flatArchiveRoot(file.path);
+    if (!archive) continue;
+    const group = archiveRoots.get(archive.root) ?? { ...archive, files: [] };
+    group.files.push(file);
+    if (archive.tail === '.openspec.yaml') group.metadata = file;
+    archiveRoots.set(archive.root, group);
+  }
+
+  for (const group of archiveRoots.values()) {
+    if (!group.metadata) continue;
+    if (group.metadata.size > MAX_CHANGE_METADATA_BYTES || group.metadata.binary) {
+      throw new FallaError(1, `change metadata 无效或过大：${group.metadata.path}`);
+    }
+    const content = await readFile(path.join(root, ...group.metadata.path.split('/')));
+    if (content.byteLength !== group.metadata.size
+      || createHash('sha256').update(content).digest('hex') !== group.metadata.sha256) {
+      throw new FallaError(1, `迁移源在扫描后发生变化：${group.metadata.path}`);
+    }
+    const metadata = parseChangeMetadata(content.toString('utf8'), group.metadata.path);
+    if (metadata.parent === undefined) continue;
+    if (typeof metadata.parent !== 'string') {
+      throw new FallaError(1, `change metadata parent 无效：${group.metadata.path}`);
+    }
+    const parent = assertChangeSegment(metadata.parent, 'parent');
+    const child = assertChangeSegment(group.child, 'child');
+    if (group.files.some((file) => file.kind === 'archived-child-change')) {
+      throw new FallaError(1, `扁平归档子 change 不能再包含子 change：${group.root}`);
+    }
+    const change = {
+      date: group.date,
+      parent,
+      child,
+      logical: `${parent}/${child}`,
+      lifecycle: 'archived',
+    };
+    for (const file of group.files) {
+      file.kind = 'archived-child-change';
+      file.change = change;
+    }
+  }
+}
+
 export async function scanLegacyProject(rootInput) {
   const requestedRoot = path.resolve(rootInput);
   const rootEntry = await lstat(requestedRoot).catch((error) => {
@@ -168,6 +237,7 @@ export async function scanLegacyProject(rootInput) {
       await scanDirectory(root, relative, files, skipped, warnings);
     }
   }
+  await classifyFlatArchivedChildren(root, files);
   files.sort((left, right) => left.path.localeCompare(right.path));
   skipped.sort((left, right) => left.path.localeCompare(right.path));
   return { root, files, skipped, warnings };

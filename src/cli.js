@@ -16,6 +16,7 @@ export function usage() {
     '  doctor [project]                  检查 OpenSpec 与 Falla 契约',
     '  migrate <project>                 预览或执行旧项目迁移',
     '  coordination register <change>    注册逻辑父子 change 映射',
+    '  coordination unregister <change>  清理未落盘的孤儿 change 映射',
     '  coordination resolve <change>     解析逻辑 change 引用',
     '  coordination validate --change X  校验协作依赖图',
   ].join('\n');
@@ -75,7 +76,12 @@ async function install(argv, io) {
     executable: io.openSpecExecutable ?? 'openspec',
     env: io.env,
   });
-  writeOutput(io, report, options.json, `安装完成：${report.written.length} 个写入，${report.warnings.length} 个警告`);
+  writeOutput(
+    io,
+    report,
+    options.json,
+    `安装完成：${report.written.length} 个写入，${report.removed.length} 个清理，${report.warnings.length} 个警告`
+  );
   return report.ok ? 0 : 1;
 }
 

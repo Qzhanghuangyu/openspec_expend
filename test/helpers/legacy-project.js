@@ -41,6 +41,22 @@ export async function makeLegacyProject() {
   );
   await put(root, 'mercuryspec/changes/archive/2026-07-20-profile/changes/avatar/tasks.md', '- [x] child\n');
 
+  await put(
+    root,
+    'mercuryspec/changes/archive/2026-07-21-flat-avatar/.openspec.yaml',
+    'schema: task-driven\ncreated: 2026-07-20\nparent: profile\n'
+  );
+  await put(
+    root,
+    'mercuryspec/changes/archive/2026-07-21-flat-avatar/tasks.md',
+    '- [x] flat child\n'
+  );
+  await put(
+    root,
+    'mercuryspec/changes/archive/2026-07-21-flat-avatar/comate.md',
+    '# comate\n'
+  );
+
   await put(root, 'mercuryspec/schemas/custom/schema.yaml', `name: custom
 version: 1
 description: custom workflow

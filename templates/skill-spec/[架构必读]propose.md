@@ -37,7 +37,10 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
 5. `depends-on` 与 `blocks` 使用逻辑名，并保持双向一致。
 6. 执行 `falla-openspec coordination validate --change "<parent>" --json`。
 
-如果官方 change 创建失败，停止并报告未完成映射；不得静默删除文件或伪造成功。
+如果官方 change 创建失败，停止并检查返回的物理 change 是否已经落盘。只有物理 change
+完全不存在时，才可显式运行
+`falla-openspec coordination unregister "<parent>/<child>" --json` 清理本次孤儿映射；
+物理 change 已存在时不得移除映射、删除文件或伪造成功。
 
 ## 4. 完成标准
 

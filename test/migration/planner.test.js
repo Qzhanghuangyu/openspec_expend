@@ -14,11 +14,14 @@ test('计划展开 active/archive 子 change、保留附件并生成逻辑映射
 
   assert.equal(plan.mappings['medal/detail'].physical, 'medal-child-detail');
   assert.equal(plan.mappings['profile/avatar'].physical, 'profile-child-avatar');
+  assert.equal(plan.mappings['profile/flat-avatar'].physical, 'profile-child-flat-avatar');
   assert.ok(plan.operations.some((operation) =>
     operation.from === 'mercuryspec/changes/medal/changes/detail/figma/node.json'
     && operation.to === 'openspec/changes/medal-child-detail/figma/node.json'));
   assert.ok(plan.operations.some((operation) =>
     operation.to === 'openspec/changes/archive/2026-07-20-profile-child-avatar/tasks.md'));
+  assert.ok(plan.operations.some((operation) =>
+    operation.to === 'openspec/changes/archive/2026-07-21-profile-child-flat-avatar/tasks.md'));
 });
 
 test('计划分流工作流规则、保留目标默认 Schema 并转换自定义 Schema', async () => {

@@ -27,6 +27,16 @@ test('Android 项目 canary 只读 dry-run 不改变 mercuryspec、openspec 或 
   assert.equal(report.dryRun, true);
   assert.ok(report.counts.copy > 0);
   assert.ok(Object.keys(report.mappings).length > 0);
+  for (const logical of [
+    'medal/achievement-center-entry',
+    'medal/profile-medal-wall',
+    'medal/cross-scene-acceptance',
+    'external-role-identity-tag/data-model-identity-label',
+    'external-role-identity-tag/mystery-medal-decouple',
+    'external-role-identity-tag/profile-home-identity-label',
+  ]) {
+    assert.equal(report.mappings[logical]?.lifecycle, 'archived', logical);
+  }
   assert.deepEqual(await snapshotTree(path.join(androidRoot, 'mercuryspec')), before.legacy);
   assert.deepEqual(await snapshotTree(path.join(androidRoot, 'openspec')), before.openSpec);
   assert.deepEqual(await snapshotTree(path.join(androidRoot, '.falla')), before.falla);

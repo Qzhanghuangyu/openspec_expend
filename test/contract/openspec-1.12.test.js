@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -24,6 +24,7 @@ async function runJson(args, cwd) {
 
 test('本机 OpenSpec 满足 Falla 使用的公开 JSON 契约', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'falla-openspec-contract-'));
+  const canonicalRoot = await realpath(root);
   await execFileAsync('openspec', ['init', '--tools', 'none', '.'], { cwd: root });
   await writeFile(path.join(root, 'openspec', 'config.yaml'), `schema: spec-driven
 context: |
@@ -47,6 +48,11 @@ operations:
   );
   assert.equal(initialStatus.isPlanningComplete, false);
   assert.equal(
+    initialStatus.changeRoot,
+    path.join(canonicalRoot, 'openspec', 'changes', 'contract-sample')
+  );
+  assert.deepEqual(initialStatus.artifactPaths.proposal.existingOutputPaths, []);
+  assert.equal(
     initialStatus.isPlanningComplete,
     initialStatus.artifacts.every(({ status }) => status === 'done' || status === 'skipped')
   );
@@ -65,6 +71,7 @@ operations:
   assert.deepEqual(archiveInstructions.operationGuidance, ['Keep summaries concise.']);
 
   const changeDir = path.join(root, 'openspec', 'changes', 'contract-sample');
+  const canonicalChangeDir = path.join(canonicalRoot, 'openspec', 'changes', 'contract-sample');
   await writeFile(path.join(changeDir, 'proposal.md'), '# Proposal\n');
   await writeFile(path.join(changeDir, 'design.md'), '# Design\n');
   await mkdir(path.join(changeDir, 'specs', 'sample'), { recursive: true });
@@ -82,10 +89,18 @@ The system SHALL work.
     await runJson(['status', '--change', 'contract-sample', '--json'], root)
   );
   assert.equal(completeStatus.isPlanningComplete, true);
+  assert.deepEqual(completeStatus.artifactPaths.specs.existingOutputPaths, [
+    path.join(canonicalChangeDir, 'specs', 'sample', 'spec.md'),
+  ]);
   assert.equal(
     completeStatus.isPlanningComplete,
     completeStatus.artifacts.every(({ status }) => status === 'done' || status === 'skipped')
   );
+  const completeApply = assertInstructionsContract(await runJson([
+    'instructions', 'apply', '--change', 'contract-sample', '--json',
+  ], root));
+  assert.deepEqual(completeApply.contextFiles.tasks, [path.join(canonicalChangeDir, 'tasks.md')]);
+  assert.deepEqual(completeApply.tasks, [{ id: '1', description: '1.1 done', done: true }]);
 
   await execFileAsync('openspec', [
     'new', 'change', 'skip-specs-sample', '--schema', 'spec-driven', '--json',
@@ -103,6 +118,7 @@ The system SHALL work.
   );
   assert.equal(skippedStatus.isPlanningComplete, true);
   assert.equal(skippedStatus.artifacts.find(({ id }) => id === 'specs').status, 'skipped');
+  assert.deepEqual(skippedStatus.artifactPaths.specs.existingOutputPaths, []);
 
   const allStatus = assertStatusAllContract(await runJson(['status', '--all', '--json'], root));
   assert.deepEqual(

@@ -68,7 +68,7 @@ async function readNode(root, logical, mapping, statusProvider) {
     throw error;
   }
 
-  const officialStatus = statusProvider
+  const officialStatus = statusProvider && resolved.lifecycle === 'active'
     ? await statusProvider(mapping.physical)
     : null;
   return { logical, mapping, resolved, comate, tasks, officialStatus };

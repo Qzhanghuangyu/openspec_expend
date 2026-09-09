@@ -58,7 +58,9 @@ export function assertStatusContract(value) {
   if (value.isComplete !== value.isPlanningComplete) {
     incompatible('status.isComplete', '与 status.isPlanningComplete 相同的 boolean');
   }
+  assertString(value.changeRoot, 'status.changeRoot');
   assertArray(value.artifacts, 'status.artifacts');
+  assertRecord(value.artifactPaths, 'status.artifactPaths');
   for (const [index, artifact] of value.artifacts.entries()) {
     const field = `status.artifacts[${index}]`;
     assertRecord(artifact, field);
@@ -69,8 +71,16 @@ export function assertStatusContract(value) {
     if (artifact.missingDeps !== undefined) {
       assertStringArray(artifact.missingDeps, `${field}.missingDeps`);
     }
+    const pathField = `status.artifactPaths.${artifact.id}`;
+    const artifactPath = value.artifactPaths[artifact.id];
+    assertRecord(artifactPath, pathField);
+    assertString(artifactPath.outputPath, `${pathField}.outputPath`);
+    assertString(artifactPath.resolvedOutputPath, `${pathField}.resolvedOutputPath`);
+    assertStringArray(artifactPath.existingOutputPaths, `${pathField}.existingOutputPaths`);
   }
   assertStringArray(value.applyRequires, 'status.applyRequires');
+  assertStringArray(value.nextSteps, 'status.nextSteps');
+  assertRecord(value.actionContext, 'status.actionContext');
   return value;
 }
 
@@ -100,19 +110,44 @@ function assertArtifactInstructions(value) {
   assertString(value.artifactId, 'instructions.artifactId');
   assertString(value.outputPath, 'instructions.outputPath');
   assertString(value.resolvedOutputPath, 'instructions.resolvedOutputPath');
-  assertArray(value.existingOutputPaths, 'instructions.existingOutputPaths');
+  assertStringArray(value.existingOutputPaths, 'instructions.existingOutputPaths');
   assertString(value.template, 'instructions.template');
   assertArray(value.dependencies, 'instructions.dependencies');
+  for (const [index, dependency] of value.dependencies.entries()) {
+    const field = `instructions.dependencies[${index}]`;
+    assertRecord(dependency, field);
+    assertString(dependency.id, `${field}.id`);
+    assertBoolean(dependency.done, `${field}.done`);
+    assertString(dependency.path, `${field}.path`);
+    assertString(dependency.description, `${field}.description`);
+    if (dependency.skipped !== undefined) assertBoolean(dependency.skipped, `${field}.skipped`);
+  }
 }
 
 function assertApplyInstructions(value) {
   assertRecord(value.contextFiles, 'instructions.contextFiles');
+  for (const [artifactId, paths] of Object.entries(value.contextFiles)) {
+    assertStringArray(paths, `instructions.contextFiles.${artifactId}`);
+  }
   assertRecord(value.progress, 'instructions.progress');
   assertNumber(value.progress.total, 'instructions.progress.total');
   assertNumber(value.progress.complete, 'instructions.progress.complete');
   assertNumber(value.progress.remaining, 'instructions.progress.remaining');
   assertArray(value.tasks, 'instructions.tasks');
+  for (const [index, task] of value.tasks.entries()) {
+    const field = `instructions.tasks[${index}]`;
+    assertRecord(task, field);
+    assertString(task.id, `${field}.id`);
+    assertString(task.description, `${field}.description`);
+    assertBoolean(task.done, `${field}.done`);
+  }
   assertString(value.state, 'instructions.state');
+  if (!['blocked', 'all_done', 'ready'].includes(value.state)) {
+    incompatible('instructions.state', 'blocked、all_done 或 ready');
+  }
+  if (value.missingArtifacts !== undefined) {
+    assertStringArray(value.missingArtifacts, 'instructions.missingArtifacts');
+  }
   assertOperationInputs(value);
 }
 

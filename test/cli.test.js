@@ -31,6 +31,7 @@ test('--help 只暴露 Falla 扩展命令', async () => {
   assert.match(result.stdout, /doctor/);
   assert.match(result.stdout, /migrate/);
   assert.match(result.stdout, /coordination/);
+  assert.match(result.stdout, /coordination unregister/);
   assert.doesNotMatch(result.stdout, /new change/);
   assert.doesNotMatch(result.stdout, /instructions/);
   assert.doesNotMatch(result.stdout, /archive/);

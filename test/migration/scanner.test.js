@@ -19,6 +19,21 @@ test('扫描旧项目时分类业务规格、父子 change、归档、Schema 和
     kinds.get('mercuryspec/changes/archive/2026-07-20-profile/changes/avatar/tasks.md'),
     'archived-child-change'
   );
+  assert.equal(
+    kinds.get('mercuryspec/changes/archive/2026-07-21-flat-avatar/tasks.md'),
+    'archived-child-change'
+  );
+  assert.deepEqual(
+    inventory.files.find((file) =>
+      file.path === 'mercuryspec/changes/archive/2026-07-21-flat-avatar/tasks.md').change,
+    {
+      date: '2026-07-21',
+      parent: 'profile',
+      child: 'flat-avatar',
+      logical: 'profile/flat-avatar',
+      lifecycle: 'archived',
+    }
+  );
   assert.equal(kinds.get('mercuryspec/schemas/custom/schema.yaml'), 'legacy-schema');
   assert.equal(kinds.get('.falla/skill-spec/[Must Read]soul.md'), 'current-rule');
   assert.equal(inventory.skipped[0].path, 'mercuryspec/.DS_Store');

@@ -213,7 +213,7 @@ async function executeTargets(root, transactionRoot, execution, journal, fs) {
     journal.phase = 'writing';
     await writeJournal(transactionRoot, journal, fs);
   }
-  journal.phase = 'applied';
+  journal.phase = 'validating';
   await writeJournal(transactionRoot, journal, fs);
 }
 
@@ -310,6 +310,8 @@ export async function applyMigration(rootInput, plan, options = {}) {
         created: journal.created.length,
         backups: journal.backups.length,
       }, null, 2)}\n`);
+      journal.phase = 'committed';
+      await writeJournal(transactionRoot, journal, fs);
       return {
         id,
         applied: execution.length,
@@ -382,7 +384,8 @@ function assertJournal(value, id, phases) {
     if (value.phase === 'prepared' && value.appliedCount !== 0) {
       throw new Error('invalid prepared count');
     }
-    if (value.phase === 'applied' && value.appliedCount !== value.operations.length) {
+    if (['applied', 'validating', 'committed'].includes(value.phase)
+      && value.appliedCount !== value.operations.length) {
       throw new Error('invalid applied count');
     }
   } catch {
@@ -391,7 +394,7 @@ function assertJournal(value, id, phases) {
   return value;
 }
 
-async function loadJournal(transactionRoot, id, fs, phases = ['applied']) {
+async function loadJournal(transactionRoot, id, fs, phases = ['committed', 'applied']) {
   const content = await fs.read(transactionRoot, JOURNAL_FILE);
   if (content === null || content.byteLength > MAX_JOURNAL_BYTES) {
     throw new FallaError(1, '迁移 journal 不存在或过大');
@@ -444,9 +447,9 @@ async function recoverInterruptedUnlocked(root, fs) {
     const transactionRelative = `.falla/migration/${entry.name}`;
     const transactionRoot = targetPath(root, transactionRelative);
     const journal = await loadJournal(transactionRoot, entry.name, fs, [
-      'applied', 'prepared', 'writing', 'rollback-incomplete',
+      'committed', 'applied', 'prepared', 'writing', 'validating', 'rollback-incomplete',
     ]);
-    if (journal.phase === 'applied') continue;
+    if (journal.phase === 'committed' || journal.phase === 'applied') continue;
     await preflightInterruptedRollback(root, transactionRoot, journal, fs);
     try {
       await restoreJournal(root, transactionRoot, journal, fs);

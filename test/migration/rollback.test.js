@@ -52,7 +52,7 @@ test('回滚无法删除迁移创建文件时返回错误码 5 并保留 journal
   );
   assert.match(
     await readFile(path.join(root, '.falla', 'migration', migration.id, 'journal.json'), 'utf8'),
-    /"phase": "applied"/
+    /"phase": "committed"/
   );
 });
 

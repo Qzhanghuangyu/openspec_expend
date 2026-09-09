@@ -103,6 +103,21 @@ async function planMarker(root, relativePath, start, body, end, previousHash) {
   };
 }
 
+async function planMarkerRemoval(root, relativePath, start, end, previousHash) {
+  const existing = (await readProjectFile(root, relativePath))?.toString('utf8') ?? '';
+  const section = extractMarkedSection(existing, start, end, relativePath);
+  if (section === null) return { relativePath, content: existing, action: 'skip' };
+  if (sha256(section) !== previousHash) {
+    throw new FallaError(1, `用户修改的 marker 不能删除：${relativePath}`);
+  }
+  return {
+    relativePath,
+    content: `${existing.slice(0, existing.indexOf(start))}${existing.slice(existing.indexOf(end) + end.length)}`,
+    expectedFileHash: sha256(existing),
+    action: 'write',
+  };
+}
+
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -196,6 +211,43 @@ async function planClaudeSettings(root, previousHash) {
   };
 }
 
+async function planClaudeSettingsRemoval(root, previousHash) {
+  const raw = await readProjectFile(root, CLAUDE_SETTINGS_PATH);
+  if (raw === null) {
+    return { relativePath: CLAUDE_SETTINGS_PATH, content: '', action: 'skip' };
+  }
+  let settings;
+  try {
+    settings = JSON.parse(raw.toString('utf8'));
+  } catch {
+    throw new FallaError(1, `${CLAUDE_SETTINGS_PATH} 不是有效 JSON`);
+  }
+  if (!isRecord(settings)) throw new FallaError(1, `${CLAUDE_SETTINGS_PATH} 必须是 JSON 对象`);
+  const entries = settings?.hooks?.PreToolUse;
+  if (entries === undefined) {
+    return { relativePath: CLAUDE_SETTINGS_PATH, content: raw, action: 'skip' };
+  }
+  if (!Array.isArray(entries)) {
+    throw new FallaError(1, `${CLAUDE_SETTINGS_PATH} 的 PreToolUse 必须是数组`);
+  }
+  const matches = entries.map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => isFallaClaudeHook(entry));
+  if (matches.length > 1) throw new FallaError(1, `${CLAUDE_SETTINGS_PATH} 包含重复 Falla Hook`);
+  if (matches.length === 0) {
+    return { relativePath: CLAUDE_SETTINGS_PATH, content: raw, action: 'skip' };
+  }
+  if (stableHash(matches[0].entry) !== previousHash) {
+    throw new FallaError(1, `用户修改的 Hook 注册不能删除：${CLAUDE_SETTINGS_PATH}`);
+  }
+  entries.splice(matches[0].index, 1);
+  return {
+    relativePath: CLAUDE_SETTINGS_PATH,
+    content: `${JSON.stringify(settings, null, 2)}\n`,
+    expectedFileHash: sha256(raw),
+    action: 'write',
+  };
+}
+
 export async function planHookRegistrations(root, toolIds, previousFiles = {}) {
   const plans = [];
   if (toolIds.includes('claude')) {
@@ -224,9 +276,42 @@ export async function planHookRegistrations(root, toolIds, previousFiles = {}) {
   return plans;
 }
 
+export async function planHookRemovals(root, relativePaths, previousFiles = {}) {
+  const plans = [];
+  for (const relativePath of [...new Set(relativePaths)].sort()) {
+    if (!isHookRegistrationPath(relativePath)) {
+      throw new FallaError(1, `不是受支持的 Hook 注册文件：${relativePath}`);
+    }
+    if (relativePath === CLAUDE_SETTINGS_PATH) {
+      plans.push(await planClaudeSettingsRemoval(root, previousFiles[relativePath]));
+    } else if (relativePath === CODEX_CONFIG_PATH) {
+      plans.push(await planMarkerRemoval(
+        root, relativePath, CODEX_START, CODEX_END, previousFiles[relativePath]
+      ));
+    } else {
+      plans.push(await planMarkerRemoval(
+        root, relativePath, AGENTS_START, AGENTS_END, previousFiles[relativePath]
+      ));
+    }
+  }
+  return plans;
+}
+
 export async function applyHookRegistrationPlan(root, plans) {
   for (const plan of plans) {
     if (plan.action === 'write') {
+      await writeAtomicFile(root, plan.relativePath, plan.content);
+    }
+  }
+}
+
+export async function applyHookRemovalPlan(root, plans) {
+  for (const plan of plans) {
+    if (plan.action === 'write') {
+      const current = await readProjectFile(root, plan.relativePath);
+      if (current === null || sha256(current) !== plan.expectedFileHash) {
+        throw new FallaError(1, `用户修改的 Hook 注册不能删除：${plan.relativePath}`);
+      }
       await writeAtomicFile(root, plan.relativePath, plan.content);
     }
   }

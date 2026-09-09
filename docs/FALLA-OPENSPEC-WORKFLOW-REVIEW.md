@@ -12,26 +12,25 @@
 
 当前版本已正确锁定并验证 OpenSpec `1.12.0`，且截至审查日，官方 GitHub Releases、npm 版本页和官方仓库 `package.json` 均显示 `1.12.0` 为最新版本。
 
-不过，目前还不建议把它认定为“可以直接对生产项目执行完整迁移并闭环归档”。审查发现 3 个应在正式迁移前处理的高优先级问题：
+审查确认的 6 个 P0/P1 实现问题已经修复，并补充了对应回归测试：归档生命周期协调、扁平归档子
+change 识别、迁移提交阶段、物理名冲突与孤儿映射清理、安装安全 prune，以及 OpenSpec 嵌套 JSON
+契约。完整回归现为 116/116 通过，真实 canary 中的父子映射也由 15 个增加到 21 个。
 
-1. 已归档子 change 会让 CLI 的 `coordination validate` 失败，导致父子工作流无法正常逐步归档。
-2. 真实 MercurySpec 项目中存在“扁平归档子 change”，当前扫描器会把它们误判成父 change，丢失逻辑父子映射。
-3. 迁移事务在最终 OpenSpec 校验之前就把 journal 标记为 `applied`，进程被强制终止时存在“未验证结果被当作成功”的恢复窗口。
-
-此外，真实 Android canary 的 dry-run 当前还有 1 个业务规格冲突，因此即使修复代码问题，也必须先人工合并该冲突再执行 `--apply`。
+但这不等于真实项目现在可以直接 `--apply`。Android canary 的 dry-run 仍有 1 个业务规格冲突，且
+尚未在项目副本上完成 apply/validate/doctor/rollback 演练。必须先人工合并冲突，再走副本验收。
 
 综合判断：
 
 | 维度 | 结论 |
 | --- | --- |
 | 官方 OpenSpec 替代魔改内核 | 通过，架构边界合理 |
-| OpenSpec 1.12 版本适配 | 基本通过，窄契约仍需补强 |
-| 新 change 主流程 | 基本可用 |
-| 父子 change 协调 | active 阶段可用，归档生命周期有阻断缺陷 |
-| MercurySpec 迁移 | 安全机制较完整，但真实历史结构识别不完整 |
-| 回滚 | 普通异常可回滚，强制退出恢复存在窗口 |
-| 安全与泄露控制 | 总体良好，诊断输出的绝对路径策略需统一 |
-| 当前生产迁移就绪度 | 暂不通过 |
+| OpenSpec 1.12 版本适配 | 通过，实际消费字段已有窄契约保护 |
+| 新 change 主流程 | 通过 |
+| 父子 change 协调 | active/archive 混合生命周期已覆盖 |
+| MercurySpec 迁移 | 实现门禁通过，真实扁平历史结构已识别 |
+| 回滚 | 普通异常与 validating 中断恢复已覆盖 |
+| 安全与泄露控制 | 总体良好；本地诊断绝对路径仍需注意发布范围 |
+| 当前真实项目迁移就绪度 | 代码就绪；数据冲突与副本演练未通过 |
 
 ## 2. 审查范围与证据
 
@@ -117,9 +116,13 @@ falla-openspec doctor /path/to/project --json
    - 当前内容等于目标内容时跳过；
    - 当前内容仍等于上次受管哈希时允许升级；
    - 用户已修改受管文件或 marker 时停止，不覆盖。
-5. 单文件采用临时文件加 rename 的原子写入。
-6. 写入安装 manifest，再运行 doctor。
-7. Figma、Lark 只在显式选择时安装；失败只生成 warning，不影响核心安装结果。
+5. manifest v2 同时记录已选工具；取消工具或版本删除模板时，对旧 manifest 有、当前计划没有的条目
+   生成 prune 计划。只有当前文件/Hook 哈希仍匹配旧受管哈希才清理，用户内容和 marker 外内容保留。
+6. 单文件采用临时文件加 rename 的原子写入。
+7. 写入安装 manifest，再运行 doctor。
+8. Figma、Lark 只在显式选择时安装；失败只生成 warning，不影响核心安装结果。
+
+安装可重入但不是整批事务，中断可能留下部分更新；运维上应重跑 install 并以 doctor 为最终门禁。
 
 Codex Hook 的 TOML 结构符合官方 `[[hooks.SessionStart]]` / `[[hooks.SessionStart.hooks]]` 语法，Hook 返回的 `hookSpecificOutput.additionalContext` 也符合官方格式。运维文档仍应补充两点：项目必须被 Codex 信任；安装或移动项目后需要重新打开会话，移动目录还应重装以更新 Hook 中的绝对路径。
 
@@ -223,7 +226,8 @@ openspec archive "<physical>" --json --yes
 
 如果存在告警，Skill 要求把选择交给用户：先修复、明确接受告警、或明确跳过 spec 同步。只有本次操作得到明确确认后才能添加 `--no-validate` 或 `--skip-specs`。能力退役还需要用户明确设置 `retire_capabilities: true`，因为它可能删除主规格。
 
-该设计的人机边界是合理的，但当前实现存在严重生命周期缺陷：第一个子 change 归档后，下一次 `coordination validate` 仍会对这个已归档物理名调用 `openspec status --change`。官方 status 只查 active change，因此整个父 DAG 会出现 `invalid-node`，阻断后续子 change 和父 change 的标准归档流程。详见 F-01。
+该设计的人机边界是合理的。协调器现在只对 active 子 change 调用官方 status；archive 子 change
+继续以归档目录内的 `tasks.md`、`comate.md` 和生命周期为依据，因此逐个归档后仍可校验同一父 DAG。
 
 ### 4.7 MercurySpec 迁移
 
@@ -241,9 +245,11 @@ flowchart TD
     H --> I[Schema + OpenSpec strict validate]
     I --> J[备份目标并写 journal]
     J --> K[逐项原子写入并校验哈希]
-    K --> L[目标 OpenSpec validate + doctor]
-    L --> M[保留 report、旧 mercuryspec 和回滚材料]
-    L -- 失败 --> N[按哈希前置条件自动回滚]
+    K --> L[进入 validating]
+    L --> M[目标 OpenSpec validate + doctor + report]
+    M --> N[标记 committed，保留旧 mercuryspec 和回滚材料]
+    L -- 失败或中断 --> O[按哈希前置条件自动回滚]
+    M -- 失败或中断 --> O
 ```
 
 扫描阶段具备以下保护：
@@ -256,7 +262,9 @@ flowchart TD
 - 目标冲突会汇总，而不是在第一个冲突处停止；
 - 新旧 config 和 coordination 使用带目标哈希前置条件的结构化合并。
 
-应用阶段具备候选验证、目标备份、逐文件原子写入、写后哈希、最终验证、doctor、自动回滚和显式回滚。显式回滚发现迁移后文件被人工修改时会拒绝覆盖。整体安全设计是本项目最扎实的部分。
+应用阶段具备候选验证、目标备份、逐文件原子写入、写后哈希、最终验证、doctor、自动回滚和显式
+回滚。journal 生命周期为 `prepared -> writing -> validating -> committed`；恢复会回滚未提交的
+`validating`，同时兼容旧版 `applied` journal。显式回滚发现迁移后文件被人工修改时会拒绝覆盖。
 
 迁移不会删除旧 `mercuryspec/`。建议把旧目录删除定义为迁移验收后的独立人工步骤，并在备份保留期结束后执行，不要加入自动迁移事务。
 
@@ -274,67 +282,60 @@ flowchart TD
 
 ## 5. 问题清单
 
-### F-01：已归档子 change 会破坏 CLI 协调校验
+### F-01：已归档子 change 会破坏 CLI 协调校验（已修复）
 
-- 优先级：P0
-- 位置：`src/coordination/dag.js:51-74`、`src/commands/coordination.js:86-95`
-- 证据：`resolveChange` 能定位 archive，但 `readNode` 无条件调用 `statusProvider(mapping.physical)`；CLI provider 执行 `openspec status --change <physical> --json`。
-- 复现结果：一个映射子 change 归档后，再校验父 change，返回 `invalid-node` 和脱敏后的“OpenSpec 命令执行失败”。
-- 影响：标准“逐个归档子 change，最后归档父 change”无法闭环；归档一个子节点后，剩余节点的门禁也无法继续运行。
-- 测试缺口：resolver 测了 archive 定位，CLI 测了 active 协调，但没有覆盖“同一父 DAG 中 active 与 archived 子节点并存”。
-- 建议：只有 `resolved.lifecycle === 'active'` 时读取官方 status；archive 节点以归档内 `tasks.md`、`comate.md` 和生命周期作为校验依据。增加 active/archived 混合 DAG 的端到端测试。
+- 原优先级：P0。
+- 修复：只有 `resolved.lifecycle === 'active'` 才读取官方 status；archive 节点继续校验归档内
+  `tasks.md`、`comate.md` 和生命周期。
+- 验证：新增“同一父 DAG 中 archived 与 active 子节点并存”的真实 CLI 回归，校验通过且 active
+  节点仍执行 artifact 门禁。
 
-### F-02：扁平归档子 change 被误判为父 change
+### F-02：扁平归档子 change 被误判为父 change（已修复）
 
-- 优先级：P0
-- 位置：`src/migration/scanner.js:37-57`、`src/migration/planner.js:69-130`
-- 证据：扫描器只凭路径判断子 change，只有 `archive/<date-parent>/changes/<child>/...` 才归类为 `archived-child-change`。
-- 真实数据：canary 中至少有 6 个 `archive/<date-child>/.openspec.yaml` 带有合法 `parent` 字段，但均被归类为 `archived-parent-change`：
+- 原优先级：P0。
+- 修复：扫描器按直接归档根聚合文件，仅读取并校验根 `.openspec.yaml`；合法 `parent` 会把整个根
+  标记为 `archived-child-change`，planner 优先使用 inventory 中的结构化 change 描述。
+- 安全边界：metadata 限制为 128 KiB，读取后复核扫描 SHA-256，不把 YAML 正文写入 inventory/report；
+  parent、child 均执行 kebab-case 校验，扁平子 change 中再嵌套子 change 会拒绝迁移。
+- 真实数据：canary 中以下 6 个扁平归档子 change 现已全部产生 archived mapping：
   - `achievement-center-entry` → `medal`
   - `profile-medal-wall` → `medal`
   - `cross-scene-acceptance` → `medal`
   - `data-model-identity-label` → `external-role-identity-tag`
   - `mystery-medal-decouple` → `external-role-identity-tag`
   - `profile-home-identity-label` → `external-role-identity-tag`
-- 影响：这些历史子 change 保留原归档目录名，却不会写入 `.falla/coordination.yaml`，逻辑父子关系和后续审计能力丢失。
-- 测试缺口：测试 fixture 只有嵌套归档形态，没有覆盖生产数据中的扁平归档形态。
-- 建议：先按 change 根目录聚合文件并尽早解析 `.openspec.yaml`；存在经过格式校验的 `parent` 时按扁平子 change 分类。一个 change 根下所有文件必须共享同一分类和目标目录，并补充 active/archive 重复逻辑名检查。
 
-### F-03：迁移 journal 过早进入 applied
+### F-03：迁移 journal 过早进入 applied（已修复）
 
-- 优先级：P1，正式迁移前应处理
-- 位置：`src/migration/transaction.js:200-217`、`304-318`、`429-450`
-- 证据：全部目标文件写完后立即设置 `journal.phase = 'applied'`，之后才执行目标 OpenSpec 校验和 doctor；中断恢复逻辑看到 `applied` 会直接跳过。
-- 已验证现象：在 `validateTarget` 回调中读取 journal，phase 已是 `applied`。
-- 影响：普通异常会进入 catch 并自动回滚，但如果进程在最终校验或 doctor 期间被 kill、断电或崩溃，下次启动会把未完成最终验证的目标当成已成功应用。
-- 测试缺口：现有测试覆盖“最终校验抛错后回滚”，没有覆盖最终校验阶段的硬中断与下次恢复。
-- 建议：写完目标后进入 `written` 或 `validating`；只有目标校验、doctor 和 report 成功后才进入 `applied`/`committed`。恢复逻辑应回滚 `prepared`、`writing`、`written`、`validating`。
+- 原优先级：P1。
+- 修复：提交阶段改为 `prepared -> writing -> validating -> committed`。目标 validate、doctor 和 report
+  完成前不会写 committed；恢复会回滚残留 validating，旧 `applied` journal 仍按已提交兼容。
+- 验证：测试在 `validateTarget` 内读取 journal 并确认其仍是 validating，同时覆盖 validating 残留恢复。
 
-### F-04：register 没有检查真实 change 名冲突
+### F-04：register 没有检查真实 change 名冲突（已修复）
 
-- 优先级：P1
-- 位置：`src/coordination/resolver.js:59-77`
-- 证据：`occupied` 只包含 coordination 中已有 physical 名，没有扫描 `openspec/changes/` 和 archive。
-- 复现结果：目标中已有未受管的 `medal-child-detail` 时，register 仍把它分配给 `medal/detail`；随后官方 `openspec new change` 失败，mapping 已经落盘。
-- 影响：可能把新的逻辑引用错误指向历史或手工创建的物理 change，并留下没有对应新 change 的孤儿映射。
-- 建议：注册前收集 active 和 archive 的全部物理 change ID；冲突时再追加固定哈希。还应提供可恢复操作，例如 `coordination unregister`，或让创建流程在官方 new 失败时安全撤销本次 reservation。
+- 原优先级：P1。
+- 修复：register 把 coordination、active 和标准日期 archive 中的全部物理名合并为占用集合，冲突时
+  追加稳定 SHA-256 前缀。新增 `coordination unregister`，且只有 active/archive 都不存在物理 change
+  时才允许删除孤儿 mapping；不提供 force。
+- 验证：覆盖 active 冲突、archive 冲突、孤儿清理、物理 change 存在时拒绝和 CLI 帮助/命令路径。
 
-### F-05：重复安装不会清理已取消选择或版本已删除的受管文件
+### F-05：重复安装不会清理已取消选择或版本已删除的受管文件（已修复）
 
-- 优先级：P1
-- 位置：`src/commands/install.js:110-134`
-- 证据：新 manifest 从 `{ ...previousFiles }` 开始，只覆盖当前计划，不删除不再规划的路径。
-- 场景：第一次安装 `claude,codex`，第二次只选择 `codex`，Claude Skill/Hook 及 manifest 条目仍保留；未来版本删除某个模板也会留下旧文件。
-- 影响：目标项目可能继续执行已禁用或已淘汰的规则，安装版本与实际运行规则生命周期不一致；doctor 仍可能报告健康。
-- 建议：manifest 增加明确的工具集合；对“旧 manifest 有、当前计划没有”的文件生成 prune 计划。仅当当前哈希仍等于旧受管哈希时删除，用户修改过的文件必须保留并报告冲突。
+- 原优先级：P1。
+- 修复：manifest v2 记录排序后的工具集合；重新安装时对过期独立文件和共享 Hook 注册生成删除计划。
+  删除前和应用时均复核旧受管哈希，用户修改、符号链接或并发变化会停止；共享文件只移除 Falla
+  marker/entry，不删除用户内容，也不递归删除目录。v1 manifest 可直接安全升级。
+- 验证：覆盖双工具到单工具、Codex/Claude 两个方向、用户漂移、v1 升级，以及计划后并发修改。
 
-### F-06：公开 JSON 契约没有覆盖全部实际消费字段
+### F-06：公开 JSON 契约没有覆盖全部实际消费字段（已修复）
 
-- 优先级：P1
-- 位置：`src/openspec/contract.js:52-116`、`.falla` archive/apply 规则模板
-- 证据：archive 规则读取 status 的 `artifactPaths.specs.existingOutputPaths`，但 `assertStatusContract` 未校验 `artifactPaths`；apply 只检查 `contextFiles` 是对象，没有校验其中的路径数组；artifact instructions 的 `existingOutputPaths` 和 `dependencies` 也只检查 array，未检查成员类型，tasks 元素结构未锁定。
-- 影响：OpenSpec 后续小版本改变嵌套字段时，contract test 可能继续通过，直到 Agent 执行到 apply/archive 才失败或读取错误路径。
-- 建议：只为真实消费的嵌套字段增加窄校验，不要锁定无关字段。真实 CLI fixture 应覆盖 glob spec、`skip_specs`、无可选 context/guidance 和 archive instructions。
+- 原优先级：P1。
+- 修复：补齐 status 的 `changeRoot`、`artifactPaths`、`nextSteps`、`actionContext`，artifact instructions
+  的路径和 dependency 成员，以及 apply 的 `contextFiles`、task 成员、state、`missingArtifacts`。
+- 边界：仍允许官方增加不相关字段，只锁定 Falla 工作流真实消费的结构。
+- 验证：单元测试覆盖畸形嵌套 payload；真实 OpenSpec 1.12 契约覆盖 glob 展开、contextFiles、tasks 和
+  `skip_specs` 空 existing paths。
 
 ### F-07：真实 Android 项目当前存在目标冲突
 
@@ -342,15 +343,17 @@ flowchart TD
 - 证据：真实 canary dry-run 统计为 `copy=85`、`write=28`、`skip=29`、`conflict=1`。
 - 冲突：`mercuryspec/specs/gift-panel/spec.md` 与 `openspec/specs/gift-panel/spec.md` 内容不同，原因 `target-different`。
 - 影响：当前执行 `migrate --apply` 会按设计拒绝开始。
-- 建议：人工比较业务语义并合并，禁止用强制覆盖消除冲突。处理后重跑 dry-run，要求 `conflict=0`，同时确认 F-02 已修复并产生完整映射。
+- 建议：人工比较业务语义并合并，禁止用强制覆盖消除冲突。处理后重跑 dry-run，要求
+  `conflict=0`；当前 F-02 已修复，完整 mapping 数为 21。
 
-### F-08：诊断输出与 README 的隐私承诺不完全一致
+### F-08：本地诊断 JSON 包含绝对路径（已澄清，行为保留）
 
 - 优先级：P2
 - 位置：`src/commands/doctor.js:175-200`、coordination resolve 输出、README“验证与风险”
 - 证据：README 表述报告只包含状态、计数、哈希和相对路径，但 doctor 返回项目根绝对路径，resolve 也返回物理目录绝对路径。
-- 影响：CI 日志或共享报告可能泄露本机用户名和目录结构。它通常不是凭据泄露，但与文档承诺不一致。
-- 建议：二选一：文档明确绝对路径是本地诊断字段；或默认 JSON 使用相对路径/脱敏 root，仅在 `--debug` 或显式 verbose 时输出绝对路径。
+- 影响：CI 日志或共享报告可能泄露本机用户名和目录结构，通常不属于凭据泄露。
+- 处理：README 已明确迁移安全报告使用相对路径，而 doctor/resolve 是本地诊断接口、会返回绝对路径；
+  运维上不得直接发布这些 JSON。若未来需要默认可公开报告，再引入脱敏/verbose 模式。
 
 ### F-09：安装仅保证单文件原子，不保证整次安装事务性
 
@@ -391,37 +394,32 @@ flowchart TD
 
 ### 6.2 仍需处理的生命周期风险
 
-- 归档后状态查询仍按 active 生命周期执行，见 F-01。
-- 迁移 journal 的提交状态早于最终校验，见 F-03。
-- 安装选择变化不会淘汰旧受管文件，见 F-05。
 - Codex Hook 内嵌项目绝对路径，项目移动后必须重装，否则 SessionStart 会引用旧位置。
+- install 仅保证单文件原子，不保证整批事务；中断后应重跑并执行 doctor，见 F-09。
+- coordination unregister 与外部 `openspec new change` 无法组成跨进程原子事务，只能在 new 已失败且
+  确认物理目录不存在后使用；命令会在执行时检查 active/archive 并拒绝删除已有 change 的映射。
 - 交互 UI 的正常完成路径会恢复 raw mode、监听器和定时器；若未来修改渲染初始化流程，应继续确保“开启 raw mode 后的所有异常路径”都进入 finally 清理。
 
 ### 6.3 泄露结论
 
-没有发现凭据正文、环境变量、PRD/规格正文或外部进程原始错误被默认写入报告的路径。主要残余是本地绝对路径可能进入 doctor/resolve JSON，属于环境元数据暴露，应按 F-08 统一策略。
+没有发现凭据正文、环境变量、PRD/规格正文或外部进程原始错误被默认写入迁移报告的路径。本地绝对
+路径会进入 doctor/resolve JSON，属于环境元数据；README 已明确其仅适合本地诊断，不应发布。
 
 ## 7. 自动化验证结果
 
 | 检查 | 结果 |
 | --- | --- |
 | `npm run check` | 通过 |
-| `FALLA_ANDROID_CANARY_ROOT=... npm test` | 102/102 通过，0 skipped，本次复验约 21.7 秒 |
+| `FALLA_ANDROID_CANARY_ROOT=... npm test` | 116/116 通过，0 skipped |
 | 官方 OpenSpec 公开契约测试 | 通过，实际 CLI 为 1.12.0 |
 | 四套 Schema 官方校验 | 通过 |
 | 完整 install/migrate/validate/resolve/rollback E2E | 通过 |
 | 真实 Android canary 零写入检查 | 通过 |
 | `npm audit --audit-level=high` | 0 vulnerabilities |
-| `npm pack --dry-run --json` | 66 个预期文件；未包含 test、node_modules、`.DS_Store` |
+| `npm pack --dry-run --json` | 66 个预期文件；未包含 test、docs、node_modules、`.DS_Store` |
 
-测试全绿与问题清单并不矛盾：
-
-- F-01 的 archive resolver 和 active CLI 各自有测试，但缺少组合生命周期测试。
-- F-02 的 fixture 只包含嵌套归档子 change，没有复制真实扁平历史结构。
-- F-03 测了 JavaScript 异常回滚，没有模拟最终校验期间的进程硬中断。
-- F-04 测了 coordination 映射之间的名称冲突，没有测试未受管物理目录冲突。
-- F-05 测了初装、幂等和用户漂移，没有测试工具取消选择或新版模板删除。
-- F-06 的真实 CLI 测试没有断言全部实际消费的嵌套字段。
+本轮新增回归覆盖此前缺失的组合场景：active/archive 混合 DAG、扁平归档 metadata、validating
+中断恢复、未受管物理名冲突、工具取消选择/用户漂移，以及官方 JSON 嵌套字段。
 
 ## 8. 真实 Android canary 分析
 
@@ -432,13 +430,12 @@ copy:      85
 write:     28
 skip:      29
 conflict:   1
-mappings:  15
+mappings:  21
 ```
 
-迁移不应立即执行，原因有两个：
-
-1. `gift-panel/spec.md` 存在真实目标冲突，需要人工合并。
-2. 15 个 mapping 不包含 F-02 所列 6 个扁平归档子 change；如果现在应用，文件虽然大多仍会被复制，但父子语义不会完整迁移。
+6 个扁平归档子 change 已全部出现在 mapping 中，且 dry-run 前后三个目录哈希一致。迁移仍不应立即
+执行，因为 `gift-panel/spec.md` 存在真实目标冲突，需要人工合并；在冲突存在时 `--apply` 会按设计
+拒绝开始。
 
 正式 canary 的通过条件建议定义为：
 
@@ -450,28 +447,20 @@ mappings:  15
 - 迁移后抽样执行 active/archived 混合协调校验；
 - 记录 migration id，并在副本上实际演练一次 rollback。
 
-## 9. 建议修复顺序与发布门禁
+## 9. 剩余迁移门禁与维护项
 
-### 第一批：正式迁移前必须完成
+### 正式迁移前必须完成
 
-1. 修复 F-02，补真实扁平归档 fixture 和 mapping 断言。
-2. 修复 F-01，补“先归档一个子 change，再继续校验和归档”的 E2E。
-3. 修复 F-03，引入 `written/validating/committed` 生命周期并测试硬中断恢复。
-4. 修复 F-04，避免映射与真实物理 change 冲突，并提供孤儿 mapping 的修复路径。
-5. 人工解决 canary 的 `gift-panel` 业务规格冲突。
+1. 人工解决 canary 的 `gift-panel` 业务规格冲突，重跑 dry-run 并确认 `conflict=0`。
+2. 在项目副本执行一次 apply、官方 strict validate、doctor 和 rollback，确认应用与恢复都符合预期。
+3. 审阅 21 个父子 mapping 和全部目标相对路径，再决定真实项目迁移窗口。
 
-### 第二批：发布前建议完成
+### 后续维护项
 
-1. 补强实际消费的 OpenSpec JSON 契约，处理 F-06。
-2. 实现安全 prune 或明确工具不可撤销，处理 F-05。
-3. 明确 legacy 无 comate 的归档政策，处理 F-10。
-4. 统一 JSON 报告中的绝对/相对路径策略，处理 F-08。
-
-### 第三批：维护性改进
-
-1. 为 install 增加整批事务或明确可重入恢复流程。
-2. 更新或删除过期 `HANDOFF-REMAINING.md`。
-3. 在 README 增加 Codex trust、重开会话和项目移动后重装 Hook 的说明。
+1. 明确 legacy 无 comate 的归档政策，处理 F-10。
+2. 若安装进入自动部署场景，为 install 增加整批事务，处理 F-09。
+3. 更新或删除过期 `HANDOFF-REMAINING.md`，处理 F-11。
+4. 若 doctor/resolve JSON 需要发布到共享系统，再增加绝对路径脱敏模式。
 
 建议的发布门禁：
 
@@ -483,15 +472,19 @@ npm pack --dry-run --json
 falla-openspec migrate /path/to/canary --json
 ```
 
-其中最后一项必须保持 dry-run，直到 P0/P1 修复、`conflict=0` 且迁移计划经人工审阅。之后应先在项目副本执行 `--apply`、官方 validate、doctor 和 rollback 演练，再考虑真实项目。
+其中最后一项必须保持 dry-run，直到 `conflict=0` 且迁移计划经人工审阅。之后应先在项目副本执行
+`--apply`、官方 validate、doctor 和 rollback 演练，再考虑真实项目。
 
 ## 10. 最终判断
 
 FallaOpenSpec 已经成功完成了最关键的架构转向：官方 OpenSpec 是唯一内核，Falla 只负责扩展流程。版本门禁、公开契约、迁移只读预演、哈希前置条件、候选校验和回滚设计都表明整体方向可靠。
 
-当前问题主要集中在“跨生命周期组合场景”，而不是基础命令本身：active 到 archived、旧嵌套结构到官方扁平结构、文件写完到最终验证、工具启用到取消启用。这也解释了为什么 102 个测试全部通过，真实流程仍然存在闭环缺口。
+本轮已补齐主要的跨生命周期组合场景：active 到 archived、旧嵌套/扁平结构到官方归档结构、文件
+写完到最终提交，以及工具启用到取消启用。代码层面的正式迁移门禁现已满足。
 
-因此，本次 review 的建议不是回退架构，而是补齐生命周期模型和真实历史 fixture。完成第一批修复后，这套方案才适合从“功能验证版本”升级为“生产迁移版本”。
+当前唯一直接阻断真实 Android 项目的是 `gift-panel` 业务规格冲突；此外还缺少项目副本上的完整
+apply/rollback 证据。因此准确结论是“实现已完成迁移加固，可以进入冲突处理和副本演练”，而不是
+“现在即可直接迁移生产项目”。
 
 ## 11. 官方参考资料
 

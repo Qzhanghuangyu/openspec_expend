@@ -9,7 +9,9 @@ import {
 
 const MANIFEST_PATH = '.falla/install-manifest.json';
 const MAX_MANIFEST_BYTES = 1024 * 1024;
-const EXPECTED_KEYS = ['fallaVersion', 'files', 'formatVersion', 'installedAt', 'openSpecVersion'];
+const V1_KEYS = ['fallaVersion', 'files', 'formatVersion', 'installedAt', 'openSpecVersion'];
+const V2_KEYS = [...V1_KEYS, 'tools'].sort();
+const TOOL_IDS = new Set(['claude', 'codex']);
 const packageFile = new URL('../../package.json', import.meta.url);
 
 function isRecord(value) {
@@ -17,10 +19,11 @@ function isRecord(value) {
 }
 
 export function assertInstallManifest(value) {
-  if (!isRecord(value) || value.formatVersion !== 1) {
+  if (!isRecord(value) || (value.formatVersion !== 1 && value.formatVersion !== 2)) {
     throw new FallaError(1, 'install-manifest.json 格式不兼容');
   }
-  if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(EXPECTED_KEYS)) {
+  const expectedKeys = value.formatVersion === 1 ? V1_KEYS : V2_KEYS;
+  if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(expectedKeys)) {
     throw new FallaError(1, 'install-manifest.json 含未知或缺失字段');
   }
   if (typeof value.fallaVersion !== 'string'
@@ -28,6 +31,14 @@ export function assertInstallManifest(value) {
     || typeof value.installedAt !== 'string'
     || !isRecord(value.files)) {
     throw new FallaError(1, 'install-manifest.json 字段类型无效');
+  }
+  if (value.formatVersion === 2) {
+    if (!Array.isArray(value.tools)
+      || value.tools.some((tool) => typeof tool !== 'string' || !TOOL_IDS.has(tool))
+      || new Set(value.tools).size !== value.tools.length
+      || JSON.stringify([...value.tools].sort()) !== JSON.stringify(value.tools)) {
+      throw new FallaError(1, 'install-manifest.json tools 字段无效');
+    }
   }
   for (const [relativePath, digest] of Object.entries(value.files)) {
     if (assertRelativePath(relativePath) !== relativePath || !/^[a-f0-9]{64}$/.test(digest)) {
@@ -64,6 +75,7 @@ export function manifestsMatch(left, right) {
   return left.formatVersion === right.formatVersion
     && left.fallaVersion === right.fallaVersion
     && left.openSpecVersion === right.openSpecVersion
+    && JSON.stringify(left.tools ?? []) === JSON.stringify(right.tools ?? [])
     && JSON.stringify(left.files) === JSON.stringify(right.files);
 }
 
