@@ -40,15 +40,22 @@ test('Figma MCP 对选择的工具使用固定参数数组', async () => {
   ]);
 });
 
-test('Lark 安装和登录使用固定参数数组且不接收凭据', async () => {
+test('Lark 安装不自动登录，登录必须显式限定业务域', async () => {
   const calls = [];
   const runner = async (command, args) => calls.push({ command, args });
   await installLarkCli(runner);
-  await loginLarkCli(runner);
+  assert.throws(
+    () => loginLarkCli([], runner),
+    (error) => error.code === 1 && error.message.includes('最小业务域')
+  );
+  await loginLarkCli(['docs', 'drive', 'docs'], runner);
 
   assert.deepEqual(calls, [
-    { command: 'npx', args: ['@larksuite/cli@latest', 'install'] },
-    { command: 'lark-cli', args: ['auth', 'login'] },
+    { command: 'npm', args: ['install', '--global', '@larksuite/cli@latest'] },
+    {
+      command: 'lark-cli',
+      args: ['auth', 'login', '--domain', 'docs,drive', '--no-wait', '--json'],
+    },
   ]);
 });
 

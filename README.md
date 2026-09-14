@@ -47,9 +47,10 @@ falla-openspec doctor /path/to/project --json
 `install-mainfest.json`。
 
 交互终端下可省略 `--non-interactive` 选择工具。Figma MCP、CodeGraph 和 Lark CLI 只有显式选择或传入
-`--with-figma`、`--with-codegraph`、`--with-lark` 时才会首次安装；非交互模式不会自动安装或登录
-外部工具。启用 CodeGraph 后，每个目标项目维护独立的 `.codegraph/` 索引，任务开始前由 Hook
-执行增量同步；AI 定位符号、调用链和影响面时优先查询图谱，再读取少量命中文件。
+`--with-figma`、`--with-codegraph`、`--with-lark` 时才会首次安装；`--with-lark` 只通过 npm 安装 CLI，不运行 Lark 的交互授权向导，
+也不会自动申请飞书权限。需要飞书能力时再按业务域或具体 scope 做最小授权。安装器默认确保目标项目的 `.gitignore`
+包含 `.codegraph/`；启用 CodeGraph 后，每个目标项目维护独立的本地索引，任务开始前由 Hook 执行增量同步。
+AI 定位符号、调用链和影响面时优先查询图谱，再读取少量命中文件。
 
 安装器还会在每个目标项目创建 `.falla/ui-knowledge/` 的通用说明和条目模板，但不会扫描业务代码
 或生成项目专属 UI 组件知识库。组件与页面模式由各项目成员，或经用户明确授权的 AI 单独维护。

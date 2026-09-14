@@ -10,6 +10,7 @@ import {
   planManagedFileRemovals,
   planManagedFiles,
 } from '../install/files.js';
+import { ensureCodeGraphIgnored } from '../install/gitignore.js';
 import {
   applyHookRemovalPlan,
   applyHookRegistrationPlan,
@@ -36,7 +37,6 @@ import {
 } from '../ui/figma-mcp.js';
 import {
   installLarkCli,
-  loginLarkCli,
   selectLarkCliInstallation,
 } from '../ui/lark-cli.js';
 import { selectTools } from '../ui/tool-select.js';
@@ -80,7 +80,6 @@ async function requireProjectRoot(rootInput) {
 
 async function defaultLarkIntegration() {
   await installLarkCli();
-  await loginLarkCli();
 }
 
 function sortedFiles(files) {
@@ -139,6 +138,7 @@ export async function installProject(options) {
     root, fileRemovalPaths, previousFiles
   );
   const hookRemovalPlan = await planHookRemovals(root, hookRemovalPaths, previousFiles);
+  const gitIgnore = await ensureCodeGraphIgnored(root);
 
   await applyManagedFilePlan(root, managedPlan);
   await applyHookRegistrationPlan(root, hookPlan);
@@ -204,11 +204,13 @@ export async function installProject(options) {
     written: [
       ...managedPlan.filter(({ action }) => action === 'write').map(({ relativePath }) => relativePath),
       ...hookPlan.filter(({ action }) => action === 'write').map(({ relativePath }) => relativePath),
+      ...(gitIgnore.action === 'write' ? [gitIgnore.relativePath] : []),
       ...(manifestWritten ? ['.falla/install-manifest.json'] : []),
     ].sort(),
     skipped: [
       ...managedPlan.filter(({ action }) => action === 'skip').map(({ relativePath }) => relativePath),
       ...hookPlan.filter(({ action }) => action === 'skip').map(({ relativePath }) => relativePath),
+      ...(gitIgnore.action === 'skip' ? [gitIgnore.relativePath] : []),
     ].sort(),
     removed: [
       ...fileRemovalPlan.filter(({ action }) => action === 'delete')

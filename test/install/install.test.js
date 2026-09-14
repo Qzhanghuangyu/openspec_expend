@@ -116,6 +116,8 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   );
   await readFile(path.join(root, '.claude', 'hooks', 'falla-codegraph.mjs'));
   await readFile(path.join(root, '.codex', 'hooks', 'falla-codegraph.mjs'));
+  assert.equal(await readFile(path.join(root, '.gitignore'), 'utf8'), '.codegraph/\n');
+  assert.ok(report.written.includes('.gitignore'));
 
   const manifestText = await readFile(path.join(root, '.falla', 'install-manifest.json'), 'utf8');
   const manifest = JSON.parse(manifestText);
@@ -128,6 +130,7 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   assert.equal(manifest.installedAt, FIXED_TIME);
   assert.deepEqual(manifest.tools, ['claude', 'codex']);
   assert.deepEqual(manifest.integrations, { codegraph: false });
+  assert.equal(manifest.files['.gitignore'], undefined);
   assert.ok(Object.keys(manifest.files).every((entry) => !path.isAbsolute(entry)));
   assert.ok(Object.values(manifest.files).every((digest) => /^[a-f0-9]{64}$/.test(digest)));
   assert.doesNotMatch(manifestText, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -208,6 +211,36 @@ test('重复安装保持 manifest 和 marker 幂等', async () => {
   assert.equal(before, after);
   assert.equal(agents.match(/<!-- falla-spec-guard:start -->/g)?.length, 1);
   assert.equal(codexConfig.match(/# falla-spec-session:start/g)?.length, 1);
+});
+
+test('初始化保留已有忽略规则并幂等追加 CodeGraph 本地索引', async () => {
+  const root = await createProject();
+  const gitIgnorePath = path.join(root, '.gitignore');
+  await writeFile(gitIgnorePath, 'build/\n.env', 'utf8');
+
+  const first = await installProject(installOptions(root));
+  await writeFile(gitIgnorePath, `${await readFile(gitIgnorePath, 'utf8')}local-cache/\n`);
+  const second = await installProject(installOptions(root));
+  const content = await readFile(gitIgnorePath, 'utf8');
+
+  assert.equal(content, 'build/\n.env\n.codegraph/\nlocal-cache/\n');
+  assert.equal(content.match(/^\.codegraph\/$/gm)?.length, 1);
+  assert.ok(first.written.includes('.gitignore'));
+  assert.ok(second.skipped.includes('.gitignore'));
+});
+
+test('初始化拒绝通过符号链接改写项目外的忽略文件', async () => {
+  const root = await createProject();
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'falla-outside-gitignore-'));
+  const outsideGitIgnore = path.join(outside, '.gitignore');
+  await writeFile(outsideGitIgnore, 'outside-rule/\n', 'utf8');
+  await symlink(outsideGitIgnore, path.join(root, '.gitignore'));
+
+  await assert.rejects(
+    () => installProject(installOptions(root)),
+    (error) => error.code === 1 && error.message.includes('普通文件')
+  );
+  assert.equal(await readFile(outsideGitIgnore, 'utf8'), 'outside-rule/\n');
 });
 
 test('受管文件被用户修改后停止且不覆盖', async () => {

@@ -24,7 +24,7 @@ test('手册覆盖初始化、幂等更新、工具选择和安全失败处理',
   assert.match(manual, /export FALLA_HOME="\/path\/to\/falla-openspec"/);
   assert.match(manual, /export TARGET_PROJECT="\/path\/to\/project"/);
   assert.doesNotMatch(manual, /androidCopy|\$HOME\/android\/|\/Users\/|\/home\//);
-  assert.match(manual, /install-mainfest\.json/);
+  assert.doesNotMatch(manual, /install-mainfest\.json/);
   assert.match(manual, /falla-openspec install/);
   assert.match(manual, /重复执行 install 完成更新/);
   assert.match(manual, /\.falla\/install-manifest\.json/);
