@@ -36,7 +36,10 @@ description: Use when implementing or continuing an existing Falla parent or log
 - 逐条考虑 `operationGuidance` 中适用且不冲突的建议；它不能覆盖官方状态、允许编辑路径、
   Falla 门禁或用户明确选择，也不得把 context/guidance 原文复制到代码、日志或报告。
 - 只做当前 change 的最小改动；完成一项验证后才勾选对应 task。
-- UI 实施保留需要人工校准的视觉项，并写入 handoff。
+- UI 实施前有界检索 `.falla/ui-knowledge/` 的相关组件和页面模式；只能复用已验证且依赖、资源、
+  API、生命周期仍匹配的条目。知识库不存在或未命中时继续核对当前代码，不得虚构可复用组件。
+- UI 实施保留需要人工校准的视觉项，并写入 handoff。普通实施不得顺带批量生成知识库；只有当前
+  tasks 明确包含知识沉淀时，才能按模板新增或更新条目。
 - 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。
 - 全部任务和验证完成后才标记 done，并重新运行 coordination validate。
 - 检查空值/NPE、异步与观察者生命周期、销毁后 UI 更新和敏感日志风险。

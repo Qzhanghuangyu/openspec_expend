@@ -124,3 +124,34 @@ test('Preflight 默认只核对当前实现且禁止重复读取 Git 历史', as
   assert.match(schema, /默认禁止读取 git log\/show\/blame\/reflog\/rev-list/);
   assert.match(schema, /不得重复或全仓扫描/);
 });
+
+
+test('全局规则要求使用 CodeGraph 做有界代码定位并保留文本搜索兜底', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const preflight = await readFile(path.join(root, 'skills', 'falla-preflight', 'SKILL.md'), 'utf8');
+
+  assert.match(soul, /任务开始前由 Hook 初始化或增量同步/);
+  assert.match(soul, /优先使用 CodeGraph/);
+  assert.match(soul, /不得把完整 CodeGraph 数据库、全量图谱结果或无关源码注入上下文/);
+  assert.match(soul, /生命周期代码的核对/);
+  assert.match(preflight, /用图谱定位相关符号、调用链和影响面/);
+  assert.match(preflight, /CodeGraph 不可用时允许有界降级/);
+});
+
+
+test('UI 组件知识库只提供项目独立位置和模板，不自动生成项目内容', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const knowledge = await readFile(path.resolve('templates/ui-knowledge/README.md'), 'utf8');
+  const component = await readFile(path.resolve('templates/ui-knowledge/templates/component.md'), 'utf8');
+  const screen = await readFile(path.resolve('templates/ui-knowledge/templates/screen-pattern.md'), 'utf8');
+  const combined = [soul, knowledge, component, screen].join('\n');
+
+  assert.match(soul, /项目独立维护的 UI 组件知识库/);
+  assert.match(soul, /不得在安装、更新、SessionStart 或普通任务中扫描业务代码并自动生成/);
+  assert.match(knowledge, /components\/.*stable-kebab-id/);
+  assert.match(knowledge, /经用户明确授权的 AI/);
+  assert.match(component, /生命周期/);
+  assert.match(screen, /direct reuse conditions/);
+  assert.doesNotMatch(combined, /androidCopy|\/Users\/|\/home\//);
+  assert.doesNotMatch(combined, /android-ui scan|自动创建.*index\.json/);
+});

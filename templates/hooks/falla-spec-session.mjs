@@ -3,6 +3,8 @@
 import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 
+import { codeGraphContext, prepareCodeGraph } from './falla-codegraph.mjs';
+
 const MAX_INPUT_BYTES = 1024 * 1024;
 const SOUL = '[Must Read]soul.md';
 const PHASES = [
@@ -100,6 +102,7 @@ async function main() {
     throw error;
   }
 
+  const graphContext = codeGraphContext(await prepareCodeGraph(root));
   const phaseList = PHASES.map(
     ([skill, document]) => `- ${skill} 前必读：\`.falla/skill-spec/${document}\``
   ).join('\n');
@@ -109,6 +112,7 @@ async function main() {
       additionalContext: [
         '【FallaOpenSpec 全局规则：本会话必须遵守】',
         phaseList,
+        ...(graphContext ? [graphContext] : []),
         `===== ${SOUL} =====\n${soul.trim()}`,
       ].join('\n\n'),
     },

@@ -4,6 +4,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rename,
   symlink,
   unlink,
@@ -42,6 +43,7 @@ function installOptions(root, overrides = {}) {
     now: () => FIXED_TIME,
     integrations: {
       installFigma: async () => { throw new Error('不应调用 Figma'); },
+      installCodeGraph: async () => { throw new Error('不应调用 CodeGraph'); },
       installLark: async () => { throw new Error('不应调用 Lark'); },
     },
     ...overrides,
@@ -92,6 +94,12 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     await readFile(path.join(root, '.falla', 'skill-spec', '[分析必读]preflight.md'), 'utf8'),
     /Stateful Interactions/
   );
+  assert.match(
+    await readFile(path.join(root, '.falla', 'ui-knowledge', 'README.md'), 'utf8'),
+    /不会在安装时扫描业务代码、生成组件索引/
+  );
+  await readFile(path.join(root, '.falla', 'ui-knowledge', 'templates', 'component.md'));
+  await readFile(path.join(root, '.falla', 'ui-knowledge', 'templates', 'screen-pattern.md'));
   for (const tool of ['.claude', '.codex']) {
     assert.match(
       await readFile(path.join(root, tool, 'skills', 'falla-preflight', 'SKILL.md'), 'utf8'),
@@ -106,17 +114,20 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     await readFile(path.join(root, '.codex', 'hooks', 'falla-spec-session.mjs'), 'utf8'),
     /\.falla.*skill-spec/s
   );
+  await readFile(path.join(root, '.claude', 'hooks', 'falla-codegraph.mjs'));
+  await readFile(path.join(root, '.codex', 'hooks', 'falla-codegraph.mjs'));
 
   const manifestText = await readFile(path.join(root, '.falla', 'install-manifest.json'), 'utf8');
   const manifest = JSON.parse(manifestText);
   assert.deepEqual(Object.keys(manifest).sort(), [
-    'fallaVersion', 'files', 'formatVersion', 'installedAt', 'openSpecVersion', 'tools',
+    'fallaVersion', 'files', 'formatVersion', 'installedAt', 'integrations', 'openSpecVersion', 'tools',
   ]);
-  assert.equal(manifest.formatVersion, 2);
+  assert.equal(manifest.formatVersion, 3);
   assert.equal(manifest.fallaVersion, '0.3.0');
   assert.equal(manifest.openSpecVersion, '1.12.0');
   assert.equal(manifest.installedAt, FIXED_TIME);
   assert.deepEqual(manifest.tools, ['claude', 'codex']);
+  assert.deepEqual(manifest.integrations, { codegraph: false });
   assert.ok(Object.keys(manifest.files).every((entry) => !path.isAbsolute(entry)));
   assert.ok(Object.values(manifest.files).every((digest) => /^[a-f0-9]{64}$/.test(digest)));
   assert.doesNotMatch(manifestText, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -273,6 +284,7 @@ test('旧版 v1 manifest 可升级并安全清理未选择工具', async () => {
   const manifestPath = path.join(root, '.falla', 'install-manifest.json');
   const current = JSON.parse(await readFile(manifestPath, 'utf8'));
   delete current.tools;
+  delete current.integrations;
   current.formatVersion = 1;
   await writeFile(manifestPath, `${JSON.stringify(current, null, 2)}\n`);
 
@@ -280,7 +292,7 @@ test('旧版 v1 manifest 可升级并安全清理未选择工具', async () => {
   const upgraded = JSON.parse(await readFile(manifestPath, 'utf8'));
 
   assert.equal(report.ok, true);
-  assert.equal(upgraded.formatVersion, 2);
+  assert.equal(upgraded.formatVersion, 3);
   assert.deepEqual(upgraded.tools, ['codex']);
   assert.equal(Object.keys(upgraded.files).some((entry) => entry.startsWith('.claude/')), false);
 });
@@ -356,6 +368,10 @@ test('非交互默认不调用可选集成，显式失败只产生 warning', asy
       calls.push(['figma', ...tools]);
       throw new Error('FIGMA_SECRET should not leak');
     },
+    installCodeGraph: async (tools, projectRoot) => {
+      calls.push(['codegraph', ...tools, projectRoot === await realpath(root)]);
+      throw new Error('CODEGRAPH_SECRET should not leak');
+    },
     installLark: async () => {
       calls.push(['lark']);
       throw new Error('LARK_SECRET should not leak');
@@ -368,12 +384,17 @@ test('非交互默认不调用可选集成，显式失败只产生 warning', asy
   const report = await installProject(installOptions(root, {
     integrations,
     withFigma: true,
+    withCodeGraph: true,
     withLark: true,
   }));
-  assert.deepEqual(calls, [['figma', 'claude', 'codex'], ['lark']]);
+  assert.deepEqual(calls, [
+    ['figma', 'claude', 'codex'],
+    ['codegraph', 'claude', 'codex', true],
+    ['lark'],
+  ]);
   assert.equal(report.ok, true);
-  assert.deepEqual(report.warnings.map(({ integration }) => integration), ['figma', 'lark']);
-  assert.doesNotMatch(JSON.stringify(report), /FIGMA_SECRET|LARK_SECRET/);
+  assert.deepEqual(report.warnings.map(({ integration }) => integration), ['figma', 'codegraph', 'lark']);
+  assert.doesNotMatch(JSON.stringify(report), /FIGMA_SECRET|CODEGRAPH_SECRET|LARK_SECRET/);
 });
 
 test('交互安装通过欢迎页和选择器决定工具及可选集成', async () => {
@@ -386,10 +407,14 @@ test('交互安装通过欢迎页和选择器决定工具及可选集成', async
       showWelcomeScreen: async () => { calls.push('welcome'); },
       selectTools: async () => { calls.push('tools'); return ['codex']; },
       selectFigma: async () => { calls.push('select-figma'); return true; },
+      selectCodeGraph: async () => { calls.push('select-codegraph'); return true; },
       selectLark: async () => { calls.push('select-lark'); return false; },
     },
     integrations: {
       installFigma: async (tools) => { calls.push(['figma', ...tools]); return []; },
+      installCodeGraph: async (tools, projectRoot) => {
+        calls.push(['codegraph', ...tools, projectRoot === await realpath(root)]);
+      },
       installLark: async () => { calls.push('lark'); },
     },
   }));
@@ -397,8 +422,33 @@ test('交互安装通过欢迎页和选择器决定工具及可选集成', async
   assert.equal(report.ok, true);
   assert.deepEqual(report.tools, ['codex']);
   assert.deepEqual(calls, [
-    'welcome', 'tools', 'select-figma', 'select-lark', ['figma', 'codex'],
+    'welcome', 'tools', 'select-figma', 'select-codegraph', 'select-lark',
+    ['figma', 'codex'], ['codegraph', 'codex', true],
   ]);
+});
+
+
+test('CodeGraph 启用状态在普通更新中保留且不重复安装', async () => {
+  const root = await createProject();
+  const calls = [];
+  await installProject(installOptions(root, {
+    withCodeGraph: true,
+    integrations: {
+      installCodeGraph: async () => { calls.push('install'); },
+    },
+  }));
+  await installProject(installOptions(root, {
+    integrations: {
+      installCodeGraph: async () => { calls.push('unexpected'); },
+    },
+  }));
+
+  const manifest = JSON.parse(await readFile(
+    path.join(root, '.falla', 'install-manifest.json'),
+    'utf8'
+  ));
+  assert.deepEqual(calls, ['install']);
+  assert.deepEqual(manifest.integrations, { codegraph: true });
 });
 
 test('已有活动安装锁时安装器在写文件前停止', async () => {

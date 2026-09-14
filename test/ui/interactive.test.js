@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test from 'node:test';
 
+import { selectCodeGraphInstallation } from '../../src/ui/codegraph.js';
 import { selectTools } from '../../src/ui/tool-select.js';
 import { showWelcomeScreen } from '../../src/ui/welcome-screen.js';
 import { selectFigmaMcpInstallation } from '../../src/ui/figma-mcp.js';
@@ -80,7 +81,7 @@ test('工具选择确认后返回选择项并恢复终端状态', async () => {
   assert.equal(stdin.listenerCount('data'), 0);
 });
 
-test('交互模式可显式确认 Figma 和跳过 Lark', async () => {
+test('交互模式可显式确认 Figma、CodeGraph 和跳过 Lark', async () => {
   const figmaInput = fakeInput();
   const figmaPromise = selectFigmaMcpInstallation({
     interactive: true,
@@ -89,6 +90,15 @@ test('交互模式可显式确认 Figma 和跳过 Lark', async () => {
   });
   figmaInput.emit('data', Buffer.from('\n'));
   assert.equal(await figmaPromise, true);
+
+  const codeGraphInput = fakeInput();
+  const codeGraphPromise = selectCodeGraphInstallation({
+    interactive: true,
+    stdin: codeGraphInput,
+    stdout: fakeOutput(),
+  });
+  codeGraphInput.emit('data', Buffer.from('\n'));
+  assert.equal(await codeGraphPromise, true);
 
   const larkInput = fakeInput();
   const larkPromise = selectLarkCliInstallation({

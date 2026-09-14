@@ -58,6 +58,7 @@ async function install(argv, io) {
   const options = parseOptions(argv, {
     '--tools': 'value',
     '--with-figma': 'boolean',
+    '--with-codegraph': 'boolean',
     '--with-lark': 'boolean',
     '--non-interactive': 'boolean',
     '--json': 'boolean',
@@ -69,6 +70,7 @@ async function install(argv, io) {
     tools,
     interactive: options.non_interactive !== true && Boolean(io.stdin?.isTTY && io.stdout?.isTTY),
     withFigma: options.with_figma,
+    withCodeGraph: options.with_codegraph,
     withLark: options.with_lark,
     executable: io.openSpecExecutable ?? 'openspec',
     env: io.env,

@@ -22,7 +22,9 @@ description: Use when an existing Falla preflight change needs proposal artifact
 
    使用返回的模板、依赖和 `resolvedOutputPath`，不猜路径。
 4. proposal/specs 只描述用户可观察的业务能力；design/tasks 先按 MVVM 拆 ViewModel 与
-   View，再把 UI 拆到模块控件，并明确人工视觉校准项。
+   View，再把 UI 拆到模块控件，并明确人工视觉校准项。已有 `.falla/ui-knowledge/` 条目只能在
+   相对源码证据、依赖、资源、生命周期和验证日期仍有效时作为复用依据；缺失或过期时回到当前
+   代码和设计事实，不自动生成项目知识库。
    若是纯重构、工具或文档变更且没有规格级行为变化，在 `.openspec.yaml` 显式设置
    `skip_specs: true`，并接受官方 status 将 specs 标为 `skipped`；不得伪造空 requirement。
 5. tasks 使用 checkbox 和逻辑依赖，形成“契约 → 控件并行 → 组装 → 联调”的 DAG。

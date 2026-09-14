@@ -27,6 +27,10 @@ import { runOpenSpec } from '../openspec/runner.js';
 import { assertSupportedVersion } from '../openspec/version.js';
 import { withProjectLock } from '../locks.js';
 import {
+  installCodeGraph,
+  selectCodeGraphInstallation,
+} from '../ui/codegraph.js';
+import {
   installFigmaMcp,
   selectFigmaMcpInstallation,
 } from '../ui/figma-mcp.js';
@@ -97,6 +101,7 @@ export async function installProject(options) {
     showWelcomeScreen,
     selectTools,
     selectFigma: selectFigmaMcpInstallation,
+    selectCodeGraph: selectCodeGraphInstallation,
     selectLark: selectLarkCliInstallation,
     ...options.ui,
   };
@@ -107,6 +112,9 @@ export async function installProject(options) {
   const tools = [...new Set(selectedTools)];
   const withFigma = options.withFigma ?? (interactive
     ? await ui.selectFigma({ interactive: true })
+    : false);
+  const withCodeGraph = options.withCodeGraph ?? (interactive
+    ? await ui.selectCodeGraph({ interactive: true })
     : false);
   const withLark = options.withLark ?? (interactive
     ? await ui.selectLark({ interactive: true })
@@ -141,12 +149,15 @@ export async function installProject(options) {
   for (const item of managedPlan) files[item.relativePath] = item.desiredHash;
   for (const item of hookPlan) files[item.relativePath] = item.managedHash;
 
+  const codeGraphEnabled = withCodeGraph === true
+    || previous?.integrations?.codegraph === true;
   const candidateManifest = {
-    formatVersion: 2,
+    formatVersion: 3,
     fallaVersion: await getFallaVersion(),
     openSpecVersion: version.raw,
     installedAt: String(options.now?.() ?? new Date().toISOString()),
     tools: [...tools].sort(),
+    integrations: { codegraph: codeGraphEnabled },
     files: sortedFiles(files),
   };
   if (manifestsMatch(previous, candidateManifest)) {
@@ -167,6 +178,17 @@ export async function installProject(options) {
       warnings.push({ integration: 'figma' });
     }
   }
+  if (withCodeGraph === true) {
+    try {
+      const installer = integrations.installCodeGraph
+        ?? ((toolIds, projectRoot) => installCodeGraph(
+          toolIds, projectRoot, undefined, { env: options.env }
+        ));
+      await installer(tools, root);
+    } catch {
+      warnings.push({ integration: 'codegraph' });
+    }
+  }
   if (withLark === true) {
     try {
       await (integrations.installLark ?? defaultLarkIntegration)();
@@ -178,6 +200,7 @@ export async function installProject(options) {
   return {
     ok: doctor.ok,
     tools,
+    integrations: candidateManifest.integrations,
     written: [
       ...managedPlan.filter(({ action }) => action === 'write').map(({ relativePath }) => relativePath),
       ...hookPlan.filter(({ action }) => action === 'write').map(({ relativePath }) => relativePath),

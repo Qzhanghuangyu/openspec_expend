@@ -16,7 +16,7 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 ## 初始化与更新
 
 完整操作说明见 [`docs/installation-and-update.md`](docs/installation-and-update.md)，包含首次初始化、
-Figma/Lark 可选集成、源码修改后的目标项目更新、受管文件冲突处理和会话重启要求。安装后同一
+Figma/CodeGraph/Lark 可选集成、源码修改后的目标项目更新、受管文件冲突处理和会话重启要求。安装后同一
 手册也会写入目标项目的 `.falla/installation-and-update.md`，无需返回源码仓库即可查阅。
 
 要求 Node.js 20.19 或更高版本。
@@ -46,8 +46,14 @@ falla-openspec doctor /path/to/project --json
 第 0 节提供了可独立复制的完整使用实例。注意文件名是 `install-manifest.json`，不是
 `install-mainfest.json`。
 
-交互终端下可省略 `--non-interactive` 选择工具。Figma MCP 和 Lark CLI 只有显式选择或传入
-`--with-figma`、`--with-lark` 时才会安装；非交互模式不会自动安装或登录外部工具。
+交互终端下可省略 `--non-interactive` 选择工具。Figma MCP、CodeGraph 和 Lark CLI 只有显式选择或传入
+`--with-figma`、`--with-codegraph`、`--with-lark` 时才会首次安装；非交互模式不会自动安装或登录
+外部工具。启用 CodeGraph 后，每个目标项目维护独立的 `.codegraph/` 索引，任务开始前由 Hook
+执行增量同步；AI 定位符号、调用链和影响面时优先查询图谱，再读取少量命中文件。
+
+安装器还会在每个目标项目创建 `.falla/ui-knowledge/` 的通用说明和条目模板，但不会扫描业务代码
+或生成项目专属 UI 组件知识库。组件与页面模式由各项目成员，或经用户明确授权的 AI 单独维护。
+详细约定见 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md)。
 
 Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在当前对话中另行手动提供含明确
 node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少

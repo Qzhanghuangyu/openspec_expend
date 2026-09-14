@@ -23,7 +23,11 @@ description: Use when analyzing a PRD or product request before OpenSpec proposa
 
 5. 执行 `openspec instructions preflight --change "<name>" --json`，按返回的
    `resolvedOutputPath` 和模板创建 `preflight.md`。
-6. 只检查需求直接涉及的当前代码与文档；所有状态结论必须有文件、符号、模型、接口或测试
+6. 对 UI 需求先有界检索 `.falla/ui-knowledge/components/` 与 `screen-patterns/` 中的相关条目；
+   缺失条目不能作为能力不存在的证据，也不得在 preflight 自动生成或批量补全知识库。
+   若项目启用了 CodeGraph，再用图谱定位相关符号、调用链和影响面，只读取命中的必要文件；
+   XML、Gradle、资源和精确文本可使用有界 `rg`。CodeGraph 不可用时允许有界降级。
+   只检查需求直接涉及的当前代码与文档；所有状态结论必须有文件、符号、模型、接口或测试
    证据。默认禁止 `git log`、`git show <commit>`、`git blame`、`git reflog`、`git rev-list` 等
    Git 历史读取。只有用户明确要求分析变更沿革、回归来源或具体提交时，才允许对相关路径执行
    一次有界批量查询；不得仓库级扫描或换参数重复读取历史。

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rename, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, realpath, rename, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -106,4 +106,83 @@ test('Hook 拒绝通过规则文件符号链接读取项目外内容', async () 
   assert.equal(claude.code, 2);
   assert.equal(codex.code, 2);
   assert.doesNotMatch(claude.stdout + claude.stderr + codex.stdout + codex.stderr, /OUTSIDE_SECRET/);
+});
+
+
+test('任务 Hook 在启用后增量同步 CodeGraph 且不透传敏感环境变量', async () => {
+  const { root, nested } = await fixture();
+  await mkdir(path.join(root, '.codegraph'));
+  await writeFile(path.join(root, '.falla', 'install-manifest.json'), `${JSON.stringify({
+    formatVersion: 3,
+    integrations: { codegraph: true },
+  })}\n`);
+  const bin = await mkdtemp(path.join(os.tmpdir(), 'falla-codegraph-bin-'));
+  const log = path.join(bin, 'calls.log');
+  const executable = path.join(bin, 'codegraph');
+  await writeFile(executable, `#!/bin/sh\nprintf '%s|%s\\n' "$*" "\${OPENAI_API_KEY-unset}" > ${JSON.stringify(log)}\n`);
+  await chmod(executable, 0o755);
+
+  const result = await runHook(
+    path.join(templates, 'falla-spec-session.mjs'),
+    nested,
+    { cwd: nested },
+    { PATH: `${bin}:${process.env.PATH}`, OPENAI_API_KEY: 'HOOK_SECRET' }
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(JSON.parse(result.stdout).hookSpecificOutput.additionalContext, /CodeGraph.*索引已准备完成/);
+  assert.equal(await readFile(log, 'utf8'), `sync ${await realpath(root)} --quiet|unset\n`);
+  assert.doesNotMatch(result.stdout + result.stderr, /HOOK_SECRET/);
+});
+
+test('CodeGraph 同步失败时 Hook 脱敏降级而不阻断任务', async () => {
+  const { root, nested } = await fixture();
+  await mkdir(path.join(root, '.codegraph'));
+  await writeFile(path.join(root, '.falla', 'install-manifest.json'), `${JSON.stringify({
+    formatVersion: 3,
+    integrations: { codegraph: true },
+  })}\n`);
+  const bin = await mkdtemp(path.join(os.tmpdir(), 'falla-codegraph-bin-'));
+  const executable = path.join(bin, 'codegraph');
+  await writeFile(executable, '#!/bin/sh\necho CODEGRAPH_SECRET >&2\nexit 9\n');
+  await chmod(executable, 0o755);
+
+  const result = await runHook(
+    path.join(templates, 'falla-spec-session.mjs'),
+    nested,
+    { cwd: nested },
+    { PATH: `${bin}:${process.env.PATH}` }
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(JSON.parse(result.stdout).hookSpecificOutput.additionalContext, /允许降级为有界 rg\/find/);
+  assert.doesNotMatch(result.stdout + result.stderr, /CODEGRAPH_SECRET/);
+});
+
+test('Claude 首次执行 Falla Skill 前初始化 CodeGraph 且同会话不重复', async () => {
+  const { root, nested } = await fixture();
+  await writeFile(path.join(root, '.falla', 'install-manifest.json'), `${JSON.stringify({
+    formatVersion: 3,
+    integrations: { codegraph: true },
+  })}\n`);
+  const bin = await mkdtemp(path.join(os.tmpdir(), 'falla-codegraph-bin-'));
+  const log = path.join(bin, 'calls.log');
+  const executable = path.join(bin, 'codegraph');
+  await writeFile(executable, `#!/bin/sh\nprintf '%s\\n' "$*" >> ${JSON.stringify(log)}\n`);
+  await chmod(executable, 0o755);
+  const payload = {
+    session_id: 'codegraph-once',
+    cwd: nested,
+    tool_input: { name: 'falla-preflight' },
+  };
+  const env = { PATH: `${bin}:${process.env.PATH}` };
+
+  const first = await runHook(path.join(templates, 'falla-spec-guard.mjs'), nested, payload, env);
+  const second = await runHook(path.join(templates, 'falla-spec-guard.mjs'), nested, payload, env);
+
+  assert.equal(first.code, 0, first.stderr);
+  assert.match(JSON.parse(first.stdout).hookSpecificOutput.additionalContext, /CodeGraph.*索引已准备完成/);
+  assert.equal(second.code, 0, second.stderr);
+  assert.equal(second.stdout, '');
+  assert.equal(await readFile(log, 'utf8'), `init ${await realpath(root)}\n`);
 });

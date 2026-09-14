@@ -124,6 +124,7 @@ export async function collectManagedFiles(toolIds) {
   });
   await addTree(result, path.join('openspec', 'schemas'), path.posix.join('openspec', 'schemas'));
   await addTree(result, 'skill-spec', path.posix.join('.falla', 'skill-spec'));
+  await addTree(result, 'ui-knowledge', path.posix.join('.falla', 'ui-knowledge'));
   for (const tool of tools) {
     await addTree(
       result,
@@ -136,11 +137,19 @@ export async function collectManagedFiles(toolIds) {
       relativePath: '.claude/hooks/falla-spec-guard.mjs',
       content: await readFile(path.join(TEMPLATE_ROOT, 'hooks', 'falla-spec-guard.mjs')),
     });
+    result.push({
+      relativePath: '.claude/hooks/falla-codegraph.mjs',
+      content: await readFile(path.join(TEMPLATE_ROOT, 'hooks', 'falla-codegraph.mjs')),
+    });
   }
   if (tools.includes('codex')) {
     result.push({
       relativePath: '.codex/hooks/falla-spec-session.mjs',
       content: await readFile(path.join(TEMPLATE_ROOT, 'hooks', 'falla-spec-session.mjs')),
+    });
+    result.push({
+      relativePath: '.codex/hooks/falla-codegraph.mjs',
+      content: await readFile(path.join(TEMPLATE_ROOT, 'hooks', 'falla-codegraph.mjs')),
     });
   }
 

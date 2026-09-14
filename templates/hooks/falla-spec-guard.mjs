@@ -5,7 +5,10 @@ import { lstat, mkdir, readFile, realpath, rename, writeFile } from 'node:fs/pro
 import os from 'node:os';
 import path from 'node:path';
 
+import { codeGraphContext, prepareCodeGraph } from './falla-codegraph.mjs';
+
 const MAX_INPUT_BYTES = 1024 * 1024;
+const CODEGRAPH_MARKER = '@codegraph-prepared';
 const SKILL_SPECS = {
   'falla-preflight': ['[Must Read]soul.md', '[分析必读]preflight.md'],
   'falla-propose': ['[Must Read]soul.md', '[架构必读]propose.md'],
@@ -133,7 +136,12 @@ async function main() {
   const marker = markerPath(root, payload.session_id ?? payload.sessionId);
   const injected = await readInjected(marker);
   const pending = required.filter((relative) => !injected.has(relative));
-  if (pending.length === 0) return;
+  let graphContext = null;
+  if (!injected.has(CODEGRAPH_MARKER)) {
+    graphContext = codeGraphContext(await prepareCodeGraph(root));
+    injected.add(CODEGRAPH_MARKER);
+  }
+  if (pending.length === 0 && graphContext === null) return;
 
   const loaded = [];
   const missing = [];
@@ -158,6 +166,7 @@ async function main() {
       hookEventName: 'PreToolUse',
       additionalContext: [
         `【FallaOpenSpec 规则：执行 ${skillName} 前必须遵守】`,
+        ...(graphContext ? [graphContext] : []),
         ...sections,
       ].join('\n\n'),
     },
