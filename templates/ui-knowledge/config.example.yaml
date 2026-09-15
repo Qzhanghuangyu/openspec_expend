@@ -1,0 +1,31 @@
+version: 1
+scope: project
+
+knowledge:
+  sourceOfTruth: markdown
+  componentPaths:
+    - .falla/ui-knowledge/components
+  screenPatternPaths:
+    - .falla/ui-knowledge/screen-patterns
+
+semantic:
+  provider: unconfigured
+  indexPath: .falla/ui-knowledge/.index
+  topK: 8
+
+graph:
+  provider: codegraph
+  projectRoot: .
+  maxCandidates: 5
+  maxFilesPerCandidate: 6
+
+retrieval:
+  projectOnly: true
+  requireVerifiedForDirectReuse: true
+  allowDraftAsReference: true
+  rejectInvalid: true
+
+writeback:
+  autoGenerate: false
+  requireExplicitTask: true
+  requireReviewerForVerified: true

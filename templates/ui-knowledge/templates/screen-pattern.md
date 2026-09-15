@@ -1,9 +1,24 @@
-# <页面模式稳定名称>
+---
+schema-version: 1
+id: stable-kebab-id
+kind: screen-pattern
+scope: project
+status: draft
+platform: android-view
+aliases: []
+intents: []
+tags: []
+codegraph:
+  primary-symbol: ""
+  related-symbols: []
+source-files: []
+layout-resources: []
+tests: []
+last-verified: null
+verified-by: ""
+---
 
-- id: `<stable-kebab-id>`
-- status: `draft | verified | deprecated | invalid`
-- last-verified: `YYYY-MM-DD`
-- verified-by: `<human | ai-assisted + reviewer>`
+# <页面模式稳定名称>
 
 ## 目标场景
 
@@ -15,12 +30,6 @@
 - state holder/view model:
 - reusable components:
 - navigation/route:
-
-## 项目内证据
-
-- source:
-- layout/resources:
-- tests/verification:
 
 ## 状态与交互
 
@@ -39,6 +48,12 @@
 - observers/callbacks/jobs:
 - view or binding release:
 - known risks:
+
+## 项目内验证证据
+
+- source evidence:
+- layout/resource evidence:
+- test/build/manual verification:
 
 ## 视觉校准与设计依据
 

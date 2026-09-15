@@ -35,7 +35,11 @@ test('手册覆盖初始化、幂等更新、工具选择和安全失败处理',
   assert.match(manual, /默认 `single`/);
   assert.match(manual, /明确要求多人\/多 Agent 并行/);
   assert.match(manual, /\.falla\/ui-knowledge/);
-  assert.match(manual, /不会扫描业务源码、生成组件索引/);
+  assert.match(manual, /schema-v1\.md/);
+  assert.match(manual, /config\.example\.yaml/);
+  assert.match(manual, /不会.*扫描业务源码.*生成具体条目.*跨项目检索/s);
+  assert.match(manual, /\.falla\/ui-knowledge\/\.index/);
+  assert.match(manual, /RAG.*模糊召回.*CodeGraph.*验证/s);
   assert.match(manual, /遥测/);
   assert.match(manual, /falla-openspec doctor/);
   assert.match(manual, /重新创建 Claude Code\/Codex 会话/);

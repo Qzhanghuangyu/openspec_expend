@@ -52,9 +52,11 @@ falla-openspec doctor /path/to/project --json
 包含 `.codegraph/`；启用 CodeGraph 后，每个目标项目维护独立的本地索引，任务开始前由 Hook 执行增量同步。
 AI 定位符号、调用链和影响面时优先查询图谱，再读取少量命中文件。
 
-安装器还会在每个目标项目创建 `.falla/ui-knowledge/` 的通用说明和条目模板，但不会扫描业务代码
-或生成项目专属 UI 组件知识库。组件与页面模式由各项目成员，或经用户明确授权的 AI 单独维护。
-详细约定见 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md)。
+安装器还会在每个目标项目创建 `.falla/ui-knowledge/` 的通用协议、配置示例和条目模板，但不会
+扫描业务代码或生成项目专属 UI 组件知识库。不同项目的 Markdown、RAG 本地索引和 CodeGraph 图谱
+完全隔离；组件与页面模式由各项目成员，或经用户明确授权的 AI 单独维护。RAG 负责模糊召回，
+CodeGraph 负责源码关系验证。详细约定见
+[`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md)。
 
 Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在当前对话中另行手动提供含明确
 node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少

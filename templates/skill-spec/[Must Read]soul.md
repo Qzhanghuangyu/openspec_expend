@@ -84,17 +84,22 @@ validate、spec 同步和 archive。Falla 不复制这些实现，只补充移�
 
 ## 3.5 项目独立维护的 UI 组件知识库
 
-每个安装 FallaOpenSpec 的项目都拥有独立位置 `.falla/ui-knowledge/`。工作流只安装通用说明和条目模板，
-不得在安装、更新、SessionStart 或普通任务中扫描业务代码并自动生成项目专属 UI 知识库。
+FallaOpenSpec 面向多个相互独立的项目，只提供 `.falla/ui-knowledge/` 的基础架构、Schema、配置示例、
+空白模板和使用规则，不保存或生成任何具体项目的组件与页面知识。
 
-- `components/` 与 `screen-patterns/` 由该项目的工程师、设计师，或经用户明确授权的 AI 创建和维护。
-- UI 任务开始时可有界检索已有条目；没有条目不代表项目没有该能力，仍须通过 CodeGraph、`rg`、
-  当前源码、资源、测试和设计节点核对。
-- 复用条目前必须核对相对源码证据、模块依赖、资源可见性、主题/API、生命周期、状态和
-  `last-verified`；过期或冲突条目只能作为参考，不能直接复制。
-- AI 不得因为完成普通页面任务就顺带批量补库。只有用户明确授权维护知识库，或当前 change/tasks
-  明确包含知识沉淀，才允许按模板新增或更新条目，并记录验证人与验证日期。
-- 不跨项目自动合并知识库，不记录绝对用户路径、凭据、完整设计正文、临时资源 URL 或整页源码。
+- 每次检索必须绑定当前项目根。项目的 Markdown、RAG 派生索引和 `.codegraph/` 都只能服务当前
+  项目；禁止自动读取、召回、合并或复制其他项目的具体条目。
+- Markdown 是唯一知识事实源；`.falla/ui-knowledge/.index/` 与 `.codegraph/` 都是本地可重建缓存，
+  不得提交，也不得向 CodeGraph 数据库写入 UI 知识或自定义向量。
+- RAG/有界 Markdown 搜索负责 aliases、intents、tags 和场景的模糊召回；CodeGraph 只负责验证
+  当前项目源码符号、调用链、影响面和测试。图谱找到源码不等于组件已经可复用。
+- `config.yaml`、`components/` 与 `screen-patterns/` 由实际项目的工程师、设计师，或经用户明确
+  授权的 AI 创建和维护；工作流安装、更新、SessionStart 和普通任务不得自动生成。
+- 复用前必须核对 `schema-version`、`scope: project`、状态、相对源码证据、模块依赖、资源可见性、
+  主题/API、生命周期、`last-verified` 和 reviewer。过期或冲突条目只能作为参考或拒绝候选。
+- AI 不得因为完成普通页面任务就顺带补库。只有用户明确授权维护知识库，或当前 change/tasks
+  明确包含知识沉淀，才允许写入 `draft`；完成当前项目验证并经 reviewer 确认后才能标记 `verified`。
+- 不记录绝对用户路径、凭据、完整设计正文、临时资源 URL、整页源码或 CodeGraph 全量输出。
 - Figma MCP 和当前代码是事实源；知识库是经过验证的项目内复用说明，不能替代当前节点和实现核对。
 
 ## 4. 拆解方法

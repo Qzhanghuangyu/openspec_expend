@@ -10,7 +10,7 @@ import {
   planManagedFileRemovals,
   planManagedFiles,
 } from '../install/files.js';
-import { ensureCodeGraphIgnored } from '../install/gitignore.js';
+import { ensureLocalIndexesIgnored } from '../install/gitignore.js';
 import {
   applyHookRemovalPlan,
   applyHookRegistrationPlan,
@@ -138,7 +138,7 @@ export async function installProject(options) {
     root, fileRemovalPaths, previousFiles
   );
   const hookRemovalPlan = await planHookRemovals(root, hookRemovalPaths, previousFiles);
-  const gitIgnore = await ensureCodeGraphIgnored(root);
+  const gitIgnore = await ensureLocalIndexesIgnored(root);
 
   await applyManagedFilePlan(root, managedPlan);
   await applyHookRegistrationPlan(root, hookPlan);

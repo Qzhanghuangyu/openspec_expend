@@ -96,8 +96,10 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   );
   assert.match(
     await readFile(path.join(root, '.falla', 'ui-knowledge', 'README.md'), 'utf8'),
-    /不会在安装时扫描业务代码、生成组件索引/
+    /安装、更新、SessionStart 和普通功能任务不得扫描全仓、自动生成条目/
   );
+  await readFile(path.join(root, '.falla', 'ui-knowledge', 'schema-v1.md'));
+  await readFile(path.join(root, '.falla', 'ui-knowledge', 'config.example.yaml'));
   await readFile(path.join(root, '.falla', 'ui-knowledge', 'templates', 'component.md'));
   await readFile(path.join(root, '.falla', 'ui-knowledge', 'templates', 'screen-pattern.md'));
   for (const tool of ['.claude', '.codex']) {
@@ -116,7 +118,10 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   );
   await readFile(path.join(root, '.claude', 'hooks', 'falla-codegraph.mjs'));
   await readFile(path.join(root, '.codex', 'hooks', 'falla-codegraph.mjs'));
-  assert.equal(await readFile(path.join(root, '.gitignore'), 'utf8'), '.codegraph/\n');
+  assert.equal(
+    await readFile(path.join(root, '.gitignore'), 'utf8'),
+    '.codegraph/\n.falla/ui-knowledge/.index/\n'
+  );
   assert.ok(report.written.includes('.gitignore'));
 
   const manifestText = await readFile(path.join(root, '.falla', 'install-manifest.json'), 'utf8');
@@ -213,7 +218,7 @@ test('重复安装保持 manifest 和 marker 幂等', async () => {
   assert.equal(codexConfig.match(/# falla-spec-session:start/g)?.length, 1);
 });
 
-test('初始化保留已有忽略规则并幂等追加 CodeGraph 本地索引', async () => {
+test('初始化保留已有忽略规则并幂等追加项目本地派生索引', async () => {
   const root = await createProject();
   const gitIgnorePath = path.join(root, '.gitignore');
   await writeFile(gitIgnorePath, 'build/\n.env', 'utf8');
@@ -223,8 +228,12 @@ test('初始化保留已有忽略规则并幂等追加 CodeGraph 本地索引', 
   const second = await installProject(installOptions(root));
   const content = await readFile(gitIgnorePath, 'utf8');
 
-  assert.equal(content, 'build/\n.env\n.codegraph/\nlocal-cache/\n');
+  assert.equal(
+    content,
+    'build/\n.env\n.codegraph/\n.falla/ui-knowledge/.index/\nlocal-cache/\n'
+  );
   assert.equal(content.match(/^\.codegraph\/$/gm)?.length, 1);
+  assert.equal(content.match(/^\.falla\/ui-knowledge\/\.index\/$/gm)?.length, 1);
   assert.ok(first.written.includes('.gitignore'));
   assert.ok(second.skipped.includes('.gitignore'));
 });

@@ -172,24 +172,47 @@ test('全局规则要求使用 CodeGraph 做有界代码定位并保留文本搜
   assert.match(soul, /优先使用 CodeGraph/);
   assert.match(soul, /不得把完整 CodeGraph 数据库、全量图谱结果或无关源码注入上下文/);
   assert.match(soul, /生命周期代码的核对/);
-  assert.match(preflight, /用图谱定位相关符号、调用链和影响面/);
+  assert.match(preflight, /CodeGraph 验证其源码符号、调用链和影响面/);
   assert.match(preflight, /CodeGraph 不可用时允许有界降级/);
 });
 
 
-test('UI 组件知识库只提供项目独立位置和模板，不自动生成项目内容', async () => {
+test('UI 知识协议保持项目隔离并连接 RAG 与 CodeGraph', async () => {
   const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
   const knowledge = await readFile(path.resolve('templates/ui-knowledge/README.md'), 'utf8');
-  const component = await readFile(path.resolve('templates/ui-knowledge/templates/component.md'), 'utf8');
-  const screen = await readFile(path.resolve('templates/ui-knowledge/templates/screen-pattern.md'), 'utf8');
-  const combined = [soul, knowledge, component, screen].join('\n');
+  const schema = await readFile(path.resolve('templates/ui-knowledge/schema-v1.md'), 'utf8');
+  const config = YAML.parse(await readFile(
+    path.resolve('templates/ui-knowledge/config.example.yaml'),
+    'utf8'
+  ));
+  const componentPath = path.resolve('templates/ui-knowledge/templates/component.md');
+  const screenPath = path.resolve('templates/ui-knowledge/templates/screen-pattern.md');
+  const component = await readFile(componentPath, 'utf8');
+  const screen = await readFile(screenPath, 'utf8');
+  const componentMetadata = parseFrontmatter(component, componentPath);
+  const screenMetadata = parseFrontmatter(screen, screenPath);
+  const combined = [soul, knowledge, schema, component, screen].join('\n');
 
   assert.match(soul, /项目独立维护的 UI 组件知识库/);
-  assert.match(soul, /不得在安装、更新、SessionStart 或普通任务中扫描业务代码并自动生成/);
-  assert.match(knowledge, /components\/.*stable-kebab-id/);
-  assert.match(knowledge, /经用户明确授权的 AI/);
-  assert.match(component, /生命周期/);
+  assert.match(soul, /禁止自动读取、召回、合并或复制其他项目/);
+  assert.match(soul, /Markdown 是唯一知识事实源/);
+  assert.match(knowledge, /工作流受管文件只有 README、Schema、配置示例和空白模板/);
+  assert.match(knowledge, /默认禁止读取、召回、合并或复制其他项目/);
+  assert.match(knowledge, /RAG.*模糊召回.*CodeGraph.*验证/s);
+  assert.match(schema, /scope.*V1 必须是 `project`/s);
+  assert.equal(config.scope, 'project');
+  assert.equal(config.retrieval.projectOnly, true);
+  assert.equal(config.semantic.indexPath, '.falla/ui-knowledge/.index');
+  assert.equal(config.writeback.autoGenerate, false);
+  assert.equal(componentMetadata['schema-version'], 1);
+  assert.equal(componentMetadata.scope, 'project');
+  assert.equal(componentMetadata.kind, 'component');
+  assert.equal(componentMetadata.status, 'draft');
+  assert.equal(typeof componentMetadata.codegraph['primary-symbol'], 'string');
+  assert.equal(screenMetadata.kind, 'screen-pattern');
+  assert.equal(screenMetadata.scope, 'project');
+  assert.match(component, /async\/observer lifecycle/);
   assert.match(screen, /direct reuse conditions/);
   assert.doesNotMatch(combined, /androidCopy|\/Users\/|\/home\//);
-  assert.doesNotMatch(combined, /android-ui scan|自动创建.*index\.json/);
+  assert.doesNotMatch(combined, /自动创建.*具体项目|跨项目共享数据库/);
 });

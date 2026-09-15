@@ -1,11 +1,24 @@
-# <组件稳定名称>
+---
+schema-version: 1
+id: stable-kebab-id
+kind: component
+scope: project
+status: draft
+platform: android-view
+aliases: []
+intents: []
+tags: []
+codegraph:
+  primary-symbol: ""
+  related-symbols: []
+source-files: []
+layout-resources: []
+tests: []
+last-verified: null
+verified-by: ""
+---
 
-- id: `<stable-kebab-id>`
-- status: `draft | verified | deprecated | invalid`
-- platform: `android-view | compose | flutter | ios | other`
-- owner-module: `<项目内模块或包>`
-- last-verified: `YYYY-MM-DD`
-- verified-by: `<human | ai-assisted + reviewer>`
+# <组件稳定名称>
 
 ## 适用场景
 
@@ -14,12 +27,6 @@
 ## 不适用场景
 
 - 
-
-## 项目内证据
-
-- source: `<相对路径:符号或行范围>`
-- layout/resource: `<相对路径或资源名>`
-- test/verification: `<测试、截图或人工验收证据>`
 
 ## 依赖与接入条件
 
@@ -35,9 +42,15 @@
 - async/observer lifecycle:
 - cleanup requirements:
 
+## 项目内验证证据
+
+- source evidence:
+- layout/resource evidence:
+- test/build/manual verification:
+
 ## 使用示例
 
-仅保留最小、已验证的项目内示例；不要复制整页源码或敏感配置。
+仅保留最小、已验证的项目内示例；不要复制整页源码、CodeGraph 全量输出或敏感配置。
 
 ## 风险与限制
 

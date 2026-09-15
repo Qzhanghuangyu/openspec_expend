@@ -144,21 +144,26 @@ codegraph sync <project> --quiet
 
 ## 6. UI 组件知识库
 
-安装器只创建通用位置和模板：
+安装器只创建通用协议、配置示例和空白模板：
 
 ```text
 .falla/ui-knowledge/
 ├── README.md
+├── schema-v1.md
+├── config.example.yaml
 └── templates/
     ├── component.md
     └── screen-pattern.md
 ```
 
-安装器不会扫描业务源码、生成组件索引或写入项目专属内容。各项目由工程师、设计师，或经用户
-明确授权的 AI 创建 `components/*.md` 与 `screen-patterns/*.md`。普通功能任务只读取相关条目，
-不自动批量补库。
+每个项目独立维护自己的 `config.yaml`、`components/*.md` 和 `screen-patterns/*.md`；工作流不会
+扫描业务源码、生成具体条目、跨项目检索或建立共享知识数据库。Markdown 是知识事实源，未来 RAG
+生成的 `.falla/ui-knowledge/.index/` 只是当前项目本地缓存，安装器会将其加入 `.gitignore`。
 
-详细规则见 `.falla/ui-knowledge/README.md`。
+RAG 负责当前项目知识 Markdown 的模糊召回，CodeGraph 负责验证当前项目源码符号、调用链、影响面
+和相关测试。不得修改 `.codegraph/codegraph.db` 存储 UI 知识，也不得把图谱命中自动视为已验证组件。
+
+详细规则见 `.falla/ui-knowledge/README.md` 和 `.falla/ui-knowledge/schema-v1.md`。
 
 ## 7. 常见问题
 

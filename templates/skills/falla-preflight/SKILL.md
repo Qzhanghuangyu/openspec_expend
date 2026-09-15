@@ -23,9 +23,10 @@ description: Use when analyzing a PRD or product request before OpenSpec proposa
 
 5. 执行 `openspec instructions preflight --change "<name>" --json`，按返回的
    `resolvedOutputPath` 和模板创建 `preflight.md`。
-6. 对 UI 需求先有界检索 `.falla/ui-knowledge/components/` 与 `screen-patterns/` 中的相关条目；
+6. 对 UI 需求只检索当前项目根内 `.falla/ui-knowledge/components/` 与 `screen-patterns/` 的条目；
+   若项目已配置本地 RAG，可先做模糊召回，否则使用有界 Markdown 搜索。禁止查询其他项目，
    缺失条目不能作为能力不存在的证据，也不得在 preflight 自动生成或批量补全知识库。
-   若项目启用了 CodeGraph，再用图谱定位相关符号、调用链和影响面，只读取命中的必要文件；
+   对候选条目使用当前项目 CodeGraph 验证其源码符号、调用链和影响面，只读取命中的必要文件；
    XML、Gradle、资源和精确文本可使用有界 `rg`。CodeGraph 不可用时允许有界降级。
    只检查需求直接涉及的当前代码与文档；所有状态结论必须有文件、符号、模型、接口或测试
    证据。默认禁止 `git log`、`git show <commit>`、`git blame`、`git reflog`、`git rev-list` 等
