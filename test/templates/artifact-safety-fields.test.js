@@ -40,10 +40,14 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(design, /## 安全与敏感信息/);
   assert.match(design, /日志与上报/);
 
+  assert.match(tasks, /## 执行模式/);
+  assert.match(tasks, /模式：single/);
+  assert.match(tasks, /只有用户明确要求并行分派时才改为 parallel/);
   assert.match(tasks, /空值、异常、弱网和重复操作/);
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
   assert.match(tasks, /验证命令、variant\/设备、结果/);
 
+  assert.match(comate, /execution-mode\): single/);
   assert.match(comate, /验证证据/);
   assert.match(comate, /生命周期结论/);
   assert.match(comate, /安全与敏感信息结论/);

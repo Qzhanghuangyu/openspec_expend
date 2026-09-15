@@ -1,24 +1,27 @@
 # [模块选读] Apply（实施与协作分派）阶段约束
 
-Apply 只实施 propose 阶段已经创建的父/子 change，不在此阶段拆分或创建 change。
+Apply 只实施 propose 阶段已经规划完成的 change，不在此阶段拆分、创建 change 或切换执行模式。
+`single` 模式直接实施父 change；`parallel` 模式只实施 propose 已创建的父/子 change。
 
 ## 1. 开始门禁
 
 1. 读取全局规则和本文。
    不读取或重跑 preflight、propose、archive；Skill 名称不是 Shell 命令。
-2. 若输入为逻辑 `<parent>/<child>`，执行
+2. 读取 `tasks.md` 中的执行模式；缺失时先检查 `.falla/coordination.yaml`：已有当前父 change 的映射则沿用 `parallel`，否则按 `single` 处理；不得自行升级。
+3. single 模式直接使用父 change，不调用 coordination；若输入为逻辑 `<parent>/<child>`，说明模式
+   不匹配并停止。parallel 模式下，逻辑 `<parent>/<child>` 执行
    `falla-openspec coordination resolve "<parent>/<child>" --json` 获取物理名。
-3. 执行 `falla-openspec doctor <project> --json` 和
+4. 执行 `falla-openspec doctor <project> --json`；仅 parallel 模式执行
    `falla-openspec coordination validate --change "<parent>" --json`。
-4. 上游依赖未 done 时停止；不得以赶进度为由绕过。
-5. owner 为 unassigned 时先认领，再把状态改为 in-progress。
-6. 使用官方 `openspec status` 和 `openspec instructions apply` 获取真实状态、contextFiles、
+5. parallel 模式下上游依赖未 done 时停止；不得以赶进度为由绕过。
+6. owner 为 unassigned 时先认领，再把状态改为 in-progress。
+7. 使用官方 `openspec status` 和 `openspec instructions apply` 获取真实状态、contextFiles、
    context 与 operationGuidance。
 
 ## 2. 实施与状态
 
-- 读取官方 contextFiles 和 context；子 change 还需通过协调映射读取父 change 的 proposal、specs、
-  design 和 tasks，不复制这些文件。
+- 读取官方 contextFiles 和 context；single 模式直接以父 change 的 artifacts 为上下文；parallel
+  模式的子 change 还需通过协调映射读取父 change 的 proposal、specs、design 和 tasks，不复制这些文件。
 - operationGuidance 仅是操作建议：逐条判断适用性，不能覆盖官方状态、允许编辑路径、Falla 门禁
   或用户明确选择，也不得把 context/guidance 正文复制到代码、日志或报告。
 - 逐项进行最小改动；对应验证成功后才把 `- [ ]` 改成 `- [x]`。

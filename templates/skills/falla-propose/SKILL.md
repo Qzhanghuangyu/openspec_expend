@@ -5,7 +5,7 @@ description: Use when an existing Falla preflight change needs proposal artifact
 
 # Falla Propose
 
-把已有 preflight 转为官方 OpenSpec artifacts 和可并行认领的父子 change DAG。
+把已有 preflight 转为官方 OpenSpec artifacts；默认保留单一 change，按用户明确要求启用并行子 change DAG。
 
 ## 必须执行
 
@@ -28,7 +28,15 @@ description: Use when an existing Falla preflight change needs proposal artifact
    若是纯重构、工具或文档变更且没有规格级行为变化，在 `.openspec.yaml` 显式设置
    `skip_specs: true`，并接受官方 status 将 specs 标为 `skipped`；不得伪造空 requirement。
 5. tasks 使用 checkbox 和逻辑依赖，形成“契约 → 控件并行 → 组装 → 联调”的 DAG。
-6. 在 propose 阶段为每个可交付单元创建子 change：
+6. 选择执行模式并写入父 `tasks.md` 和 `comate.md`：
+   - 新 change 默认使用 `single`。ViewModel、View、控件、组装和联调只是父 change 内的任务组；
+     不调用 coordination，不创建额外 change 目录。
+   - 重跑已有 change 时，若 `.falla/coordination.yaml` 已有该父 change 的映射，则沿用 `parallel`
+     并复用已有子 change，不得降级或重复创建。
+   - 只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才使用
+     `parallel`。AI 可以建议一次，但未得到明确确认时仍使用 single；任务较多、存在 MVVM
+     分层或理论上可并行，都不能由 AI 自行升级执行模式。
+7. 仅在 parallel 模式下为独立认领、独立验证和独立交接的交付单元创建子 change：
 
    逻辑名必须恰好是两个 kebab-case 段：`<parent>/<child>`。View 只是任务类别，
    不能再形成第三层；例如 `medal/view-model`、`medal/top-bar`、`medal/list-card`。
@@ -55,7 +63,7 @@ description: Use when an existing Falla preflight change needs proposal artifact
 
    物理 change 已存在时 unregister 会拒绝，不能删除文件或使用 force。
 
-7. `comate.md` 使用逻辑名记录双向 `depends-on` / `blocks`，并执行：
+8. 仅在 parallel 模式下让 `comate.md` 使用逻辑名记录双向 `depends-on` / `blocks`，并执行：
 
    ```bash
    falla-openspec coordination validate --change "<parent>" --json
@@ -63,7 +71,8 @@ description: Use when an existing Falla preflight change needs proposal artifact
 
 ## 完成边界
 
-- 所有物理子 change 位于 `openspec/changes/` 顶层；逻辑引用保持 `<parent>/<child>`。
-- apply 阶段不再创建或拆分子 change。
+- 默认 single 模式只生成父 change，不生成子 change 或 coordination 映射。
+- parallel 模式的物理子 change 位于 `openspec/changes/` 顶层；逻辑引用保持 `<parent>/<child>`。
+- apply 阶段不再创建、拆分子 change 或切换执行模式。
 - DAG 校验失败、映射缺失或官方命令失败时停止，不手工嵌套目录、不伪造完成状态。
 - 不在 propose 阶段修改业务代码。

@@ -71,7 +71,11 @@ openspec status --change "medal" --json
 openspec instructions proposal --change "medal" --json
 ```
 
-OpenSpec 的物理 change 名不支持 `/`。创建子 change 时先注册逻辑引用，再把返回的
+`falla-propose` 默认使用 `single` 模式：ViewModel、View、控件和联调只拆成父 change
+`tasks.md` 内的任务组，不自动创建额外目录。只有用户明确要求多人/多 Agent 并行、创建子 change
+或独立分派时，才使用 `parallel` 模式。
+
+OpenSpec 的物理 change 名不支持 `/`。parallel 模式创建子 change 时先注册逻辑引用，再把返回的
 `physical` 交给官方 CLI：
 
 ```bash

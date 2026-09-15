@@ -126,6 +126,44 @@ test('Preflight 默认只核对当前实现且禁止重复读取 Git 历史', as
 });
 
 
+
+test('Propose 默认单 change 且仅在用户明确要求时创建并行子 change', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(
+    path.join(root, 'skills', 'falla-propose', 'SKILL.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+  const schema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven', 'schema.yaml'),
+    'utf8'
+  );
+
+  for (const content of [soul, proposeRule, proposeSkill, schema]) {
+    assert.match(content, /single/);
+    assert.match(content, /parallel/);
+    assert.match(content, /用户明确要求/);
+  }
+  assert.match(soul, /任务拆解与 change 拆解是两件事/);
+  assert.match(proposeRule, /不调用 `coordination register`/);
+  assert.match(proposeSkill, /不创建额外 change 目录/);
+  assert.match(proposeSkill, /任务较多、存在 MVVM\s+分层或理论上可并行/);
+  assert.match(applyRule, /不在此阶段拆分、创建 change 或切换执行模式/);
+  assert.match(applySkill, /single：直接实施父 change/);
+  assert.match(applySkill, /已有当前父 change 的映射则沿用 `parallel`/);
+});
+
 test('全局规则要求使用 CodeGraph 做有界代码定位并保留文本搜索兜底', async () => {
   const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
   const preflight = await readFile(path.join(root, 'skills', 'falla-preflight', 'SKILL.md'), 'utf8');

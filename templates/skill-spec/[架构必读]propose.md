@@ -20,18 +20,32 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
   `skip_specs: true`；官方 status 中 `skipped` 表示依赖已满足，不创建空 delta spec。
 - design 明确 AI 搭建的 UI 框架和留给人工校准的约 20% 视觉项。
 
-## 3. 子 change 落盘
+## 3. 选择执行模式
 
-子 change 必须在 propose 阶段创建，apply 不得创建：
+### 3.1 single（默认）
 
-1. 为每个交付单元确定逻辑名 `<parent>/<child>`。
+- 新 change 未收到用户明确的并行拆分要求时，`tasks.md` 中写入 `执行模式：single`。
+- 重跑已有 change 时，若 `.falla/coordination.yaml` 已存在该父 change 的子映射，则保留
+  `parallel` 并复用已有子 change，不得降级为 single 或重复创建。
+- ViewModel、View、独立控件、组装和联调只作为父 change 内的任务组，不创建额外 change 目录。
+- apply 直接实施父 change，并按 `tasks.md` 的依赖顺序推进。
+- 不调用 `coordination register`，也不创建 `falla-task-driven` change。
+
+### 3.2 parallel（显式启用）
+
+只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才写入
+`执行模式：parallel` 并创建子 change。任务规模较大、存在 ViewModel/View 分层或理论上可并行，
+都不能单独作为启用依据。
+
+parallel 模式下：
+
+1. 为每个独立认领、独立验证和独立交接的交付单元确定逻辑名 `<parent>/<child>`。
    逻辑名必须恰好两段；View 是拆解类别，不得形成 `<parent>/view/<component>` 第三层。
 2. 使用 `falla-openspec coordination register "<parent>/<child>" --json` 获得唯一物理名。
    默认物理名中间的 `child` 是固定字面量；例如 `medal/view-model` 映射为
    `medal-child-view-model`，`medal/top-bar` 映射为 `medal-child-top-bar`。
    每段只使用小写字母、数字和单连字符，并允许数字开头。只有冲突时工具才追加逻辑引用
-   SHA-256 的前 8 位；
-   agent 不得自行编造后缀。
+   SHA-256 的前 8 位；agent 不得自行编造后缀。
 3. 使用官方 `openspec new change "<physical>" --schema falla-task-driven --json` 创建 change。
 4. 用官方 instructions 创建子 change 的 `tasks.md` 和 `comate.md`。
 5. `depends-on` 与 `blocks` 使用逻辑名，并保持双向一致。
@@ -45,7 +59,7 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
 ## 4. 完成标准
 
 - 父 change 的 proposal、specs、design、tasks、comate 全部由官方 status 判定 done。
-- 所有子 change 都是 OpenSpec 顶层物理 change，并能通过逻辑名解析。
-- 子 change 至少有 `.openspec.yaml`、`tasks.md` 和 `comate.md`。
-- DAG 无缺失节点、非对称边或环。
+- single 模式不创建子 change 或 coordination 映射。
+- parallel 模式的所有子 change 都是 OpenSpec 顶层物理 change，并能通过逻辑名解析；每个子
+  change 至少有 `.openspec.yaml`、`tasks.md` 和 `comate.md`，DAG 无缺失节点、非对称边或环。
 - 无实现模块伪装成业务规格。

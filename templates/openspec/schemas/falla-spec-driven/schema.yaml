@@ -59,7 +59,9 @@ artifacts:
     instruction: |
       使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的前置依赖。
       MVVM 契约优先，独立 UI 控件可并行，最后进行组装和联调。
-      propose 阶段必须据此创建可独立实施的子 change；apply 阶段不得重新拆分。
+      执行模式默认是 single：所有任务保留在父 change 中，不能仅因任务分组或理论上可并行就
+      创建子 change。只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才使用
+      parallel，并在 propose 阶段创建子 change；apply 阶段不得重新拆分或切换模式。
     requires:
       - specs
       - design
@@ -69,9 +71,9 @@ artifacts:
     description: 父 change 的责任、依赖、状态和交接台账
     template: comate.md
     instruction: |
-      建立父 change 协作台账并汇总子 change。owner、status、depends-on、blocks、handoff
-      必须完整；依赖边必须双向一致且不能形成环。父 change 完成前全部子 change
-      必须完成或有明确交接。
+      建立父 change 协作台账并记录 execution-mode。owner、status、depends-on、blocks、handoff
+      必须完整。single 模式直接跟踪父 change；parallel 模式汇总子 change，依赖边必须双向一致
+      且不能形成环。父 change 完成前全部子 change 必须完成或有明确交接。
     requires:
       - tasks
 
@@ -79,5 +81,6 @@ apply:
   requires: [comate]
   tracks: tasks.md
   instruction: |
-    读取官方 contextFiles 和 Falla 协作上下文，按拓扑逐项实施并在验证成功后更新任务。
-    遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。
+    读取官方 contextFiles 和 Falla 协作上下文。single 模式直接实施父 change；parallel 模式
+    按已有子 change DAG 实施。按拓扑逐项执行并在验证成功后更新任务，不得在 apply 阶段创建、
+    拆分子 change 或切换执行模式。遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。

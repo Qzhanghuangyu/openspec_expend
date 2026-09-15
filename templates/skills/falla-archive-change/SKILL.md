@@ -11,21 +11,24 @@ description: Use when closing and archiving a completed or explicitly accepted F
 
 1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
    `.falla/skill-spec/[任务选读]archive.md`；缺失时停止。
-2. 逻辑子 change 先用 coordination resolve 获取物理名。阶段中收到或需要核对设计稿链接时
-   执行 Soul 的 MCP 门禁：Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
+2. 读取父 `tasks.md` / `comate.md` 的执行模式；字段缺失时检查 `.falla/coordination.yaml`，
+   有该父 change 的子映射则按 parallel，否则按 single。parallel 模式的逻辑子 change 先用
+   coordination resolve 获取物理名。阶段中收到或需要核对设计稿链接时执行 Soul 的 MCP 门禁：
+   Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
 3. 运行：
 
    ```bash
    openspec validate "<physical>" --strict --json --no-interactive
    openspec status --change "<physical>" --json
    openspec instructions archive --change "<physical>" --json
+   # 仅 parallel 模式执行
    falla-openspec coordination validate --change "<parent>" --json
    ```
 
 4. 应用 archive instructions 返回的 `context`，并只采纳适用且不冲突的 `operationGuidance`；
    guidance 不能覆盖官方状态、安全门禁或用户选择，也不得原样写入报告。
-5. 汇总非 done/skipped artifact、未完成 tasks、非 done comate、未交接子 change，以及官方 status
-   返回的 delta spec 路径与同步影响。
+5. 汇总非 done/skipped artifact、未完成 tasks、非 done comate，以及官方 status 返回的 delta
+   spec 路径与同步影响；仅 parallel 模式汇总未交接子 change。
 
 ## 有告警时
 
@@ -62,8 +65,8 @@ openspec archive "<physical>" --json --yes --no-validate --skip-specs
 无告警或已经修复并通过 validate 时使用
 `openspec archive "<physical>" --json --yes`。
 
-根据本次明确选择追加例外参数。子 change 与父 change 分别归档，父 change 在全部子 change
-完成或明确交接后处理。不得手工 `mv`，不得执行 Skill 名称作为命令。
+根据本次明确选择追加例外参数。single 模式只归档父 change；parallel 模式先分别归档子
+change，全部完成或明确交接后再归档父 change。不得手工 `mv`，不得执行 Skill 名称作为命令。
 
 官方命令失败时停止；成功后保留 coordination 映射与归档内 `comate.md`，并报告归档位置、
 spec 同步结果和仍存在的告警。

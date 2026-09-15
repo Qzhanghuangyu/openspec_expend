@@ -4,13 +4,16 @@ Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移�
 
 ## 1. 前置检查
 
-1. `openspec validate "<physical>" --strict --json --no-interactive`。
-2. `openspec status --change "<physical>" --json`，汇总非 done/skipped artifact。
-3. `openspec instructions archive --change "<physical>" --json`，读取 context，并只采纳适用且
+1. 读取父 `tasks.md` / `comate.md` 的执行模式；字段缺失时检查 `.falla/coordination.yaml`，
+   有该父 change 的子映射则按 parallel，否则按 single。
+2. `openspec validate "<physical>" --strict --json --no-interactive`。
+3. `openspec status --change "<physical>" --json`，汇总非 done/skipped artifact。
+4. `openspec instructions archive --change "<physical>" --json`，读取 context，并只采纳适用且
    不冲突的 operationGuidance。
-4. 统计 `tasks.md` 中未完成 checkbox。
-5. 检查 `comate.md` 是否 done、handoff 是否完整。
-6. 父 change 归档前运行 coordination validate，确认所有子 change 完成或明确交接。
+5. 统计 `tasks.md` 中未完成 checkbox。
+6. 检查 `comate.md` 是否 done、handoff 是否完整。
+7. 仅 parallel 模式在父 change 归档前运行 coordination validate，确认所有子 change 完成或明确交接；
+   single 模式直接检查父 change 的 tasks 与 comate。
 
 这些结果是告警与决策材料，不得隐瞒。若存在问题，先展示问题及可能影响并请求用户
 明确确认；不能自行把任务改为完成，也不能臆造 abandoned/cancelled 等 OpenSpec 未提供的流程。
@@ -30,7 +33,7 @@ Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移�
 
 - 调用 `openspec archive "<physical>" --json`；已取得对应例外确认时才追加
   `--no-validate`、`--skip-specs` 或 `--yes`。
-- 子 change 与父 change 分别由官方命令归档。
-- 保留 coordination 映射和归档目录内的 `comate.md` 审计记录。
+- single 模式只归档父 change；parallel 模式先分别归档子 change，再归档父 change。
+- parallel 模式保留 coordination 映射；所有模式都保留归档目录内的 `comate.md` 审计记录。
 - 官方命令失败时停止，不把错误解释为无 delta 或已归档。
 - 展示 change、schema、官方归档位置、spec 同步情况和仍存在的告警。

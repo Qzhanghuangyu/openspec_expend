@@ -32,6 +32,8 @@ test('手册覆盖初始化、幂等更新、工具选择和安全失败处理',
   assert.match(manual, /不要重复传 `--with-figma`、`--with-codegraph` 或 `--with-lark`/);
   assert.match(manual, /--with-codegraph/);
   assert.match(manual, /codegraph sync/);
+  assert.match(manual, /默认 `single`/);
+  assert.match(manual, /明确要求多人\/多 Agent 并行/);
   assert.match(manual, /\.falla\/ui-knowledge/);
   assert.match(manual, /不会扫描业务源码、生成组件索引/);
   assert.match(manual, /遥测/);

@@ -120,13 +120,24 @@ validate、spec 同步和 archive。Falla 不复制这些实现，只补充移�
 - 独立任务并行，有依赖任务按拓扑顺序推进。
 - 典型顺序：ViewModel 数据契约 → 控件并行 → 页面组装 → 联调。
 
-### 4.4 propose 阶段创建子 change
+### 4.4 默认单 change，按需启用并行子 change
 
-父 change 完成规划 artifact 后，必须在 propose 阶段创建子 change；apply 只实施已有子
-change，不重新拆分。业务 `specs/` 只描述用户可观察、可测试的行为，不能用 View、
-ViewModel、控件或接口层等实现模块冒充能力。
+任务拆解与 change 拆解是两件事。proposal、specs、design、tasks 默认都保存在同一个父 change
+中；ViewModel、View、控件、组装和联调通常只是 `tasks.md` 内的任务组，不能仅因分层或任务较多
+就自动创建子 change。
 
-标准 OpenSpec 不支持嵌套 change，因此：
+执行模式只有两种：
+
+- `single`（默认）：由一个 change 跟踪全部任务，apply 直接实施父 change。
+- `parallel`（显式启用）：只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，
+  propose 才创建子 change。AI 可以建议一次，但未得到明确确认时仍必须使用 single；不得根据
+  复杂度、分层或潜在并行性自行升级。
+
+parallel 模式下，子 change 必须在 propose 阶段一次性创建，apply 只实施已有子 change，不能再次
+拆分。业务 `specs/` 只描述用户可观察、可测试的行为，不能用 View、ViewModel、控件或接口层等
+实现模块冒充能力。
+
+标准 OpenSpec 不支持嵌套 change，因此仅在 parallel 模式下：
 
 - 逻辑引用保持 `<parent>/<child>`。
 - 物理 change 位于 `openspec/changes/<parent>-child-<child>/`。

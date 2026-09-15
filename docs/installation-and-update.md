@@ -89,6 +89,16 @@ Hook 和 marker。
 普通更新不要重复传 `--with-figma`、`--with-codegraph` 或 `--with-lark`。省略这些参数不会卸载
 已有外部工具；CodeGraph 启用状态会保留，任务 Hook 继续执行增量同步。
 
+### Propose 执行模式
+
+- 默认 `single`：只维护一个父 change，ViewModel、View、控件、组装和联调作为 `tasks.md` 中的任务组。
+- 仅当用户明确要求多人/多 Agent 并行、创建子 change 或独立分派时使用 `parallel`；AI 可以提出
+  建议，但未得到明确确认时仍保持 `single`。
+- 任务较多、存在 MVVM 分层或理论上可并行，不足以自动切换为 `parallel`。
+- 重跑旧 change 时，如果 `.falla/coordination.yaml` 已存在该父 change 的映射，则继续按
+  `parallel` 处理，避免既有父子 change 生命周期失配。
+- 执行模式由 propose 决定；apply 不得创建子 change 或切换模式。
+
 更新后执行：
 
 ```bash

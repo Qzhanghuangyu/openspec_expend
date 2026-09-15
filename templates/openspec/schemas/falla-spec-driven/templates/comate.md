@@ -1,5 +1,6 @@
 # comate
 
+- 执行模式 (execution-mode): single
 - 负责人 (owner): unassigned
 - 状态 (status): todo
 - 依赖 (depends-on): []
