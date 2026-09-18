@@ -4,6 +4,8 @@ import { FallaError } from './errors.js';
 import { coordinationCommand } from './commands/coordination.js';
 import { doctorProject } from './commands/doctor.js';
 import { installProject } from './commands/install.js';
+import { knowledgeCommand } from './commands/knowledge.js';
+import { codeGraphCommand } from './commands/codegraph.js';
 
 export function usage() {
   return [
@@ -16,6 +18,10 @@ export function usage() {
     '  coordination unregister <change>  清理未落盘的孤儿 change 映射',
     '  coordination resolve <change>     解析逻辑 change 引用',
     '  coordination validate --change X  校验协作依赖图',
+    '  coordination claim X --owner ID   排他认领现有 Android change',
+    '  ui-knowledge validate             校验项目 Android UI 知识',
+    '  ui-knowledge fingerprint <entry>  只读计算知识引用文件指纹',
+    '  codegraph prepare                同步当前项目已启用的图谱',
   ].join('\n');
 }
 
@@ -79,7 +85,7 @@ async function install(argv, io) {
     io,
     report,
     options.json,
-    `安装完成：${report.written.length} 个写入，${report.removed.length} 个清理，${report.warnings.length} 个警告`
+    `安装${report.ok ? '完成' : '未完成'}：${report.written.length} 个写入，${report.removed.length} 个清理，${report.warnings.length} 个集成警告；项目健康${report.doctor.ok ? '通过' : '存在问题，请运行 doctor --json'}`
   );
   return report.ok ? 0 : 1;
 }
@@ -105,6 +111,8 @@ export async function main(argv, io) {
   const [command, ...rest] = argv;
   if (command === 'install') return install(rest, io);
   if (command === 'doctor') return doctor(rest, io);
+  if (command === 'ui-knowledge') return knowledgeCommand(rest, io);
+  if (command === 'codegraph') return codeGraphCommand(rest, io);
   if (command === 'coordination') {
     const result = await coordinationCommand(rest, io);
     return result.ok === false ? 1 : 0;

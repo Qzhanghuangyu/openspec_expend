@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { FallaError } from '../errors.js';
+import { claimChange } from '../coordination/claim.js';
 import { validateCoordination } from '../coordination/dag.js';
 import {
   registerMapping,
@@ -13,7 +14,9 @@ import { runOpenSpecJson } from '../openspec/runner.js';
 
 function parseArguments(argv) {
   const [command, ...rest] = argv;
-  const options = { json: false, project: null, change: null, positional: [] };
+  const options = {
+    json: false, project: null, change: null, owner: null, positional: [],
+  };
 
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index];
@@ -21,7 +24,7 @@ function parseArguments(argv) {
       options.json = true;
       continue;
     }
-    if (argument === '--project' || argument === '--change') {
+    if (argument === '--project' || argument === '--change' || argument === '--owner') {
       const value = rest[index + 1];
       if (!value || value.startsWith('--')) {
         throw new FallaError(1, `参数 ${argument} 缺少值`);
@@ -58,6 +61,10 @@ function requireSingleReference(command, options) {
   return options.positional[0];
 }
 
+function rejectOwner(command, options) {
+  if (options.owner !== null) throw new FallaError(1, `${command} 不接受 --owner`);
+}
+
 function writeResult(io, result, json, summary) {
   io.stdout.write(json ? `${JSON.stringify(result)}\n` : `${summary}\n`);
 }
@@ -67,6 +74,7 @@ export async function coordinationCommand(argv, io) {
   const root = await resolveRoot(options, io);
 
   if (command === 'register') {
+    rejectOwner(command, options);
     const reference = requireSingleReference(command, options);
     const result = await registerMapping(root, reference);
     writeResult(io, result, options.json, `${result.logical} -> ${result.physical}`);
@@ -74,6 +82,7 @@ export async function coordinationCommand(argv, io) {
   }
 
   if (command === 'unregister') {
+    rejectOwner(command, options);
     const reference = requireSingleReference(command, options);
     const result = await unregisterMapping(root, reference);
     writeResult(io, result, options.json, `已移除映射：${result.logical}`);
@@ -81,6 +90,7 @@ export async function coordinationCommand(argv, io) {
   }
 
   if (command === 'resolve') {
+    rejectOwner(command, options);
     const reference = requireSingleReference(command, options);
     const result = await resolveChange(root, reference);
     const output = {
@@ -92,6 +102,7 @@ export async function coordinationCommand(argv, io) {
   }
 
   if (command === 'validate') {
+    rejectOwner(command, options);
     if (options.positional.length > 0) {
       throw new FallaError(1, `未知参数：${options.positional[0]}`);
     }
@@ -117,6 +128,24 @@ export async function coordinationCommand(argv, io) {
         ? `协调校验通过：${result.parent}`
         : `协调校验失败：${result.parent}（${result.errors.length} 个错误）`
     );
+    return result;
+  }
+
+  if (command === 'claim') {
+    const reference = requireSingleReference(command, options);
+    if (!options.owner) throw new FallaError(1, 'claim 需要 --owner <id>');
+    const result = await claimChange(root, reference, {
+      owner: options.owner,
+      statusProvider: async (physical) => assertStatusContract(await runOpenSpecJson(
+        ['status', '--change', physical, '--json'],
+        {
+          cwd: root,
+          executable: io.openSpecExecutable ?? 'openspec',
+          env: io.env,
+        }
+      )),
+    });
+    writeResult(io, result, options.json, `已认领 change：${result.change}`);
     return result;
   }
 

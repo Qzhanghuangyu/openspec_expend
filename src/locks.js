@@ -1,9 +1,9 @@
-import { lstat, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { FallaError } from './errors.js';
 
-const ALLOWED_KINDS = new Set(['install']);
+const ALLOWED_KINDS = new Set(['install', 'coordination']);
 
 function isAlive(pid) {
   try {
@@ -65,7 +65,7 @@ async function acquireLock(file, kind, content) {
 
 export async function withProjectLock(rootInput, kind, operation) {
   if (!ALLOWED_KINDS.has(kind)) throw new FallaError(1, `不支持的锁类型：${kind}`);
-  const root = path.resolve(rootInput);
+  const root = await realpath(path.resolve(rootInput));
   const falla = path.join(root, '.falla');
   await mkdir(falla, { recursive: true });
   const fallaEntry = await lstat(falla);

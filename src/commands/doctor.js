@@ -13,6 +13,9 @@ import {
   isHookRegistrationPath,
 } from '../install/hooks.js';
 import { loadInstallManifest } from '../install/manifest.js';
+import { validateChangeRecords } from '../coordination/health.js';
+import { validateKnowledge } from '../knowledge/validate.js';
+import { inspectCodeGraph } from '../ui/codegraph.js';
 
 const SCHEMA_NAMES = [
   'falla-spec-driven',
@@ -137,6 +140,8 @@ export async function doctorProject(options) {
     ok: manifest !== null && driftedPaths.length === 0,
     paths: driftedPaths,
   });
+  const installationOk = checks.every(check => check.ok);
+  for (const check of checks) check.group = 'installation';
 
   const coordinationPresent = await exists(
     path.join(root, '.falla', 'coordination.yaml'),
@@ -164,14 +169,36 @@ export async function doctorProject(options) {
   }
   checks.push({
     id: 'falla-coordination',
+    group: 'workflow',
     ok: coordinationErrors === 0,
     present: coordinationPresent,
     parents: coordinationParents,
     errors: coordinationErrors,
   });
 
+  let workflow;
+  try {
+    workflow = await validateChangeRecords(root, [...statusByChange.values()]);
+  } catch {
+    workflow = { ok: false, errors: [{ kind: 'workflow-records-unreadable' }] };
+  }
+  checks.push({ id: 'falla-change-records', group: 'workflow', ok: workflow.ok, errors: workflow.errors });
+  const knowledge = await validateKnowledge(root);
+  checks.push({ id: 'falla-ui-knowledge', group: 'knowledge', ok: knowledge.ok, errors: knowledge.errors, warnings: knowledge.warnings });
+  const codegraph = await inspectCodeGraph(root, {
+    enabled: manifest?.integrations?.codegraph === true, env: options.env,
+  });
+  checks.push({ id: 'codegraph-availability', group: 'integrations', ok: codegraph.ok, state: codegraph.state });
+  const groups = {
+    installation: { ok: installationOk },
+    workflow: { ...workflow, ok: workflow.ok && coordinationErrors === 0, coordinationErrors },
+    knowledge,
+    integrations: { ok: codegraph.ok, codegraph, figma: { state: 'not-checked' }, lark: { state: 'not-checked' } },
+  };
+
   return {
     ok: checks.every((check) => check.ok),
+    groups,
     openSpec: {
       executable,
       version: version.raw,

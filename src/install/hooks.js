@@ -116,12 +116,14 @@ function replaceMarkedSection(existing, desired, start, end, previousHash, relat
 
 async function planMarker(root, relativePath, start, body, end, previousHash) {
   const desired = markedSection(start, body, end);
-  const existing = (await readProjectFile(root, relativePath))?.toString('utf8') ?? '';
+  const raw = await readProjectFile(root, relativePath);
+  const existing = raw?.toString('utf8') ?? '';
   const content = replaceMarkedSection(existing, desired, start, end, previousHash, relativePath);
   return {
     relativePath,
     content,
     managedHash: sha256(desired),
+    expectedFileHash: raw === null ? null : sha256(raw),
     action: content === existing ? 'skip' : 'write',
   };
 }
@@ -233,6 +235,7 @@ async function planClaudeSettings(root, previousHash) {
     relativePath: CLAUDE_SETTINGS_PATH,
     content,
     managedHash: desiredHash,
+    expectedFileHash: raw === null ? null : sha256(raw),
     action: raw?.toString('utf8') === content ? 'skip' : 'write',
   };
 }
@@ -322,21 +325,34 @@ export async function planHookRemovals(root, relativePaths, previousFiles = {}) 
 }
 
 export async function applyHookRegistrationPlan(root, plans) {
+  await assertHookPlanHashes(root, plans, '用户修改的 Hook 注册不能覆盖');
   for (const plan of plans) {
     if (plan.action === 'write') {
-      await writeAtomicFile(root, plan.relativePath, plan.content);
+      await writeAtomicFile(root, plan.relativePath, plan.content, {
+        expectedHash: plan.expectedFileHash,
+      });
     }
   }
 }
 
+async function assertHookPlanHashes(root, plans, message) {
+  for (const plan of plans) {
+    if (plan.action !== 'write' || plan.expectedFileHash === undefined) continue;
+    const current = await readProjectFile(root, plan.relativePath);
+    const matches = plan.expectedFileHash === null
+      ? current === null
+      : current !== null && sha256(current) === plan.expectedFileHash;
+    if (!matches) throw new FallaError(1, `${message}：${plan.relativePath}`);
+  }
+}
+
 export async function applyHookRemovalPlan(root, plans) {
+  await assertHookPlanHashes(root, plans, '用户修改的 Hook 注册不能删除');
   for (const plan of plans) {
     if (plan.action === 'write') {
-      const current = await readProjectFile(root, plan.relativePath);
-      if (current === null || sha256(current) !== plan.expectedFileHash) {
-        throw new FallaError(1, `用户修改的 Hook 注册不能删除：${plan.relativePath}`);
-      }
-      await writeAtomicFile(root, plan.relativePath, plan.content);
+      await writeAtomicFile(root, plan.relativePath, plan.content, {
+        expectedHash: plan.expectedFileHash,
+      });
     }
   }
 }

@@ -59,3 +59,37 @@ export async function installCodeGraph(toolIds, root, commandRunner = runProcess
   await commandRunner('codegraph', args, { ...processOptions, cwd: root });
   return { success: true, action, tools };
 }
+
+export async function inspectCodeGraph(root, options = {}) {
+  const result = {
+    enabled: options.enabled === true, available: false, indexPresent: false,
+    freshness: 'not-checked', connection: 'not-checked',
+  };
+  if (!result.enabled) return { ...result, ok: true, state: 'disabled' };
+  try {
+    await runProcess('codegraph', ['--version'], {
+      cwd: root, env: restrictedEnvironment(options.env), stdio: 'ignore',
+      timeoutMs: options.timeoutMs ?? 2_000, killGraceMs: 100,
+    });
+    result.available = true;
+  } catch {
+    // No raw subprocess diagnostics or environment values in health reports.
+  }
+  let unsafe = false;
+  try {
+    const directory = await lstat(path.join(root, '.codegraph'));
+    unsafe = directory.isSymbolicLink() || !directory.isDirectory();
+    if (!unsafe) {
+      const file = await lstat(path.join(root, '.codegraph/codegraph.db'));
+      unsafe = file.isSymbolicLink() || !file.isFile();
+      result.indexPresent = !unsafe;
+    }
+  } catch {
+    result.indexPresent = false;
+  }
+  return {
+    ...result, ok: result.available && result.indexPresent && !unsafe,
+    state: unsafe ? 'unsafe-index-path' : !result.available ? 'cli-unavailable'
+      : !result.indexPresent ? 'index-missing' : 'available',
+  };
+}

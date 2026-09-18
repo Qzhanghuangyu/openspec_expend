@@ -165,7 +165,6 @@ export async function installProject(options) {
   }
   const manifestWritten = await saveInstallManifest(root, candidateManifest);
 
-  const doctor = await doctorProject({ root, executable, env: options.env });
   const warnings = [];
   const integrations = options.integrations ?? {};
   if (withFigma === true) {
@@ -197,8 +196,12 @@ export async function installProject(options) {
     }
   }
 
+  // Probe after optional setup. Project task/knowledge/tool health is distinct
+  // from whether this installation wrote a consistent set of managed files.
+  const doctor = await doctorProject({ root, executable, env: options.env });
+
   return {
-    ok: doctor.ok,
+    ok: doctor.groups.installation.ok,
     tools,
     integrations: candidateManifest.integrations,
     written: [

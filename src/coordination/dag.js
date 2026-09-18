@@ -1,9 +1,7 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
 import { FallaError } from '../errors.js';
 import { assertChangeSegment } from './naming.js';
 import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
+import { readChangeRecordFile } from './health.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
 
@@ -50,23 +48,12 @@ function findCycle(records) {
 
 async function readNode(root, logical, mapping, statusProvider) {
   const resolved = await resolveChange(root, logical);
-  let comate;
-  let tasks;
-  try {
-    comate = parseComate(
-      await readFile(path.join(resolved.path, 'comate.md'), 'utf8'),
-      `${logical}/comate.md`
-    );
-  } catch (error) {
-    if (error?.code === 'ENOENT') throw new FallaError(1, `缺少 comate.md：${logical}`);
-    throw error;
-  }
-  try {
-    tasks = parseTaskProgress(await readFile(path.join(resolved.path, 'tasks.md'), 'utf8'));
-  } catch (error) {
-    if (error?.code === 'ENOENT') throw new FallaError(1, `缺少 tasks.md：${logical}`);
-    throw error;
-  }
+  const markdown = await readChangeRecordFile(root, resolved.path, 'comate.md', true);
+  if (markdown === null) throw new FallaError(1, `缺少 comate.md：${logical}`);
+  const comate = parseComate(markdown, `${logical}/comate.md`);
+  const taskMarkdown = await readChangeRecordFile(root, resolved.path, 'tasks.md', true);
+  if (taskMarkdown === null) throw new FallaError(1, `缺少 tasks.md：${logical}`);
+  const tasks = parseTaskProgress(taskMarkdown);
 
   const officialStatus = statusProvider && resolved.lifecycle === 'active'
     ? await statusProvider(mapping.physical)

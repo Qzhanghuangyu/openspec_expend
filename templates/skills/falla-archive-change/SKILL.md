@@ -1,6 +1,6 @@
 ---
 name: falla-archive-change
-description: Use when closing and archiving a completed or explicitly accepted Falla OpenSpec change.
+description: Use when closing and archiving a completed or explicitly accepted Android Falla OpenSpec change.
 ---
 
 # Falla Archive Change
@@ -10,7 +10,8 @@ description: Use when closing and archiving a completed or explicitly accepted F
 ## 归档前
 
 1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
-   `.falla/skill-spec/[任务选读]archive.md`；缺失时停止。
+   `.falla/skill-spec/[任务选读]archive.md`；缺失时停止。需要源码证据时按 Soul 的索引准备规则
+   执行 CodeGraph prepare。
 2. 读取父 `tasks.md` / `comate.md` 的执行模式；字段缺失时检查 `.falla/coordination.yaml`，
    有该父 change 的子映射则按 parallel，否则按 single。parallel 模式的逻辑子 change 先用
    coordination resolve 获取物理名。阶段中收到或需要核对设计稿链接时执行 Soul 的 MCP 门禁：

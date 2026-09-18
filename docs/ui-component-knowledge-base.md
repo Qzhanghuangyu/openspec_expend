@@ -4,7 +4,8 @@
 
 ## 1. 定位
 
-FallaOpenSpec 面向多个相互独立的业务项目。工作流仓库只提供 UI 知识库的基础架构：
+FallaOpenSpec 仅面向多个相互独立的 Android 客户端项目，支持 Android View 与 Jetpack Compose。
+工作流仓库提供 UI 知识库的基础架构及只读校验工具：
 
 - 统一目录约定；
 - Markdown Schema V1；
@@ -120,11 +121,16 @@ schema-version / id / kind / scope / status / platform
 aliases / intents / tags
 codegraph.primary-symbol / codegraph.related-symbols
 source-files / layout-resources / tests
-last-verified / verified-by
+last-verified / verified-by / source-hashes
 ```
 
 `scope` 在 V1 必须是 `project`。`verified` 必须同时具备当前源码证据、依赖/资源检查、生命周期结论
 和 reviewer；AI 生成草稿只能是 `draft`。
+
+`ui-knowledge validate --json` 校验结构、Android 平台、项目边界和证据指纹；
+`ui-knowledge fingerprint <条目相对路径> --json` 只读生成引用文件指纹。两者都不自动维护条目，
+也不将校验结果当作人工验证。校验器的文件预算、历史条目与错误处理见安装后的 schema-v1.md。
+旧 verified 条目没有 source-hashes 时需要项目维护者重新验证并补齐。
 
 ## 7. 工作流阶段规则
 

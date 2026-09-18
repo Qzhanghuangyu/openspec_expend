@@ -171,15 +171,33 @@ export async function planManagedFiles(root, files, previousFiles = {}) {
       if (previousHash) {
         throw new FallaError(1, `用户修改的受管文件不能覆盖：${relativePath}`);
       }
-      plan.push({ ...file, relativePath, desiredHash, action: 'write' });
+      plan.push({
+        ...file,
+        relativePath,
+        desiredHash,
+        expectedFileHash: null,
+        action: 'write',
+      });
       continue;
     }
 
     const currentHash = sha256(current);
     if (currentHash === desiredHash) {
-      plan.push({ ...file, relativePath, desiredHash, action: 'skip' });
+      plan.push({
+        ...file,
+        relativePath,
+        desiredHash,
+        expectedFileHash: currentHash,
+        action: 'skip',
+      });
     } else if (previousHash && currentHash === previousHash) {
-      plan.push({ ...file, relativePath, desiredHash, action: 'write' });
+      plan.push({
+        ...file,
+        relativePath,
+        desiredHash,
+        expectedFileHash: currentHash,
+        action: 'write',
+      });
     } else {
       throw new FallaError(1, `用户修改的受管文件不能覆盖：${relativePath}`);
     }
@@ -205,7 +223,21 @@ export async function planManagedFileRemovals(root, relativePaths, previousFiles
   return plan;
 }
 
-export async function writeAtomicFile(root, relativePath, content) {
+function fileMatchesExpectedHash(content, expectedHash) {
+  if (expectedHash === undefined) return true;
+  if (expectedHash === null) return content === null;
+  return content !== null && sha256(content) === expectedHash;
+}
+
+async function assertExpectedFileHash(root, relativePath, expectedHash, message) {
+  if (expectedHash === undefined) return;
+  const current = await readProjectFile(root, relativePath);
+  if (!fileMatchesExpectedHash(current, expectedHash)) {
+    throw new FallaError(1, `${message}：${relativePath}`);
+  }
+}
+
+export async function writeAtomicFile(root, relativePath, content, options = {}) {
   const safe = assertRelativePath(relativePath);
   await assertSafeAncestors(root, safe);
   const target = targetPath(root, safe);
@@ -219,6 +251,12 @@ export async function writeAtomicFile(root, relativePath, content) {
   const temporary = path.join(path.dirname(target), `.${path.basename(target)}.${process.pid}.${randomUUID()}.tmp`);
   try {
     await writeFile(temporary, content, { flag: 'wx', mode: 0o600 });
+    await assertExpectedFileHash(
+      root,
+      safe,
+      options.expectedHash,
+      '用户修改的安装目标不能覆盖'
+    );
     await rename(temporary, target);
   } catch (error) {
     try {
@@ -233,12 +271,31 @@ export async function writeAtomicFile(root, relativePath, content) {
 export async function applyManagedFilePlan(root, plan) {
   for (const item of plan) {
     if (item.action === 'write') {
-      await writeAtomicFile(root, item.relativePath, item.content);
+      await assertExpectedFileHash(
+        root,
+        item.relativePath,
+        item.expectedFileHash,
+        '用户修改的受管文件不能覆盖'
+      );
+    }
+  }
+  for (const item of plan) {
+    if (item.action === 'write') {
+      await writeAtomicFile(root, item.relativePath, item.content, {
+        expectedHash: item.expectedFileHash,
+      });
     }
   }
 }
 
 export async function applyManagedFileRemovalPlan(root, plan) {
+  for (const item of plan) {
+    if (item.action !== 'delete') continue;
+    const current = await readProjectFile(root, item.relativePath);
+    if (current !== null && sha256(current) !== item.expectedHash) {
+      throw new FallaError(1, `用户修改的受管文件不能删除：${item.relativePath}`);
+    }
+  }
   for (const item of plan) {
     if (item.action !== 'delete') continue;
     const current = await readProjectFile(root, item.relativePath);

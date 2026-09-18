@@ -1,6 +1,7 @@
 # 项目 UI 知识库 V1
 
-本目录是**当前项目独立维护**的 UI 组件与页面模式知识库。FallaOpenSpec 只提供通用协议、配置示例、
+本目录是**当前 Android 项目独立维护**的 UI 组件与页面模式知识库。支持 Android View 与 Jetpack
+Compose。FallaOpenSpec 提供通用协议、只读校验工具、配置示例、
 条目模板和工作流约束，不拥有、不生成、也不内置任何业务项目的具体知识条目。
 
 ## 1. 核心边界
@@ -65,8 +66,8 @@ cp .falla/ui-knowledge/config.example.yaml .falla/ui-knowledge/config.yaml
 
 - RAG 不索引整个源码，只索引当前项目维护的知识 Markdown。
 - CodeGraph 不承担适用场景、视觉意图、不适用条件和人工经验的语义存储。
-- CodeGraph 验证失败时，`verified` 条目必须降级为 `draft`、`deprecated` 或 `invalid` 候选，
-  不能继续作为直接复用建议。
+- CodeGraph 验证失败时，在当前查询结果中排除该条目的直接复用资格，携带 stale 原因。
+  普通查询不修改 Markdown 的 status；状态变更由获授权的知识维护任务处理。
 - XML、Drawable、主题、Manifest、Gradle 和资源可见性仍需读取当前项目文件或执行有界文本搜索。
 - 不把 CodeGraph 全量输出、完整源码或数据库内容写入知识条目或 RAG 索引。
 
@@ -86,6 +87,11 @@ cp .falla/ui-knowledge/config.example.yaml .falla/ui-knowledge/config.yaml
 - 模块依赖、主题、资源和 public API 仍匹配；
 - 生命周期和清理要求已核对；
 - `last-verified` 未被当前代码变化证明过期。
+- `source-hashes` 覆盖全部引用文件且与当前内容一致。
+
+检索前执行 `falla-openspec ui-knowledge validate --json`，只使用通过校验的候选。
+返回的 `direct-reuse-candidate` 是文件与结构检查结果，不能替代 CodeGraph、依赖和生命周期核对。
+CLI 不调用 RAG、不读取其他项目，也不根据 config.yaml 自动加载外部 provider。
 
 ## 6. 维护流程
 
@@ -94,7 +100,9 @@ cp .falla/ui-knowledge/config.example.yaml .falla/ui-knowledge/config.yaml
 3. 使用模板创建 `draft` 条目，不复制整页源码或 CodeGraph 全量结果。
 4. 用 CodeGraph 验证源码符号、调用方、影响面和相关测试。
 5. 用实际构建、测试、截图或人工验收补足图谱无法证明的事实。
-6. reviewer 确认后改为 `verified`，并记录 `last-verified` 与 `verified-by`。
+6. 执行 `falla-openspec ui-knowledge fingerprint <条目相对路径> --json`，将输出的 `sourceHashes`
+   作为 `source-hashes` 待审查内容。reviewer 核对当前证据后改为 `verified`，记录 `last-verified`
+   与实际 reviewer 的 `verified-by`，再运行 `ui-knowledge validate --json`。
 7. 代码或设计变化后重新验证；不满足条件时降级，不静默删除历史结论。
 
 ## 7. 安全约束

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, symlink, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -90,4 +90,27 @@ test('done 状态拒绝未完成任务且报告不泄露 owner 或 handoff', asy
   const report = await validateCoordination(root, { change: 'medal' });
   assert.equal(report.errors.some(({ kind }) => kind === 'tasks-incomplete'), true);
   assert.doesNotMatch(JSON.stringify(report), /SECRET_OWNER|SENSITIVE_HANDOFF_BODY/);
+});
+
+test('DAG 校验拒绝通过 comate 符号链接读取项目外内容', async () => {
+  const root = await createGraph([
+    { name: 'list-card', status: 'todo', dependsOn: [], blocks: [] },
+  ]);
+  const mapping = await registerMapping(root, 'medal/list-card');
+  const comatePath = path.join(root, 'openspec', 'changes', mapping.physical, 'comate.md');
+  const outside = path.join(await mkdtemp(path.join(os.tmpdir(), 'falla-dag-outside-')), 'comate.md');
+  await writeFile(outside, `# comate
+
+- 负责人 (owner): outside
+- 状态 (status): todo
+- 依赖 (depends-on): []
+- 被依赖 (blocks): []
+- 交接 (handoff):
+`, 'utf8');
+  await unlink(comatePath);
+  await symlink(outside, comatePath);
+
+  const report = await validateCoordination(root, { change: 'medal' });
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.errors.map(({ kind }) => kind), ['invalid-node']);
 });

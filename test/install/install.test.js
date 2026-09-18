@@ -130,7 +130,7 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     'fallaVersion', 'files', 'formatVersion', 'installedAt', 'integrations', 'openSpecVersion', 'tools',
   ]);
   assert.equal(manifest.formatVersion, 3);
-  assert.equal(manifest.fallaVersion, '0.3.0');
+  assert.equal(manifest.fallaVersion, '0.4.0');
   assert.equal(manifest.openSpecVersion, '1.12.0');
   assert.equal(manifest.installedAt, FIXED_TIME);
   assert.deepEqual(manifest.tools, ['claude', 'codex']);

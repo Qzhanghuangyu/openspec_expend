@@ -87,6 +87,78 @@ test('协调命令拒绝未知参数和缺失 change', async () => {
     () => coordinationCommand(['validate', '--json'], memoryIo(root)),
     (error) => error.code === 1 && error.message.includes('--change')
   );
+  await assert.rejects(
+    () => coordinationCommand(['unknown'], memoryIo(root)),
+    (error) => error.code === 1 && error.message.includes('未知 coordination 子命令')
+  );
+  await assert.rejects(
+    () => coordinationCommand(['claim', 'medal', '--owner'], memoryIo(root)),
+    (error) => error.code === 1 && error.message.includes('--owner')
+  );
+  await assert.rejects(
+    () => coordinationCommand(['claim', 'medal', '--owner', 'alice', '--owner', 'bob'], memoryIo(root)),
+    (error) => error.code === 1 && error.message.includes('不能重复')
+  );
+  await assert.rejects(
+    () => coordinationCommand(['claim', 'medal', '--owner', 'alice', 'extra'], memoryIo(root)),
+    (error) => error.code === 1 && error.message.includes('仅需要一个')
+  );
+  await assert.rejects(
+    () => coordinationCommand(['resolve', 'medal', '--owner', 'alice'], memoryIo(root)),
+    (error) => error.code === 1 && error.message.includes('--owner')
+  );
+});
+
+test('coordination claim 认领逻辑子 change 且输出不含 owner/handoff', async () => {
+  const root = await createProject();
+  await cp(
+    path.resolve('templates/openspec/schemas/falla-spec-driven'),
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven'),
+    { recursive: true }
+  );
+  const parentDirectory = path.join(root, 'openspec', 'changes', 'medal');
+  await writeFile(path.join(parentDirectory, '.openspec.yaml'), 'schema: falla-spec-driven\nskip_specs: true\n');
+  for (const artifact of ['preflight', 'proposal', 'design']) {
+    await writeFile(path.join(parentDirectory, `${artifact}.md`), `# ${artifact}\n\nAndroid 组件内部重构。\n`);
+  }
+  await writeFile(path.join(parentDirectory, 'tasks.md'), '- [ ] 1.1 完成 medal/card\n');
+  await writeFile(path.join(parentDirectory, 'comate.md'), `# comate
+
+- 执行模式 (execution-mode): parallel
+- 负责人 (owner): unassigned
+- 状态 (status): todo
+- 依赖 (depends-on): []
+- 被依赖 (blocks): []
+- 交接 (handoff):
+`);
+  const registerIo = memoryIo(root);
+  await coordinationCommand(['register', 'medal/card', '--json'], registerIo);
+  const { physical } = JSON.parse(registerIo.output().stdout);
+  await execFileAsync('openspec', [
+    'new', 'change', physical, '--schema', 'falla-task-driven', '--json',
+  ], { cwd: root });
+  const directory = path.join(root, 'openspec', 'changes', physical);
+  await writeFile(path.join(directory, 'tasks.md'), '- [ ] 1.1 implement\n', 'utf8');
+  await writeFile(path.join(directory, 'comate.md'), `# comate
+
+- 负责人 (owner): unassigned
+- 状态 (status): todo
+- 依赖 (depends-on): []
+- 被依赖 (blocks): []
+- 交接 (handoff): SENSITIVE_HANDOFF_BODY
+`, 'utf8');
+  const io = memoryIo(root);
+
+  const result = await coordinationCommand([
+    'claim', 'medal/card', '--owner', 'SECRET_OWNER', '--json',
+  ], io);
+
+  assert.deepEqual(result, {
+    change: 'medal/card', status: 'in-progress', claimed: true, idempotent: false,
+  });
+  assert.doesNotMatch(io.output().stdout, /SECRET_OWNER|SENSITIVE_HANDOFF_BODY/);
+  assert.match(await import('node:fs/promises').then(({ readFile }) =>
+    readFile(path.join(directory, 'comate.md'), 'utf8')), /SECRET_OWNER/);
 });
 
 test('协调命令可清理尚未创建物理 change 的孤儿映射', async () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -108,4 +108,50 @@ test('doctor 拒绝 manifest 哈希一致但绑定旧项目根的 Codex Hook', a
     report.checks.find(({ id }) => id === 'falla-install-integrity').paths,
     ['.codex/config.toml']
   );
+});
+
+test('doctor 区分安装完整性、single 状态和非法知识，安装更新仍可完成', async () => {
+  const root = await createOpenSpecProject();
+  await installProject({ root, tools: ['codex'], interactive: false });
+  await execFileAsync('openspec', ['new', 'change', 'health-test', '--schema', 'falla-spec-driven', '--json'], { cwd: root });
+  const change = path.join(root, 'openspec/changes/health-test');
+  await writeFile(path.join(change, 'tasks.md'), '- [ ] 1.1 pending\n');
+  await writeFile(path.join(change, 'comate.md'), '# comate\n- 负责人 (owner): unassigned\n- 状态 (status): done\n- 依赖 (depends-on): []\n- 被依赖 (blocks): []\n- 交接 (handoff):\n');
+  const knowledge = path.join(root, '.falla/ui-knowledge/components');
+  await mkdir(knowledge, { recursive: true });
+  await writeFile(path.join(knowledge, 'bad.md'), '---\nschema-version: 999\nscope: other\n---\nPRIVATE_BODY');
+  const result = await doctorProject({ root });
+  assert.equal(result.ok, false);
+  assert.equal(result.groups.installation.ok, true);
+  assert.equal(result.groups.workflow.ok, false);
+  assert.equal(result.groups.knowledge.ok, false);
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE_BODY/);
+  const update = await installProject({ root, tools: ['codex'], interactive: false });
+  assert.equal(update.ok, true);
+  assert.equal(update.doctor.ok, false);
+});
+
+test('安装集成失败后保留启用意图，doctor 显式报告不可用且安装不误报失败', async () => {
+  const root = await createOpenSpecProject();
+  const result = await installProject({
+    root, tools: ['codex'], interactive: false, withCodeGraph: true,
+    integrations: { installCodeGraph: async () => { throw new Error('PRIVATE_TOOL_FAILURE'); } },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.integrations.codegraph, true);
+  assert.equal(result.doctor.groups.installation.ok, true);
+  assert.equal(result.doctor.groups.integrations.ok, false);
+  assert.equal(result.doctor.groups.integrations.codegraph.indexPresent, false);
+  assert.equal(result.doctor.groups.integrations.codegraph.freshness, 'not-checked');
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE_TOOL_FAILURE/);
+});
+
+test('损坏的协作文件返回 workflow 失败分组而不丢失安装诊断', async () => {
+  const root = await createOpenSpecProject();
+  await installProject({ root, tools: ['codex'], interactive: false });
+  await writeFile(path.join(root, '.falla/coordination.yaml'), 'mappings: [PRIVATE_BAD_DATA\n');
+  const report = await doctorProject({ root });
+  assert.equal(report.groups.installation.ok, true);
+  assert.equal(report.groups.workflow.ok, false);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE_BAD_DATA/);
 });

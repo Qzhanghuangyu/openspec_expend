@@ -18,7 +18,7 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
 - `specs/` 只承载用户可观察、可测试的业务行为，不承载实现模块。
 - 纯重构、工具或文档变更且没有规格级行为变化时，在 `.openspec.yaml` 显式设置
   `skip_specs: true`；官方 status 中 `skipped` 表示依赖已满足，不创建空 delta spec。
-- design 明确 AI 搭建的 UI 框架和留给人工校准的约 20% 视觉项。
+- design 明确可自动验证的 UI 实现和留给人工校准的具体视觉项，不用固定百分比判断完成。
 
 ## 3. 选择执行模式
 

@@ -25,6 +25,8 @@ function restrictedEnvironment(source = process.env) {
 }
 
 async function codeGraphEnabled(root) {
+  const directory = await safeLstat(path.join(root, '.falla'));
+  if (!directory || directory.isSymbolicLink() || !directory.isDirectory()) return false;
   const manifestPath = path.join(root, MANIFEST);
   const entry = await safeLstat(manifestPath);
   if (!entry || entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_MANIFEST_BYTES) {
@@ -38,7 +40,7 @@ async function codeGraphEnabled(root) {
   }
 }
 
-function runCodeGraph(args, root, timeoutMs) {
+function runCodeGraph(args, root, timeoutMs, env) {
   return new Promise((resolve) => {
     let settled = false;
     let timedOut = false;
@@ -46,7 +48,7 @@ function runCodeGraph(args, root, timeoutMs) {
     let killTimer;
     const child = spawn('codegraph', args, {
       cwd: root,
-      env: restrictedEnvironment(),
+      env: restrictedEnvironment(env),
       shell: false,
       stdio: 'ignore',
     });
@@ -84,7 +86,7 @@ export async function prepareCodeGraph(root, options = {}) {
   const args = action === 'init'
     ? ['init', projectRoot]
     : ['sync', projectRoot, '--quiet'];
-  const ready = await runCodeGraph(args, projectRoot, options.timeoutMs ?? 5 * 60_000);
+  const ready = await runCodeGraph(args, projectRoot, options.timeoutMs ?? 60_000, options.env);
   return {
     enabled: true,
     ready,

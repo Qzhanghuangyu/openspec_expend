@@ -59,6 +59,32 @@ test('校验负责人、blocked 交接和 done 任务门禁', () => {
   );
 });
 
+test('多行 handoff 读取到下一个顶级字段为止且空模板标签不算内容', () => {
+  const emptyTemplate = valid.replace(
+    '- 交接 (handoff): 已完成数据绑定，待视觉校准',
+    `- 交接 (handoff):
+  - 已完成：
+  - 验证证据：
+    - 命令：
+    - 结果：
+- 补充字段: 必须保留`
+  );
+  const empty = parseComate(emptyTemplate, 'comate.md');
+  assert.match(empty.handoff, /验证证据/);
+  assert.doesNotMatch(empty.handoff, /补充字段/);
+  assert.deepEqual(
+    validateComateRecord({ ...empty, status: 'done' }, { pendingTasks: 0 })
+      .map(({ kind }) => kind),
+    ['done-handoff-required']
+  );
+
+  const filled = parseComate(emptyTemplate.replace('命令：', '命令：npm test'), 'comate.md');
+  assert.deepEqual(
+    validateComateRecord({ ...filled, status: 'done' }, { pendingTasks: 0 }),
+    []
+  );
+});
+
 test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbox', () => {
   assert.deepEqual(parseTaskProgress(`- [x] 1.1 done
   - [ ] 1.1.1 nested pending

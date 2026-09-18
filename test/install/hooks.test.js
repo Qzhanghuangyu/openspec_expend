@@ -75,6 +75,17 @@ test('Claude Hook 缺少强制规则时显式阻断', async () => {
   assert.doesNotMatch(result.stderr, /SOUL_RULE/);
 });
 
+test('Claude 同会话规则修改后重新注入，删除后不能沿用旧缓存', async () => {
+  const { docs, nested } = await fixture();
+  const script = path.join(templates, 'falla-spec-guard.mjs');
+  const payload = { session_id: 'rules-changed', cwd: nested, tool_input: { name: 'falla-preflight' } };
+  assert.equal((await runHook(script, nested, payload)).code, 0);
+  await writeFile(path.join(docs, '[Must Read]soul.md'), 'UPDATED_SOUL');
+  assert.match((await runHook(script, nested, payload)).stdout, /UPDATED_SOUL/);
+  await rename(path.join(docs, '[Must Read]soul.md'), path.join(docs, 'soul.missing'));
+  assert.equal((await runHook(script, nested, payload)).code, 2);
+});
+
 test('Codex SessionStart 从子目录注入 soul 且缺失时失败', async () => {
   const { docs, nested } = await fixture();
   const script = path.join(templates, 'falla-spec-session.mjs');
@@ -159,7 +170,7 @@ test('CodeGraph 同步失败时 Hook 脱敏降级而不阻断任务', async () =
   assert.doesNotMatch(result.stdout + result.stderr, /CODEGRAPH_SECRET/);
 });
 
-test('Claude 首次执行 Falla Skill 前初始化 CodeGraph 且同会话不重复', async () => {
+test('Claude 每次进入 Falla Skill 均准备 CodeGraph，规则内容仍按会话去重', async () => {
   const { root, nested } = await fixture();
   await writeFile(path.join(root, '.falla', 'install-manifest.json'), `${JSON.stringify({
     formatVersion: 3,
@@ -183,6 +194,23 @@ test('Claude 首次执行 Falla Skill 前初始化 CodeGraph 且同会话不重�
   assert.equal(first.code, 0, first.stderr);
   assert.match(JSON.parse(first.stdout).hookSpecificOutput.additionalContext, /CodeGraph.*索引已准备完成/);
   assert.equal(second.code, 0, second.stderr);
-  assert.equal(second.stdout, '');
-  assert.equal(await readFile(log, 'utf8'), `init ${await realpath(root)}\n`);
+  assert.match(JSON.parse(second.stdout).hookSpecificOutput.additionalContext, /CodeGraph.*索引已准备完成/);
+  assert.doesNotMatch(second.stdout, /SOUL_RULE|PREFLIGHT_RULE/);
+  assert.equal(await readFile(log, 'utf8'), `init ${await realpath(root)}\ninit ${await realpath(root)}\n`);
+});
+
+test('Claude 同会话的索引失败可在下次 Skill 重试', async () => {
+  const { root, nested } = await fixture();
+  await writeFile(path.join(root, '.falla/install-manifest.json'), JSON.stringify({ formatVersion: 3, integrations: { codegraph: true } }));
+  const bin = await mkdtemp(path.join(os.tmpdir(), 'falla-codegraph-retry-'));
+  const executable = path.join(bin, 'codegraph');
+  await writeFile(executable, '#!/bin/sh\nexit 9\n');
+  await chmod(executable, 0o755);
+  const payload = { session_id: 'retry', cwd: nested, tool_input: { name: 'falla-preflight' } };
+  const env = { PATH: `${bin}:${process.env.PATH}` };
+  const first = await runHook(path.join(templates, 'falla-spec-guard.mjs'), nested, payload, env);
+  assert.match(first.stdout, /索引准备失败/);
+  await writeFile(executable, '#!/bin/sh\nexit 0\n');
+  const second = await runHook(path.join(templates, 'falla-spec-guard.mjs'), nested, payload, env);
+  assert.match(second.stdout, /索引已准备完成/);
 });

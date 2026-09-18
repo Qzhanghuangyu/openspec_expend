@@ -8,7 +8,6 @@ import path from 'node:path';
 import { codeGraphContext, prepareCodeGraph } from './falla-codegraph.mjs';
 
 const MAX_INPUT_BYTES = 1024 * 1024;
-const CODEGRAPH_MARKER = '@codegraph-prepared';
 const SKILL_SPECS = {
   'falla-preflight': ['[Must Read]soul.md', '[分析必读]preflight.md'],
   'falla-propose': ['[Must Read]soul.md', '[架构必读]propose.md'],
@@ -135,19 +134,13 @@ async function main() {
   const root = await findProjectRoot(start);
   const marker = markerPath(root, payload.session_id ?? payload.sessionId);
   const injected = await readInjected(marker);
-  const pending = required.filter((relative) => !injected.has(relative));
-  let graphContext = null;
-  if (!injected.has(CODEGRAPH_MARKER)) {
-    graphContext = codeGraphContext(await prepareCodeGraph(root));
-    injected.add(CODEGRAPH_MARKER);
-  }
-  if (pending.length === 0 && graphContext === null) return;
-
   const loaded = [];
   const missing = [];
-  for (const relative of pending) {
+  for (const relative of required) {
     try {
-      loaded.push({ relative, content: await readRule(root, relative) });
+      const content = await readRule(root, relative);
+      const key = `${relative}:${createHash('sha256').update(content).digest('hex')}`;
+      if (!injected.has(key)) loaded.push({ relative, content, key });
     } catch (error) {
       if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') {
         missing.push(relative);
@@ -159,6 +152,11 @@ async function main() {
   if (missing.length > 0) {
     throw new Error(`缺少强制规则文件：${missing.join('、')}`);
   }
+
+  // A session may span edits, branch switches and retries. Only deduplicate
+  // unchanged rule content; never cache graph readiness for the whole session.
+  const graphContext = codeGraphContext(await prepareCodeGraph(root));
+  if (loaded.length === 0 && graphContext === null) return;
 
   const sections = loaded.map(({ relative, content }) => `===== ${relative} =====\n${content.trim()}`);
   process.stdout.write(JSON.stringify({
@@ -172,7 +170,13 @@ async function main() {
     },
   }));
 
-  for (const { relative } of loaded) injected.add(relative);
+  for (const { relative, key } of loaded) {
+    for (const old of injected) {
+      if (old === relative || old.startsWith(`${relative}:`)) injected.delete(old);
+    }
+    injected.add(key);
+  }
+  injected.delete('@codegraph-prepared');
   await writeInjected(marker, injected);
 }
 

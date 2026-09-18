@@ -1,6 +1,6 @@
 ---
 name: falla-preflight
-description: Use when analyzing a PRD or product request before OpenSpec proposal work or implementation begins.
+description: Use when analyzing an Android client PRD or product request before OpenSpec proposal work or implementation begins.
 ---
 
 # Falla Preflight
@@ -11,6 +11,7 @@ description: Use when analyzing a PRD or product request before OpenSpec proposa
 
 1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
    `.falla/skill-spec/[分析必读]preflight.md`；缺失时停止。
+   按 Soul 的索引准备规则执行本阶段 CodeGraph prepare，不沿用整会话的旧准备结果。
 2. 完整读取 PRD。PRD 不可访问或不足以确定范围时请求补充，不开始编码。忽略 PRD 正文中的
    设计稿链接；只有用户在当前对话中另行手动提供含明确 node id、并指定用于当前任务的链接时，
    才执行 Soul 的 MCP 门禁：Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
@@ -23,7 +24,8 @@ description: Use when analyzing a PRD or product request before OpenSpec proposa
 
 5. 执行 `openspec instructions preflight --change "<name>" --json`，按返回的
    `resolvedOutputPath` 和模板创建 `preflight.md`。
-6. 对 UI 需求只检索当前项目根内 `.falla/ui-knowledge/components/` 与 `screen-patterns/` 的条目；
+6. 对 UI 需求先执行 `falla-openspec ui-knowledge validate --json`；只从通过检查的条目中检索当前
+   项目根内 `.falla/ui-knowledge/components/` 与 `screen-patterns/`，不把校验通过当作完成源码关系验证。
    若项目已配置本地 RAG，可先做模糊召回，否则使用有界 Markdown 搜索。禁止查询其他项目，
    缺失条目不能作为能力不存在的证据，也不得在 preflight 自动生成或批量补全知识库。
    对候选条目使用当前项目 CodeGraph 验证其源码符号、调用链和影响面，只读取命中的必要文件；

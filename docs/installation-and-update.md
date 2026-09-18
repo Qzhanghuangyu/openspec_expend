@@ -3,6 +3,7 @@
 - **工作流源码目录**：本仓库，用 `$FALLA_HOME` 表示。
 - **目标项目目录**：实际业务项目，用 `$TARGET_PROJECT` 表示。
 - `install` 同时负责首次安装和后续更新，没有单独的 `update` 命令。
+- 目标工作流只用于 Android 客户端，支持 Android View 与 Jetpack Compose。
 
 ## 0. 完整使用实例
 
@@ -136,7 +137,9 @@ lark-cli auth login --scope "<missing_scope>" --no-wait --json
 codegraph sync <project> --quiet
 ```
 
-- Codex 在 SessionStart 准备索引；Claude Code 在首次运行 Falla Skill 前准备一次。
+- Codex 在 SessionStart 准备索引，并在每次 Falla 阶段开始时执行 `falla-openspec codegraph prepare --json`；
+  Claude Code 每次进入 Falla Skill 前由 Hook 准备索引。阶段内源码变化或切换分支后也须再次准备。
+- 同一次会话的失败不会阻止后续重试。单次 Hook/prepare 最多等待约 60 秒，然后终止并有界降级。
 - CodeGraph 用于符号、调用链和影响面；XML、Gradle、Manifest、资源及精确文本仍使用有界 `rg`。
 - 安装器会幂等确保 `.gitignore` 包含 `.codegraph/`；首次初始化和后续增量同步生成的图谱仅保存在开发者本机。
 - `.codegraph/` 不提交版本库，不把完整数据库或全量查询结果交给模型。
@@ -165,6 +168,37 @@ RAG 负责当前项目知识 Markdown 的模糊召回，CodeGraph 负责验证�
 
 详细规则见 `.falla/ui-knowledge/README.md` 和 `.falla/ui-knowledge/schema-v1.md`。
 
+```bash
+falla-openspec ui-knowledge validate --json
+falla-openspec ui-knowledge fingerprint .falla/ui-knowledge/components/retry-list.md --json
+```
+
+校验不自动生成条目或授予 verified。旧 verified 条目需要 reviewer 重新核对并补全 source-hashes，
+不能只通过更新哈希掩盖代码变化。CLI 使用当前项目固定知识目录，不执行配置示例中的 RAG provider。
+
+### 健康检查与认领
+
+`doctor --json` 的 `groups` 分别报告 installation、workflow、knowledge、integrations；任一已检查组
+失败时退出码为 1。installation 失败需修复受管文件；workflow 失败按 change 定位协作矛盾；
+knowledge 失败排除对应候选；CodeGraph 不可用时允许有界文本检索。Figma/Lark 认证与 MCP 连接
+仍需在实际调用时验证，doctor 不把未检查的能力标记为已验证。
+
+install 的 `ok` 只表示 installation 分组通过，附带的 doctor 仍可能报告项目问题；更新文件的流程
+不会因旧知识条目失效而被错误判定为安装失败。
+
+```bash
+# single
+falla-openspec coordination claim medal --owner developer-a --json
+# parallel：认领 propose 已创建的逻辑子 change
+falla-openspec coordination claim medal/card --owner developer-b --json
+```
+
+owner 使用 1–64 位字母、数字或 ._@-，不放凭据。命令核对官方规划、当前 owner、状态与依赖，
+保留其余交接内容；同 owner 重试幂等，不抢占其他 owner，不自动重启 blocked/done/已归档任务。
+子 change 还必须等待父 change 规划完成；上游的 done 必须同时满足任务完成和交接校验，
+活跃上游还需通过官方规划状态检查。同 owner 重试也会重新检查这些前置条件。
+认领锁仅适用于同一台机器上的同一真实项目目录；多工作树、跨机器协作仍需明确任务归属和合并规则。
+
 ## 7. 常见问题
 
 ### 受管文件被修改
@@ -186,5 +220,7 @@ RAG 负责当前项目知识 Markdown 的模糊召回，CodeGraph 负责验证�
 - 确认目标项目路径和 manifest 中的 `tools`，避免误删另一 Agent 的受管文件。
 - 不在日志、artifact、知识库或 handoff 中写入 token、cookie、API Key、签名或临时资源 URL。
 - 不要并发执行两个 `install`。
-- `doctor` 失败时不要继续使用部分更新的工作流。
+- `doctor.groups.installation` 失败时不要继续使用部分更新的工作流；其他分组按上述范围处理。
 - 更新完成后重新创建 Agent 会话。
+- 写入阶段会复核计划时文件哈希，但不提供跨文件事务；中途中断时保留现状，重跑相同版本 install
+  并检查 doctor，不删除 manifest 或绕过漂移保护。最终核对与文件替换间仍有极短的外部编辑竞争窗口。

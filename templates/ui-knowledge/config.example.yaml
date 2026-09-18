@@ -1,5 +1,7 @@
 version: 1
 scope: project
+# Android View / Jetpack Compose。以下为检索接入配置示例；只读校验 CLI 使用固定知识目录，
+# 不执行自定义 provider，也不会根据本文件建立索引。
 
 knowledge:
   sourceOfTruth: markdown

@@ -1,6 +1,6 @@
 ---
 name: falla-propose
-description: Use when an existing Falla preflight change needs proposal artifacts, Android architecture planning, or parallel child-change decomposition.
+description: Use when an existing Android Falla preflight change needs proposal artifacts, architecture planning, or explicitly requested parallel child-change decomposition.
 ---
 
 # Falla Propose
@@ -10,7 +10,8 @@ description: Use when an existing Falla preflight change needs proposal artifact
 ## 必须执行
 
 1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
-   `.falla/skill-spec/[架构必读]propose.md`；缺失时停止。
+   `.falla/skill-spec/[架构必读]propose.md`；缺失时停止。按 Soul 的索引准备规则执行本阶段
+   CodeGraph prepare。
 2. 通过 `openspec status --change "<parent>" --json` 复用已有父 change；`preflight`
    未 done 时停止，不能只检查目录。阶段中收到或继续依赖设计稿链接时执行 Soul 的 MCP 门禁：
    Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
@@ -22,7 +23,8 @@ description: Use when an existing Falla preflight change needs proposal artifact
 
    使用返回的模板、依赖和 `resolvedOutputPath`，不猜路径。
 4. proposal/specs 只描述用户可观察的业务能力；design/tasks 先按 MVVM 拆 ViewModel 与
-   View，再把 UI 拆到模块控件，并明确人工视觉校准项。只允许检索当前项目的
+   View，再把 UI 拆到模块控件，并明确人工视觉校准项。先执行
+   `falla-openspec ui-knowledge validate --json`，只从通过检查的条目中检索当前项目的
    `.falla/ui-knowledge/`；RAG 命中的候选必须再由当前项目 CodeGraph 验证源码符号、调用关系和
    影响面，并核对依赖、资源、生命周期和验证日期后才能作为复用依据。缺失、跨项目或过期条目
    只能作为无效候选，回到当前代码和设计事实，不自动生成项目知识库。

@@ -48,7 +48,7 @@ artifacts:
     instruction: |
       说明上下文、目标、非目标、决策、替代方案、风险、迁移和开放问题。
       页面级变更先按 MVVM 划分 View 与 ViewModel；UI 再按可独立交付控件拆分。
-      AI 只搭建约 80% 的 UI 框架，明确记录留给人工校准的视觉细节。
+      明确 Android UI 的自动验证项与人工校准项，记录具体视觉细节，不以固定百分比代替验收。
     requires:
       - proposal
 

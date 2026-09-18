@@ -1,6 +1,7 @@
 # FallaOpenSpec
 
-FallaOpenSpec 是官方 OpenSpec 的工作流扩展层。官方 `openspec` CLI 是唯一的 change、artifact、
+FallaOpenSpec 是仅用于 Android 客户端项目的官方 OpenSpec 工作流扩展层，支持 Android View 与
+Jetpack Compose。官方 `openspec` CLI 是唯一的 change、artifact、
 Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则、父子任务协调、Skill/Hook 安装、
 运行时检查与可选工具接入。
 
@@ -62,6 +63,29 @@ Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在
 node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少
 node id 时会要求重新选择节点并复制链接。浏览器、网页截图或抓取不能作为降级方案。若 MCP
 未安装、未认证或没有设计稿权限，依赖该设计的工作会明确停止。
+
+## Android 项目校验与认领
+
+```bash
+# 全项目只读检查：安装、工作流、知识、集成分别报告
+falla-openspec doctor --json
+# 校验当前项目知识；不生成或修改条目
+falla-openspec ui-knowledge validate --json
+# 只读生成引用文件的 SHA-256，供 reviewer 核对后写入 source-hashes
+falla-openspec ui-knowledge fingerprint .falla/ui-knowledge/components/retry-list.md --json
+# 阶段开始或源码变化后，准备已启用的图谱；失败可有界降级
+falla-openspec codegraph prepare --json
+# single 父 change 或 parallel 逻辑子 change 均使用排他认领
+falla-openspec coordination claim medal --owner developer-a --json
+```
+
+`doctor` 的 `groups` 包含 `installation`、`workflow`、`knowledge`、`integrations`。
+任一已检查分组失败时 doctor 返回非零；安装器的 `ok` 只表示安装完整性，同时附带完整 doctor
+报告。图谱不可用可以有界降级，非法知识条目被排除；它们不等于工作流文件安装失败。
+
+知识校验只证明 Markdown 结构和引用文件指纹符合协议，`direct-reuse-candidate` 仍需由当前
+CodeGraph、依赖、资源及生命周期核对决定是否复用。旧 verified 条目缺少 `source-hashes` 时
+会报告待补证据，不自动降级或改写。外部 Figma/Lark 认证、CodeGraph MCP 连接与索引新鲜度不由 doctor 证明。
 
 ## 标准工作流
 
@@ -133,5 +157,7 @@ npm test
 ```
 
 主要风险：官方小版本改变 JSON 字段或 Schema 语义；人工修改受管文件；Hook 所需规则文件缺失。
-版本门禁、公开契约测试、项目锁、受管哈希和原子写入用于把这些情况转成显式失败。报告不输出
+版本门禁、公开契约测试、项目锁、受管哈希和原子写入用于把这些情况转成显式失败。写入前会
+复核计划时的文件哈希，但多文件更新不是事务，外部编辑器在最终核对与替换之间仍存在极短竞争窗口。
+认领锁只覆盖同一台机器上的同一真实项目目录，不替代跨机器协调、工作树隔离或代码合并。报告不输出
 环境变量、凭据或规格正文。

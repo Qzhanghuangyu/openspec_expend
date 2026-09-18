@@ -19,9 +19,10 @@
 
 ## 1. 定位
 
-FallaOpenSpec 是建立在官方 OpenSpec 之上的 Android/移动端任务拆解与 SDD 扩展。
+FallaOpenSpec 是建立在官方 OpenSpec 之上的 Android 客户端任务拆解与 SDD 扩展，
+只用于 Android 项目，支持 Android View 与 Jetpack Compose。
 OpenSpec 是唯一工作流内核，负责 change、Schema、artifact DAG、status、instructions、
-validate、spec 同步和 archive。Falla 不复制这些实现，只补充移动端决策规则与团队协作。
+validate、spec 同步和 archive。Falla 不复制这些实现，只补充 Android 决策规则与团队协作。
 
 标准链路为：
 
@@ -31,7 +32,7 @@ validate、spec 同步和 archive。Falla 不复制这些实现，只补充移�
 
 ## 2. 两个核心问题
 
-1. **UI 还原边界**：Figma 到 Android 的最后约 20% 涉及视觉手感、字体、动效、机型
+1. **UI 还原边界**：Figma 到 Android 的人工视觉校准涉及手感、字体、动效、机型
    适配和设计隐性意图，不能假装可由 AI 稳定完成。
 2. **团队协作**：单一 change 不足以表达多人、多 agent 的认领、依赖、阻塞和交接。
 
@@ -39,7 +40,8 @@ validate、spec 同步和 archive。Falla 不复制这些实现，只补充移�
 
 ### 3.1 AI 搭框架，人类做最终校准
 
-- AI 负责约 80%：布局结构、控件层级、可复用组件、主题基础样式、数据绑定和交互框架。
+- AI 负责可验证的布局结构、控件层级、可复用组件、主题基础样式、数据绑定和交互实现。
+- 验收按明确的自动验证项与人工校准项判断，不以固定完成百分比代替功能交付标准。
 - AI 不反复追求无法客观验证的 100% 像素对齐。
 - design 和 comate 必须明确记录留给工程师/设计师校准的视觉项。
 
@@ -73,6 +75,10 @@ validate、spec 同步和 archive。Falla 不复制这些实现，只补充移�
 
 项目在安装时显式启用 CodeGraph 后，任务开始前由 Hook 初始化或增量同步项目级索引。AI 必须遵守：
 
+- Codex 在每个 Falla 阶段开始时执行 `falla-openspec codegraph prepare --json`；Claude 每次进入
+  Falla Skill 时由 Hook 准备。阶段内源码变化、切换分支或上次准备失败后，重新执行该命令。
+- 未启用时 prepare 是空操作；启用但失败时按下面的有界降级处理，不缓存整会话的可用结论。
+
 - 定位类、函数、调用链、影响面和受影响测试时，优先使用 CodeGraph 的 `explore`、`node`、
   `callers`、`callees`、`impact` 或 `affected`，再只读取命中的必要文件。
 - Android XML、Manifest、Gradle、资源名、配置及精确文本查询可以直接使用有界 `rg`；
@@ -96,7 +102,11 @@ FallaOpenSpec 面向多个相互独立的项目，只提供 `.falla/ui-knowledge
 - `config.yaml`、`components/` 与 `screen-patterns/` 由实际项目的工程师、设计师，或经用户明确
   授权的 AI 创建和维护；工作流安装、更新、SessionStart 和普通任务不得自动生成。
 - 复用前必须核对 `schema-version`、`scope: project`、状态、相对源码证据、模块依赖、资源可见性、
-  主题/API、生命周期、`last-verified` 和 reviewer。过期或冲突条目只能作为参考或拒绝候选。
+  主题/API、生命周期、`last-verified`、`source-hashes` 和 reviewer。
+- 先执行 `falla-openspec ui-knowledge validate --json`，从通过检查的条目中召回候选。结构或指纹
+  失败的条目不得直接复用；其他有效条目仍可使用，不因无关坏条目阻断功能任务。
+- `direct-reuse-candidate` 仅代表结构与文件指纹通过，仍须验证当前源码关系和实际接入条件。
+  普通查询只报告 stale，不修改知识 status；过期条目由获授权的维护任务重新验证。
 - AI 不得因为完成普通页面任务就顺带补库。只有用户明确授权维护知识库，或当前 change/tasks
   明确包含知识沉淀，才允许写入 `draft`；完成当前项目验证并经 reviewer 确认后才能标记 `verified`。
 - 不记录绝对用户路径、凭据、完整设计正文、临时资源 URL、整页源码或 CodeGraph 全量输出。
@@ -160,6 +170,18 @@ parallel 模式下，子 change 必须在 propose 阶段一次性创建，apply 
 
 依赖边必须双向一致且无环。owner、状态和依赖不复制到协调索引，避免双重事实来源。
 
+single 与 parallel 均用 `falla-openspec coordination claim "<change>" --owner "<id>" --json`
+认领；parallel 使用逻辑子 change 名。使用已约定的当前工程师或 Agent 标识，不自行替换他人 owner。
+不得直接覆写 owner 绕过认领冲突；blocked/done 不通过重复 claim 自动重启。
+本地排他锁只覆盖同一真实项目目录，跨机器或不同工作树仍需事先分派文件责任并明确合并策略。
+
+### 4.6 doctor 的分组边界
+
+`doctor --json` 的非零退出码需要读取 JSON 分组结果。`groups.installation` 失败时停止并修复
+安装；`groups.workflow` 的当前 change 错误需要解决后再实施。其他 change 的错误单独报告。
+`groups.knowledge` 失败只排除对应候选；`groups.integrations` 的 CodeGraph 失败允许有界降级。
+doctor 不证明图谱新鲜、MCP 连接、人工验证或 Figma/Lark 认证；这些仍在使用对应能力时检查。
+
 ## 5. 安全与完成边界
 
 - 不把推测写成已确认需求，不用模糊兜底替代产品决策。
@@ -169,4 +191,4 @@ parallel 模式下，子 change 必须在 propose 阶段一次性创建，apply 
 - 不自动 commit、push、merge 或 rebase。
 
 > FallaOpenSpec = 官方 OpenSpec 的严谨内核 + 对 AI UI 边界的诚实 + 可并行认领和交接的
-> 移动端协作模型。
+> Android 协作模型。
