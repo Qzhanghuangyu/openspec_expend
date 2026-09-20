@@ -13,7 +13,7 @@ falla-openspec ui-knowledge index clear [--project <path>] [--json]
 falla-openspec ui-knowledge index query --text <query> [--top-k <1..50>] [--project <path>] [--json]
 ```
 
-`build`、`sync` 和 `status` 已实现；`query/rebuild/clear` 当前仍返回 `implemented: false` 和非零退出码。
+`build`、`sync`、`query` 和 `status` 已实现；`rebuild/clear` 当前仍返回 `implemented: false` 和非零退出码。
 
 ## 配置契约
 
@@ -135,4 +135,4 @@ retrieval:
 
 ## 当前阶段完成边界
 
-当前阶段已实现安全文档装载、Markdown 分块、Fake Embedding、Manifest/chunks/vectors 原子写入以及只读 status。已实现增量同步；尚未实现查询、重建和清理。`build` 拒绝覆盖已有索引，Provider/模型/维度不兼容时 sync 要求 rebuild。
+当前阶段已实现安全文档装载、Markdown 分块、Fake Embedding、Manifest/chunks/vectors 原子写入以及只读 status。已实现增量同步和按文档聚合的向量查询；尚未实现重建和清理。`build` 拒绝覆盖已有索引，Provider/模型/维度不兼容时 sync 要求 rebuild。

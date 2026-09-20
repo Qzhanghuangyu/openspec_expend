@@ -23,7 +23,7 @@ export function usage() {
     '  ui-knowledge fingerprint <entry>  只读计算知识引用文件指纹',
     '  ui-knowledge index build        使用配置的 Provider 构建完整 RAG 索引',
     '  ui-knowledge index sync         增量同步已新增、修改和删除的知识',
-    '  ui-knowledge index query        RAG 查询契约（尚未实现）',
+    '  ui-knowledge index query        查询 RAG 候选并复核当前知识状态',
     '  codegraph prepare                同步当前项目已启用的图谱',
   ].join('\n');
 }

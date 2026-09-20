@@ -4,6 +4,7 @@ import { FallaError } from '../errors.js';
 import { findProjectRoot } from '../openspec/locator.js';
 import { buildKnowledgeIndex, statusKnowledgeIndex } from '../knowledge/index/build.js';
 import { syncKnowledgeIndex } from '../knowledge/index/sync.js';
+import { queryKnowledgeIndex } from '../knowledge/index/query.js';
 import {
   DEFAULT_TOP_K,
   INDEX_ACTIONS,
@@ -39,7 +40,7 @@ export async function knowledgeIndexCommand(argv, io) {
   let project;
   let json = false;
   let text;
-  let topK = DEFAULT_TOP_K;
+  let topK;
   const positional = [];
 
   for (let index = 0; index < args.length; index += 1) {
@@ -66,7 +67,7 @@ export async function knowledgeIndexCommand(argv, io) {
   if (positional.length > 0) throw usageError();
   if (action === 'query') {
     if (typeof text !== 'string' || !text.trim() || text.length > 2000) throw usageError();
-  } else if (text !== undefined || topK !== DEFAULT_TOP_K) {
+  } else if (text !== undefined || topK !== undefined) {
     throw usageError();
   }
 
@@ -74,17 +75,21 @@ export async function knowledgeIndexCommand(argv, io) {
   // Resolve the project now so the future implementation cannot silently change project-boundary semantics.
   void root;
 
-  if (['build', 'sync', 'status'].includes(action)) {
+  if (['build', 'sync', 'query', 'status'].includes(action)) {
     const result = action === 'build'
       ? await buildKnowledgeIndex(root)
       : action === 'sync'
         ? await syncKnowledgeIndex(root)
-        : await statusKnowledgeIndex(root);
+        : action === 'query'
+          ? await queryKnowledgeIndex(root, text.trim(), { topK })
+          : await statusKnowledgeIndex(root);
     const message = action === 'build'
       ? `UI 知识索引已构建：${result.documents} 个文档，${result.chunks} 个 chunks`
       : action === 'sync'
         ? `UI 知识索引已同步：${result.added.length} 新增，${result.updated.length} 更新，${result.removed.length} 删除`
-        : result.exists
+        : action === 'query'
+          ? `UI 知识检索完成：${result.candidates.length} 个候选`
+          : result.exists
           ? `UI 知识索引存在：${result.documents} 个文档，${result.chunks} 个 chunks`
           : 'UI 知识索引不存在';
     io.stdout.write(json ? `${JSON.stringify(result)}\n` : `${message}\n`);
@@ -95,7 +100,7 @@ export async function knowledgeIndexCommand(argv, io) {
     ok: false,
     implemented: false,
     action,
-    ...(action === 'query' ? { request: { text: text.trim(), topK } } : {}),
+    ...(action === 'query' ? { request: { text: text.trim(), topK: topK ?? DEFAULT_TOP_K } } : {}),
     contract: indexContractSummary(),
   };
   const message = `UI 知识索引命令契约已定义但尚未实现：${action}`;

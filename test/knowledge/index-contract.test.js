@@ -59,7 +59,7 @@ test('CLI help 暴露 ui-knowledge index 契约', () => {
 
 test('所有有效索引动作暂时明确返回未实现且不写索引', async (t) => {
   const root = await fixture(t);
-  for (const action of INDEX_ACTIONS.filter(value => !['build', 'sync', 'status'].includes(value))) {
+  for (const action of INDEX_ACTIONS.filter(value => !['build', 'sync', 'query', 'status'].includes(value))) {
     const capture = ioFor(root);
     const args = action === 'query'
       ? ['ui-knowledge', 'index', action, '--text', 'H5 动画', '--top-k', '5', '--json']
