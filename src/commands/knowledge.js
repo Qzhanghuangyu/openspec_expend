@@ -2,9 +2,11 @@ import path from 'node:path';
 import { FallaError } from '../errors.js';
 import { findProjectRoot } from '../openspec/locator.js';
 import { validateKnowledge, fingerprintEntry } from '../knowledge/validate.js';
+import { knowledgeIndexCommand } from './knowledge-index.js';
 
 export async function knowledgeCommand(argv, io) {
   const [command, ...args] = argv;
+  if (command === 'index') return knowledgeIndexCommand(args, io);
   const positional = [];
   let project;
   let json = false;
