@@ -7,7 +7,7 @@ import { parseKnowledge, validateMetadata } from './schema.js';
 
 const digest = content => createHash('sha256').update(content).digest('hex');
 
-async function readEntry(root, file, kind) {
+export async function readKnowledgeEntry(root, file, kind) {
   const text = (await readBoundedFile(root, file, MAX_ENTRY_BYTES)).toString('utf8');
   // Only flag recognizable assignments, never echo the matching text.
   if (/(?:api[_-]?key|access[_-]?token|cookie|password)\s*[:=]\s*["']?[^\s"']{8,}/iu.test(text)
@@ -15,7 +15,7 @@ async function readEntry(root, file, kind) {
     throw knowledgeError('sensitive-content');
   }
   const data = parseKnowledge(text);
-  return { data, ...validateMetadata(data, kind) };
+  return { text, data, ...validateMetadata(data, kind) };
 }
 
 async function evidenceHashes(root, references, budget) {
@@ -49,7 +49,7 @@ export async function validateKnowledge(rootInput) {
       const result = { entry: file, reuse: 'rejected' };
       entries.push(result);
       try {
-        const parsed = await readEntry(root, file, kind);
+        const parsed = await readKnowledgeEntry(root, file, kind);
         const { data, references } = parsed;
         const local = [...parsed.issues];
         if (typeof data.id === 'string') {
@@ -88,7 +88,7 @@ export async function fingerprintEntry(rootInput, relative) {
   const match = file.match(/^\.falla\/ui-knowledge\/(components|screen-patterns)\/[^/]+\.md$/u);
   if (!match) throw knowledgeError('invalid-entry-path');
   const root = await knowledgeProjectRoot(rootInput);
-  const parsed = await readEntry(root, file, match[1] === 'components' ? 'component' : 'screen-pattern');
+  const parsed = await readKnowledgeEntry(root, file, match[1] === 'components' ? 'component' : 'screen-pattern');
   // Refreshing evidence is allowed for any status, but does not grant verification.
   const pendingVerification = new Set(['reviewer-required', 'verification-date-required', 'invalid-verification-date', 'evidence-hash-required', 'invalid-source-hashes']);
   const invalid = parsed.issues.find(kind => !pendingVerification.has(kind));

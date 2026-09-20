@@ -72,6 +72,14 @@ retrieval:
 
 后续实现必须记录每个文档的稳定 `id`、相对路径、内容哈希、状态和 chunk ID。Embedding 模型、维度或分块版本变化时必须全量重建。
 
+## 文档装载与章节分块
+
+索引文档必须先经过现有 `validateKnowledge`。装载器只读取 `reference-only` 或 `direct-reuse-candidate` 条目，并在第二次读取时重新执行 Frontmatter、安全内容和 metadata 校验，避免校验后文件被替换。
+
+每个文档至少生成一个 metadata chunk，并按 Markdown 二级标题生成正文 chunk。代码围栏内的 `##` 不视为章节。标题 ID 使用规范化 ASCII slug；无法生成 slug 的标题使用标题 SHA-256 前 12 位，避免依赖章节顺序。
+
+单 chunk 上限为 48 KiB，单文档最多 64 个 chunk。超大章节按 Markdown 空行块拆分；单个代码块或表格自身超过限制时拒绝索引，不进行破坏结构的硬切分。
+
 ## 分块标识
 
 建议稳定格式：
