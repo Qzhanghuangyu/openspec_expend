@@ -58,6 +58,7 @@ AI 定位符号、调用链和影响面时优先查询图谱，再读取少量�
 完全隔离；组件与页面模式由各项目成员，或经用户明确授权的 AI 单独维护。RAG 负责模糊召回，
 CodeGraph 负责源码关系验证。详细约定见
 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md)。
+简洁 RAG 操作见安装到项目后的 `.falla/ui-knowledge/RAG-QUICKSTART.md`。
 
 Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在当前对话中另行手动提供含明确
 node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少

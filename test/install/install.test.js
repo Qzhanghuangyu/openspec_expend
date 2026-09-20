@@ -100,6 +100,10 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   );
   await readFile(path.join(root, '.falla', 'ui-knowledge', 'schema-v1.md'));
   await readFile(path.join(root, '.falla', 'ui-knowledge', 'config.example.yaml'));
+  assert.match(
+    await readFile(path.join(root, '.falla', 'ui-knowledge', 'RAG-QUICKSTART.md'), 'utf8'),
+    /ui-knowledge index sync/
+  );
   await readFile(path.join(root, '.falla', 'ui-knowledge', 'templates', 'component.md'));
   await readFile(path.join(root, '.falla', 'ui-knowledge', 'templates', 'screen-pattern.md'));
   for (const tool of ['.claude', '.codex']) {

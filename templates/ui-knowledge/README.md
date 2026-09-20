@@ -95,6 +95,8 @@ cp .falla/ui-knowledge/config.example.yaml .falla/ui-knowledge/config.yaml
 `config.yaml`，并始终绑定当前项目；当前内置 `fake` Provider 只用于索引流程测试，不能作为生产语义
 召回质量依据。未配置可用 Provider 时继续使用有界 Markdown 检索。
 
+简洁操作手册见 [`RAG-QUICKSTART.md`](RAG-QUICKSTART.md)。
+
 本地索引命令：
 
 ```bash
