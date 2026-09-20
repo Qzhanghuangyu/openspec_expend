@@ -29,9 +29,9 @@ knowledge:
   screenPatternPaths:
     - .falla/ui-knowledge/screen-patterns
 semantic:
-  provider: unconfigured # 当前还允许测试专用 fake
-  model: unconfigured
-  dimensions: null
+  provider: local-keyword
+  model: local-keyword-v1
+  dimensions: 512
   indexPath: .falla/ui-knowledge/.index
   topK: 8
 retrieval:
@@ -41,7 +41,7 @@ retrieval:
   rejectInvalid: true
 ```
 
-当前阶段只实现 `unconfigured` 和确定性的 `fake` Provider。配置不允许自定义模块路径、Shell 命令、项目外索引目录或内嵌凭据。
+当前实现支持 `local-keyword`、测试专用 `fake` 和安全默认 `unconfigured`。配置不允许自定义模块路径、Shell 命令、项目外索引目录或内嵌凭据。
 
 ## 索引目录
 

@@ -15,7 +15,7 @@ falla() {
 }
 ```
 
-## 2. 配置测试 Provider
+## 2. 配置本地检索
 
 首次测试时复制配置：
 
@@ -28,14 +28,14 @@ cp "$TARGET_PROJECT/.falla/ui-knowledge/config.example.yaml" \
 
 ```yaml
 semantic:
-  provider: fake
-  model: fake-v1
-  dimensions: 32
+  provider: local-keyword
+  model: local-keyword-v1
+  dimensions: 512
   indexPath: .falla/ui-knowledge/.index
   topK: 8
 ```
 
-`fake` 只验证索引流程，不代表真实语义召回质量。
+`local-keyword` 不需要网络或 API Key，支持中文字符/词组、英文 token 与轻微拼写差异，并对 metadata、适用场景和不适用场景使用不同权重。`fake` 仅用于自动化机制测试。
 
 ## 3. 首次构建
 

@@ -47,7 +47,7 @@ test('query 对完全相同 chunk 返回最高分并按文档聚合', async (t) 
   const report = await queryKnowledgeIndex(root, target.text);
   assert.equal(report.topK, 2);
   assert.equal(report.candidates[0].id, 'alpha');
-  assert.equal(report.candidates[0].score, 1);
+  assert.equal(report.candidates[0].score, 0.95);
   assert.equal(report.candidates[0].validation, 'current');
   assert.equal(report.candidates[0].reuseMode, 'reference-only');
   assert.ok(report.candidates[0].matchedSections.includes('适用场景'));

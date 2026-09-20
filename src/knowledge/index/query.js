@@ -23,6 +23,29 @@ function compatible(snapshot, provider) {
     && embedding.dimensions === provider.dimensions;
 }
 
+function sectionWeight(section) {
+  const weights = new Map([
+    ['metadata', 1],
+    ['适用场景', 0.95],
+    ['目标场景', 0.95],
+    ['使用示例', 0.85],
+    ['最小使用示例', 0.85],
+    ['依赖与接入条件', 0.75],
+    ['状态、交互与生命周期', 0.7],
+    ['状态与交互', 0.7],
+    ['生命周期与风险', 0.65],
+    ['结构', 0.6],
+    ['overview', 0.6],
+    ['子组件与拆分边界', 0.5],
+    ['项目内验证证据', 0.45],
+    ['风险与限制', 0.35],
+    ['不适用场景', 0.15],
+    ['设计依据', 0.1],
+    ['视觉校准与设计依据', 0.1],
+  ]);
+  return weights.get(section) ?? 0.55;
+}
+
 export async function queryKnowledgeIndex(root, query, { topK } = {}) {
   const snapshot = await readIndexSnapshot(root);
   if (!snapshot) throw knowledgeError('index-not-found');
@@ -43,7 +66,7 @@ export async function queryKnowledgeIndex(root, query, { topK } = {}) {
   for (const vector of snapshot.vectors.vectors) {
     const chunk = chunks.get(vector.chunkId);
     if (!chunk) continue;
-    const score = cosine(queryVector, vector.values);
+    const score = Math.max(0, cosine(queryVector, vector.values)) * sectionWeight(chunk.section);
     const candidate = grouped.get(chunk.documentId) ?? { score: -1, sections: [] };
     candidate.score = Math.max(candidate.score, score);
     candidate.sections.push({ section: chunk.section, score });

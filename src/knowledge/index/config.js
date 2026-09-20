@@ -17,10 +17,12 @@ export const INDEX_CONFIG_PATH = `${KNOWLEDGE_ROOT}/config.yaml`;
 export const MAX_INDEX_CONFIG_BYTES = 64 * 1024;
 export const FAKE_PROVIDER_MODEL = 'fake-v1';
 export const DEFAULT_FAKE_DIMENSIONS = 32;
+export const LOCAL_KEYWORD_MODEL = 'local-keyword-v1';
+export const DEFAULT_LOCAL_KEYWORD_DIMENSIONS = 512;
 
 const COMPONENT_PATH = `${KNOWLEDGE_ROOT}/components`;
 const SCREEN_PATTERN_PATH = `${KNOWLEDGE_ROOT}/screen-patterns`;
-const PROVIDERS = new Set(['unconfigured', 'fake']);
+const PROVIDERS = new Set(['unconfigured', 'fake', 'local-keyword']);
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -88,10 +90,15 @@ export function validateIndexConfig(value) {
     if (dimensions !== undefined && dimensions !== null) throw configError();
     model = 'unconfigured';
     dimensions = null;
-  } else {
+  } else if (provider === 'fake') {
     model ??= FAKE_PROVIDER_MODEL;
     if (typeof model !== 'string' || !/^[a-z0-9][a-z0-9._-]{0,99}$/iu.test(model)) throw configError();
     dimensions = parsePositiveInteger(dimensions, DEFAULT_FAKE_DIMENSIONS, 4096);
+  } else {
+    model ??= LOCAL_KEYWORD_MODEL;
+    if (model !== LOCAL_KEYWORD_MODEL) throw configError();
+    dimensions = parsePositiveInteger(dimensions, DEFAULT_LOCAL_KEYWORD_DIMENSIONS, 4096);
+    if (dimensions < 64) throw configError();
   }
 
   const retrieval = value.retrieval ?? {};

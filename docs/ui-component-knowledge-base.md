@@ -166,8 +166,8 @@ Coroutine、Flow、Disposable 时，条目必须记录持有者、创建时机�
 ## 9. RAG V1 能力与限制
 
 - 已实现本地 Manifest、Markdown 分块、JSON 向量存储、全量构建、增量同步、查询、重建和清理；
-- 当前内置 Fake Embedding Provider 只验证索引机制，不证明生产语义召回质量；
-- 真实本地或远程 embedding Provider 仍需作为后续 change 单独设计、鉴权和验证；
+- 当前内置 `local-keyword` Provider 提供无网络的中文/英文关键词切片、轻量模糊匹配和章节加权；
+- `fake` Provider 只验证索引机制；更强的神经语义 embedding 可作为后续 change 单独接入；
 - 自动全仓扫描和组件发现；
 - 自动生成具体项目 Markdown；
 - 跨项目检索、合并和推荐；
