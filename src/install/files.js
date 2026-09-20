@@ -83,6 +83,7 @@ async function listTemplateFiles(directory, relativeDirectory = '') {
   const entries = await readdir(path.join(directory, relativeDirectory), { withFileTypes: true });
   const files = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    if (entry.name === '.DS_Store') continue;
     const relative = path.join(relativeDirectory, entry.name);
     if (entry.isSymbolicLink()) {
       throw new FallaError(1, `模板不能包含符号链接：${relative}`);

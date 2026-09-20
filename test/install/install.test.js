@@ -136,6 +136,7 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   assert.deepEqual(manifest.tools, ['claude', 'codex']);
   assert.deepEqual(manifest.integrations, { codegraph: false });
   assert.equal(manifest.files['.gitignore'], undefined);
+  assert.equal(Object.keys(manifest.files).some(file => file.endsWith('/.DS_Store') || file === '.DS_Store'), false);
   assert.ok(Object.keys(manifest.files).every((entry) => !path.isAbsolute(entry)));
   assert.ok(Object.values(manifest.files).every((digest) => /^[a-f0-9]{64}$/.test(digest)));
   assert.doesNotMatch(manifestText, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
