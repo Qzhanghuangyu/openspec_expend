@@ -163,9 +163,11 @@ last-verified / verified-by / source-hashes
 涉及 Context、Activity、Fragment View、Binding、Observer、Callback、Listener、Handler、
 Coroutine、Flow、Disposable 时，条目必须记录持有者、创建时机、取消/释放时机和页面销毁后的行为。
 
-## 9. V1 不包含的能力
+## 9. RAG V1 能力与限制
 
-- RAG 引擎或 embedding 模型实现；
+- 已实现本地 Manifest、Markdown 分块、JSON 向量存储、全量构建、增量同步、查询、重建和清理；
+- 当前内置 Fake Embedding Provider 只验证索引机制，不证明生产语义召回质量；
+- 真实本地或远程 embedding Provider 仍需作为后续 change 单独设计、鉴权和验证；
 - 自动全仓扫描和组件发现；
 - 自动生成具体项目 Markdown；
 - 跨项目检索、合并和推荐；

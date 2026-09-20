@@ -73,6 +73,14 @@ falla-openspec doctor --json
 falla-openspec ui-knowledge validate --json
 # 只读生成引用文件的 SHA-256，供 reviewer 核对后写入 source-hashes
 falla-openspec ui-knowledge fingerprint .falla/ui-knowledge/components/retry-list.md --json
+# 使用 config.yaml 中的 Provider 构建、增量同步和查询本地派生索引
+falla-openspec ui-knowledge index build --json
+falla-openspec ui-knowledge index sync --json
+falla-openspec ui-knowledge index query --text "排行榜身份勋章" --json
+falla-openspec ui-knowledge index status --json
+# rebuild 原子替换现有索引；clear 只删除 .index/
+falla-openspec ui-knowledge index rebuild --json
+falla-openspec ui-knowledge index clear --json
 # 阶段开始或源码变化后，准备已启用的图谱；失败可有界降级
 falla-openspec codegraph prepare --json
 # single 父 change 或 parallel 逻辑子 change 均使用排他认领

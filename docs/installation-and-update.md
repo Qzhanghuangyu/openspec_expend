@@ -171,6 +171,12 @@ RAG 负责当前项目知识 Markdown 的模糊召回，CodeGraph 负责验证�
 ```bash
 falla-openspec ui-knowledge validate --json
 falla-openspec ui-knowledge fingerprint .falla/ui-knowledge/components/retry-list.md --json
+falla-openspec ui-knowledge index build --json
+falla-openspec ui-knowledge index sync --json
+falla-openspec ui-knowledge index query --text "用户身份勋章" --json
+falla-openspec ui-knowledge index status --json
+falla-openspec ui-knowledge index rebuild --json
+falla-openspec ui-knowledge index clear --json
 ```
 
 校验不自动生成条目或授予 verified。旧 verified 条目需要 reviewer 重新核对并补全 source-hashes，

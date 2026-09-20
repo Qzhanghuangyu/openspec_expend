@@ -91,7 +91,23 @@ cp .falla/ui-knowledge/config.example.yaml .falla/ui-knowledge/config.yaml
 
 检索前执行 `falla-openspec ui-knowledge validate --json`，只使用通过校验的候选。
 返回的 `direct-reuse-candidate` 是文件与结构检查结果，不能替代 CodeGraph、依赖和生命周期核对。
-CLI 不调用 RAG、不读取其他项目，也不根据 config.yaml 自动加载外部 provider。
+`validate` 和 `fingerprint` 不会隐式调用 RAG。索引只在显式执行 `ui-knowledge index` 命令时读取
+`config.yaml`，并始终绑定当前项目；当前内置 `fake` Provider 只用于索引流程测试，不能作为生产语义
+召回质量依据。未配置可用 Provider 时继续使用有界 Markdown 检索。
+
+本地索引命令：
+
+```bash
+falla-openspec ui-knowledge index build --json
+falla-openspec ui-knowledge index sync --json
+falla-openspec ui-knowledge index query --text "用户身份勋章" --json
+falla-openspec ui-knowledge index status --json
+falla-openspec ui-knowledge index rebuild --json
+falla-openspec ui-knowledge index clear --json
+```
+
+`build` 拒绝覆盖已有索引；普通内容变化使用 `sync`，Provider、模型、维度或分块版本变化使用
+`rebuild`。`clear` 只删除 `.index/`，不删除 Markdown 和 `config.yaml`。
 
 ## 6. 维护流程
 
