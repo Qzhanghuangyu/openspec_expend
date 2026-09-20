@@ -3,6 +3,7 @@ import path from 'node:path';
 import { FallaError } from '../errors.js';
 import { findProjectRoot } from '../openspec/locator.js';
 import { buildKnowledgeIndex, statusKnowledgeIndex } from '../knowledge/index/build.js';
+import { syncKnowledgeIndex } from '../knowledge/index/sync.js';
 import {
   DEFAULT_TOP_K,
   INDEX_ACTIONS,
@@ -73,15 +74,19 @@ export async function knowledgeIndexCommand(argv, io) {
   // Resolve the project now so the future implementation cannot silently change project-boundary semantics.
   void root;
 
-  if (action === 'build' || action === 'status') {
+  if (['build', 'sync', 'status'].includes(action)) {
     const result = action === 'build'
       ? await buildKnowledgeIndex(root)
-      : await statusKnowledgeIndex(root);
+      : action === 'sync'
+        ? await syncKnowledgeIndex(root)
+        : await statusKnowledgeIndex(root);
     const message = action === 'build'
       ? `UI 知识索引已构建：${result.documents} 个文档，${result.chunks} 个 chunks`
-      : result.exists
-        ? `UI 知识索引存在：${result.documents} 个文档，${result.chunks} 个 chunks`
-        : 'UI 知识索引不存在';
+      : action === 'sync'
+        ? `UI 知识索引已同步：${result.added.length} 新增，${result.updated.length} 更新，${result.removed.length} 删除`
+        : result.exists
+          ? `UI 知识索引存在：${result.documents} 个文档，${result.chunks} 个 chunks`
+          : 'UI 知识索引不存在';
     io.stdout.write(json ? `${JSON.stringify(result)}\n` : `${message}\n`);
     return 0;
   }

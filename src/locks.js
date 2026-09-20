@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { FallaError } from './errors.js';
 
-const ALLOWED_KINDS = new Set(['install', 'coordination']);
+const ALLOWED_KINDS = new Set(['install', 'coordination', 'knowledge-index']);
 
 function isAlive(pid) {
   try {

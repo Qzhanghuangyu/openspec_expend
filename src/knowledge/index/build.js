@@ -1,3 +1,4 @@
+import { withProjectLock } from '../../locks.js';
 import {
   createEmptyIndexManifest,
   INDEX_ROOT,
@@ -22,52 +23,54 @@ function assertVectors(vectors, count, dimensions) {
 }
 
 export async function buildKnowledgeIndex(root, { now = () => new Date() } = {}) {
-  const configResult = await readIndexConfig(root);
-  const provider = createEmbeddingProvider(configResult.config.semantic);
-  const loaded = await loadIndexableKnowledge(root);
-  const chunks = loaded.documents.flatMap(document => document.chunks);
-  const embeddings = await provider.embed(chunks.map(chunk => chunk.text));
-  assertVectors(embeddings, chunks.length, provider.dimensions);
+  return withProjectLock(root, 'knowledge-index', async () => {
+    const configResult = await readIndexConfig(root);
+    const provider = createEmbeddingProvider(configResult.config.semantic);
+    const loaded = await loadIndexableKnowledge(root);
+    const chunks = loaded.documents.flatMap(document => document.chunks);
+    const embeddings = await provider.embed(chunks.map(chunk => chunk.text));
+    assertVectors(embeddings, chunks.length, provider.dimensions);
 
-  const documents = {};
-  for (const document of loaded.documents) {
-    documents[document.id] = {
-      path: document.path,
-      kind: document.kind,
-      status: document.status,
-      reuse: document.reuse,
-      contentHash: document.contentHash,
-      chunkIds: document.chunks.map(chunk => chunk.chunkId),
+    const documents = {};
+    for (const document of loaded.documents) {
+      documents[document.id] = {
+        path: document.path,
+        kind: document.kind,
+        status: document.status,
+        reuse: document.reuse,
+        contentHash: document.contentHash,
+        chunkIds: document.chunks.map(chunk => chunk.chunkId),
+      };
+    }
+    const rejected = loaded.validation.entries.filter(entry => entry.reuse === 'rejected').length;
+    const manifest = {
+      ...createEmptyIndexManifest({
+        provider: provider.id,
+        model: provider.model,
+        dimensions: provider.dimensions,
+      }),
+      generatedAt: now().toISOString(),
+      counts: { documents: loaded.documents.length, chunks: chunks.length, rejected },
+      documents,
     };
-  }
-  const rejected = loaded.validation.entries.filter(entry => entry.reuse === 'rejected').length;
-  const manifest = {
-    ...createEmptyIndexManifest({
+    const vectorStore = {
+      formatVersion: manifest.formatVersion,
+      dimensions: provider.dimensions,
+      vectors: chunks.map((chunk, index) => ({ chunkId: chunk.chunkId, values: embeddings[index] })),
+    };
+    await writeNewIndex(root, { manifest, chunks, vectors: vectorStore });
+    return {
+      ok: true,
+      action: 'build',
+      indexPath: INDEX_ROOT,
       provider: provider.id,
       model: provider.model,
       dimensions: provider.dimensions,
-    }),
-    generatedAt: now().toISOString(),
-    counts: { documents: loaded.documents.length, chunks: chunks.length, rejected },
-    documents,
-  };
-  const vectorStore = {
-    formatVersion: manifest.formatVersion,
-    dimensions: provider.dimensions,
-    vectors: chunks.map((chunk, index) => ({ chunkId: chunk.chunkId, values: embeddings[index] })),
-  };
-  await writeNewIndex(root, { manifest, chunks, vectors: vectorStore });
-  return {
-    ok: true,
-    action: 'build',
-    indexPath: INDEX_ROOT,
-    provider: provider.id,
-    model: provider.model,
-    dimensions: provider.dimensions,
-    documents: manifest.counts.documents,
-    chunks: manifest.counts.chunks,
-    rejected: manifest.counts.rejected,
-  };
+      documents: manifest.counts.documents,
+      chunks: manifest.counts.chunks,
+      rejected: manifest.counts.rejected,
+    };
+  });
 }
 
 export async function statusKnowledgeIndex(root) {
