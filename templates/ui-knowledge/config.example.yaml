@@ -11,7 +11,10 @@ knowledge:
     - .falla/ui-knowledge/screen-patterns
 
 semantic:
+  # 当前索引实现仅允许 unconfigured 或测试专用 fake；真实 Provider 后续显式接入。
   provider: unconfigured
+  model: unconfigured
+  dimensions: null
   indexPath: .falla/ui-knowledge/.index
   topK: 8
 

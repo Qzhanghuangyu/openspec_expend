@@ -15,6 +15,34 @@ falla-openspec ui-knowledge index query --text <query> [--top-k <1..50>] [--proj
 
 当前阶段只固定契约。有效命令返回 `implemented: false` 和非零退出码，不创建 `.index/`。
 
+## 配置契约
+
+索引器只读取固定项目文件 `.falla/ui-knowledge/config.yaml`。缺失时返回安全的 `unconfigured` 默认值，不创建文件。
+
+```yaml
+version: 1
+scope: project
+knowledge:
+  sourceOfTruth: markdown
+  componentPaths:
+    - .falla/ui-knowledge/components
+  screenPatternPaths:
+    - .falla/ui-knowledge/screen-patterns
+semantic:
+  provider: unconfigured # 当前还允许测试专用 fake
+  model: unconfigured
+  dimensions: null
+  indexPath: .falla/ui-knowledge/.index
+  topK: 8
+retrieval:
+  projectOnly: true
+  requireVerifiedForDirectReuse: true
+  allowDraftAsReference: true
+  rejectInvalid: true
+```
+
+当前阶段只实现 `unconfigured` 和确定性的 `fake` Provider。配置不允许自定义模块路径、Shell 命令、项目外索引目录或内嵌凭据。
+
 ## 索引目录
 
 ```text
