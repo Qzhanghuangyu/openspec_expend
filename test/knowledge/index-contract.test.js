@@ -57,23 +57,6 @@ test('CLI help 暴露 ui-knowledge index 契约', () => {
   assert.match(usage(), /ui-knowledge index query/);
 });
 
-test('所有有效索引动作暂时明确返回未实现且不写索引', async (t) => {
-  const root = await fixture(t);
-  for (const action of INDEX_ACTIONS.filter(value => !['build', 'sync', 'query', 'status'].includes(value))) {
-    const capture = ioFor(root);
-    const args = action === 'query'
-      ? ['ui-knowledge', 'index', action, '--text', 'H5 动画', '--top-k', '5', '--json']
-      : ['ui-knowledge', 'index', action, '--json'];
-    assert.equal(await main(args, capture.io), 1);
-    const report = JSON.parse(capture.output());
-    assert.equal(report.ok, false);
-    assert.equal(report.implemented, false);
-    assert.equal(report.action, action);
-    if (action === 'query') assert.deepEqual(report.request, { text: 'H5 动画', topK: 5 });
-  }
-  await assert.rejects(access(path.join(root, INDEX_ROOT)), { code: 'ENOENT' });
-});
-
 test('query 强制 text 和合法 top-k，其他动作拒绝查询参数', async (t) => {
   const root = await fixture(t);
   await assert.rejects(main(['ui-knowledge', 'index', 'query', '--json'], ioFor(root).io), /ui-knowledge index query/);

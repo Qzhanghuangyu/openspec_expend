@@ -24,6 +24,9 @@ export function usage() {
     '  ui-knowledge index build        使用配置的 Provider 构建完整 RAG 索引',
     '  ui-knowledge index sync         增量同步已新增、修改和删除的知识',
     '  ui-knowledge index query        查询 RAG 候选并复核当前知识状态',
+    '  ui-knowledge index status       查看本地 RAG 索引状态',
+    '  ui-knowledge index rebuild      原子重建本地 RAG 索引',
+    '  ui-knowledge index clear        删除本地派生 RAG 索引',
     '  codegraph prepare                同步当前项目已启用的图谱',
   ].join('\n');
 }
