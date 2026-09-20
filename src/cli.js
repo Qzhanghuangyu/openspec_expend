@@ -21,7 +21,7 @@ export function usage() {
     '  coordination claim X --owner ID   排他认领现有 Android change',
     '  ui-knowledge validate             校验项目 Android UI 知识',
     '  ui-knowledge fingerprint <entry>  只读计算知识引用文件指纹',
-    '  ui-knowledge index build        RAG 完整索引契约（尚未实现）',
+    '  ui-knowledge index build        使用配置的 Provider 构建完整 RAG 索引',
     '  ui-knowledge index sync         RAG 增量索引契约（尚未实现）',
     '  ui-knowledge index query        RAG 查询契约（尚未实现）',
     '  codegraph prepare                同步当前项目已启用的图谱',

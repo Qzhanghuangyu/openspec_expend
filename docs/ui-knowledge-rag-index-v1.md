@@ -13,7 +13,7 @@ falla-openspec ui-knowledge index clear [--project <path>] [--json]
 falla-openspec ui-knowledge index query --text <query> [--top-k <1..50>] [--project <path>] [--json]
 ```
 
-当前阶段只固定契约。有效命令返回 `implemented: false` 和非零退出码，不创建 `.index/`。
+`build` 和 `status` 已实现；`sync/query/rebuild/clear` 当前仍返回 `implemented: false` 和非零退出码。
 
 ## 配置契约
 
@@ -135,4 +135,4 @@ retrieval:
 
 ## 当前阶段完成边界
 
-本阶段不实现 Markdown 分块、Embedding、向量持久化、增量同步或查询算法。所有索引动作均明确返回“尚未实现”，并保证不写入目标项目。
+当前阶段已实现安全文档装载、Markdown 分块、Fake Embedding、Manifest/chunks/vectors 原子写入以及只读 status。尚未实现增量同步、查询、重建和清理。`build` 拒绝覆盖已有索引。
