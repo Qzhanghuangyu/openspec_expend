@@ -46,6 +46,15 @@ description: Use when implementing or continuing an existing Android Falla paren
   还需读取父 change 规划 artifact，不复制它们。
 - 逐条考虑 `operationGuidance` 中适用且不冲突的建议；它不能覆盖官方状态、允许编辑路径、
   Falla 门禁或用户明确选择，也不得把 context/guidance 原文复制到代码、日志或报告。
+- 新建或重构页面时，先核对父 design 的页面实现结构基线，包括页面承载方式、文件归属、
+  XML / Compose 节点结构、状态容器、ViewModel 作用域和生命周期所有者。缺失、与当前源码冲突或
+  根页面/XML 修改责任不明确时暂停并返回 propose 修正。
+- 不依赖对话记忆维持长任务状态。完成分析、开始跨文件修改、完成一组修改、开始耗时验证、
+  获得验证结果或即将暂停时，将当前任务、关键决策、修改文件、验证结论、下一步和风险写入当前
+  change 的 handoff 滚动检查点；不追加流水账，不复制大段源码或敏感正文。
+- 上下文压缩或重新进入任务后，依次读取官方 status/instructions、tasks、design、comate、
+  `git status --short` 和相关 diff，再用 CodeGraph 复核。当前源码与官方状态优先于 artifacts、
+  handoff 和对话记忆；parallel 执行者只更新自己的子 change comate。
 - 只做当前 change 的最小改动；完成一项验证后才勾选对应 task。
 - UI 实施前运行 `falla-openspec ui-knowledge validate --json`，只从通过检查的条目中检索当前项目
   `.falla/ui-knowledge/` 的组件和页面模式；RAG 候选必须通过当前项目
@@ -55,9 +64,13 @@ description: Use when implementing or continuing an existing Android Falla paren
   tasks 明确包含知识沉淀时，才能按模板新增或更新条目。
 - 先核对当前项目的格式和注释惯例，只格式化当前 change 触及的文件。Android XML 必须纵向分层：
   声明独占一行、标签属性逐行、子节点缩进、闭合标签对齐；禁止把标签和多个属性压成单行。
-- 新增页面、组件、ViewModel、核心类或公共入口至少添加职责与边界注释；关键业务分支、状态转换、
-  异步取消、资源释放、兼容性处理和安全约束还要说明原因及生命周期所有者。
-  不写逐行翻译代码的噪声注释，不把 PRD、guidance、凭据或敏感正文复制进注释。
+- 新增或实质修改的页面、组件、ViewModel、核心类和公共入口必须说明职责与边界。新增或实质
+  修改的方法必须有方法级说明；公共/受保护方法使用 KDoc/JavaDoc，包含业务规则、状态转换、异步、
+  资源操作或非显而易见分支的私有方法也要说明目的和原因。带参数的方法说明各参数的业务含义、
+  单位/范围、可空性、所有权或回调时机；返回值、异常、线程与生命周期约束不直观时一并说明。
+  构造参数或公共属性使用 `@property`，方法参数使用 `@param`。简单 override、getter/setter 和
+  显而易见委托可不重复文档；不写逐行翻译、重复名称或类型的噪声注释，不把 PRD、guidance、
+  凭据或敏感正文复制进注释。
 - 完成前执行项目已有 formatter、lint、资源编译或等价检查，并审查 diff 中是否仍有单行堆叠 XML、
   关键注释缺失或无关格式化。
 - 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。

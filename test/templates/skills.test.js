@@ -103,12 +103,17 @@ test('Apply 阶段强制 XML 纵向格式与关键实现注释', async () => {
   ]) {
     assert.match(content, /Android XML/, `${source} 缺少 Android XML 约束`);
     assert.match(content, /属性逐行/, `${source} 缺少 XML 属性逐行要求`);
-    assert.match(content, /职责.*生命周期所有者/s, `${source} 缺少关键注释要求`);
+    assert.match(content, /类.*方法.*参数/s, `${source} 缺少类、方法和参数注释要求`);
+    assert.match(content, /KDoc\/JavaDoc/, `${source} 缺少方法文档格式要求`);
+    assert.match(content, /参数.*业务含义.*可空性/s, `${source} 缺少参数语义要求`);
+    assert.match(content, /线程.*生命周期/s, `${source} 缺少线程与生命周期说明要求`);
     assert.match(content, /只格式化.*change/s, `${source} 缺少最小格式化边界`);
   }
 
-  assert.match(soul, /不得把 PRD、operationGuidance、凭据或敏感正文\n  复制进注释/);
-  assert.match(applyRule, /禁止用逐行翻译代码的噪声注释凑数/);
+  assert.match(soul, /方法参数使用 `@param`/);
+  assert.match(soul, /简单 override、getter\/setter/);
+  assert.match(soul, /不得把 PRD、operationGuidance、凭据或.*敏感正文/s);
+  assert.match(applyRule, /禁止用逐行翻译代码、重复名称或类型的噪声注释凑数/);
   assert.match(applySkill, /formatter、lint、资源编译或等价检查/);
 });
 
@@ -219,6 +224,70 @@ test('Propose 默认单 change 且仅在用户明确要求时创建并行子 cha
   assert.match(applyRule, /不在此阶段拆分、创建 change 或切换执行模式/);
   assert.match(applySkill, /single：直接实施父 change/);
   assert.match(applySkill, /已有当前父 change 的映射则沿用 `parallel`/);
+});
+
+test('新页面在 Propose 固化实现结构基线并由 Apply 执行前置校验', async () => {
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(
+    path.join(root, 'skills', 'falla-propose', 'SKILL.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+  const schema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven', 'schema.yaml'),
+    'utf8'
+  );
+
+  for (const content of [proposeRule, proposeSkill, schema]) {
+    assert.match(content, /页面实现结构基线/);
+    assert.match(content, /XML \/ Compose/);
+    assert.match(content, /最小可编译/);
+  }
+  for (const content of [applyRule, applySkill]) {
+    assert.match(content, /页面实现结构基线/);
+    assert.match(content, /返回 propose 修正/);
+  }
+});
+
+test('长任务使用 tasks 和 comate 滚动检查点恢复上下文', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(
+    path.join(root, 'skills', 'falla-propose', 'SKILL.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+
+  for (const content of [soul, proposeRule, proposeSkill]) {
+    assert.match(content, /一次独立实施上下文/);
+    assert.match(content, /拆 task/);
+  }
+  for (const content of [soul, applyRule, applySkill]) {
+    assert.match(content, /滚动检查点/);
+    assert.match(content, /git status --short/);
+    assert.match(content, /当前源码与官方状态/);
+    assert.match(content, /不依赖对话记忆|对话上下文和自动摘要不是事实源/);
+  }
 });
 
 test('全局规则要求使用 CodeGraph 做有界代码定位并保留文本搜索兜底', async () => {

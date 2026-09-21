@@ -47,7 +47,11 @@ artifacts:
     template: design.md
     instruction: |
       说明上下文、目标、非目标、决策、替代方案、风险、迁移和开放问题。
-      页面级变更先按 MVVM 划分 View 与 ViewModel；UI 再按可独立交付控件拆分。
+      新建或重构页面时，先核对当前项目的同类实现和可复用组件，并明确“页面实现结构基线”：
+      页面承载方式、文件归属、
+      导航入口、ViewModel 作用域，以及 XML / Compose 的根节点、层级、滚动与状态容器、组件复用、
+      Insets 和生命周期所有者；XML 需给出简明节点树。无法确定的结构问题必须保留为开放问题。
+      页面级变更再按 MVVM 划分 View 与 ViewModel；UI 再按可独立交付控件拆分。
       明确 Android UI 的自动验证项与人工校准项，记录具体视觉细节，不以固定百分比代替验收。
     requires:
       - proposal
@@ -58,7 +62,12 @@ artifacts:
     template: tasks.md
     instruction: |
       使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的前置依赖。
-      MVVM 契约优先，独立 UI 控件可并行，最后进行组装和联调。
+      每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，并写明必要输入、
+      允许编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。新建或重构页面时，任务顺序
+      必须是“结构基线复核与最小可编译骨架 → MVVM 契约 → 独立 UI 控件 → 组装和联调”；
+      结构基线不明确时不得生成可直接实施的下游任务。
+      parallel 模式必须指定根页面/XML 的唯一修改责任，依赖根结构或页面契约的子 change 必须
+      等待相应前置任务完成。
       执行模式默认是 single：所有任务保留在父 change 中，不能仅因任务分组或理论上可并行就
       创建子 change。只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才使用
       parallel，并在 propose 阶段创建子 change；apply 阶段不得重新拆分或切换模式。
@@ -72,8 +81,9 @@ artifacts:
     template: comate.md
     instruction: |
       建立父 change 协作台账并记录 execution-mode。owner、status、depends-on、blocks、handoff
-      必须完整。single 模式直接跟踪父 change；parallel 模式汇总子 change，依赖边必须双向一致
-      且不能形成环。父 change 完成前全部子 change 必须完成或有明确交接。
+      必须完整。handoff 作为可恢复的滚动检查点，记录当前任务、关键决策、修改文件、验证结果、
+      下一步和风险，不追加流水账或敏感正文。single 模式直接跟踪父 change；parallel 模式汇总
+      子 change，依赖边必须双向一致且不能形成环。父 change 完成前全部子 change 必须完成或有明确交接。
     requires:
       - tasks
 
@@ -83,8 +93,12 @@ apply:
   instruction: |
     读取官方 contextFiles 和 Falla 协作上下文。single 模式直接实施父 change；parallel 模式
     按已有子 change DAG 实施。按拓扑逐项执行并在验证成功后更新任务，不得在 apply 阶段创建、
-    拆分子 change 或切换执行模式。Android XML 必须按属性逐行、层级缩进的纵向格式排版；
-    新增页面、组件、ViewModel、核心类或公共入口至少添加职责边界注释，关键逻辑还要说明
-    业务原因和生命周期所有者。
+    拆分子 change 或切换执行模式。新建或重构页面时先复核 design 的页面实现结构基线；缺失、
+    与当前源码冲突或根页面/XML 修改责任不明确时暂停并返回 propose 修正。Android XML 必须按属性逐行、层级缩进的纵向格式排版；
+    新增或实质修改的类、方法和参数必须有可维护的职责说明。公共/受保护方法使用 KDoc/JavaDoc；
+    私有方法包含业务规则、状态转换、异步或资源操作时也要说明目的。参数说明业务含义、单位/范围、
+    可空性、所有权或回调时机；必要时补充返回值、异常、线程和生命周期约束，且不得包含敏感正文。
     只格式化当前 change 触及的文件，完成前运行项目已有 formatter、lint、资源编译或等价检查。
+    在分析、跨文件修改和验证等稳定边界更新 comate 的滚动检查点；上下文压缩或重新进入任务后，
+    重新读取官方状态、artifacts、comate、git diff 和相关源码，不依赖对话记忆继续。
     遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。

@@ -9,7 +9,7 @@
 
 - `single`：直接实施父 change。
 - `parallel`：只实施 propose 已创建的子 change，并遵守既定依赖顺序。
-- apply 不拆分、创建 change，也不切换执行模式。
+- 不在此阶段拆分、创建 change 或切换执行模式。
 
 ## Figma 文本兼容模式
 
@@ -67,27 +67,42 @@
 - 读取官方 `contextFiles` 和 `context`；parallel 子 change 还需读取父 change 的规划
   artifacts，但不复制它们。
 - `operationGuidance` 仅作建议，不能覆盖官方状态、编辑范围、Falla 门禁或用户选择。
+- 新建或重构页面时，先确认 design 已给出页面实现结构基线，包括页面承载方式、文件归属、
+  XML / Compose 节点结构、状态容器、ViewModel 作用域和生命周期所有者；缺失或与当前源码冲突时
+  停止实施并返回 propose 修正。
 - parallel 的子 change 必须是可独立认领、验证和交接的交付单元；实施前确认文件责任，
   避免多个执行者修改同一文件或公共接口。
 - UI 实施前运行 `falla-openspec ui-knowledge validate --json`；只复用经过当前源码、
   依赖、资源、API 和生命周期核对的候选。
 - 每次选择一项依赖已满足的任务：
   1. 使用 CodeGraph 定位符号、调用链、影响面和已有测试。
-  2. 完成最小且聚焦的代码改动，不顺带重构。
-  3. 检查空值、异常、并发、异步取消、资源释放、销毁后 UI 更新和敏感日志。
-  4. 执行与改动匹配的最小 formatter、lint、测试或编译检查。
-  5. 验证成功后才勾选 task，并简洁更新 handoff。
-  6. 重新读取 `openspec instructions apply`，以最新状态继续。
+  2. 完成最小且聚焦的代码改动，不顺带重构；只格式化当前 change 触及的文件。
+  3. Android XML 必须保持属性逐行和层级缩进。新增或实质修改的类需说明职责与边界；方法需
+     说明目的和关键约束，带参数的方法需说明参数业务含义、单位/范围、可空性、所有权或回调时机。
+     返回值、异常、线程及生命周期约束不直观时一并说明；Kotlin/Java 公共 API 使用 KDoc/JavaDoc
+     的 `@property`、`@param`、返回值或异常说明。简单 override、getter/setter 或显而易见委托可不
+     重复文档；禁止用逐行翻译代码、重复名称或类型的噪声注释凑数。
+  4. 检查空值、异常、并发、异步取消、资源释放、销毁后 UI 更新和敏感日志。
+  5. 执行与改动匹配的最小 formatter、lint、测试或编译检查。
+  6. 验证成功后才勾选 task，并简洁更新 handoff。
+  7. 重新读取 `openspec instructions apply`，以最新状态继续。
 
-## 3. comate 与暂停规则
+## 3. comate、检查点与暂停规则
 
-`comate.md` 是 owner、状态、依赖和交接的协作事实：
+`comate.md` 是 owner、状态、依赖、交接和长任务恢复的持久事实：
 
 - 使用 claim 认领，不手工覆盖他人的 owner。
 - `depends-on` / `blocks` 必须与 propose 的拓扑关系一致，apply 不自行修改。
 - blocked 或 done 时，handoff 必须记录完成内容、验证证据、生命周期与安全结论、
   遗留风险和恢复/接手条件。
-- 不在 handoff 中写入凭据、敏感正文或完整 guidance。
+- handoff 维护滚动检查点，只保留当前任务、已确认事实与关键决策、已修改文件、验证结果、
+  下一步和风险，不追加流水账，也不写入凭据、敏感正文、完整 guidance 或大段源码。
+- 完成分析、开始跨文件修改、完成一组修改、开始耗时验证、获得验证结果或即将暂停时更新检查点。
+- 上下文压缩或重新进入任务后，不依赖对话记忆直接继续；依次读取官方 status/instructions、
+  tasks、design、comate、`git status --short` 和相关 diff，再用 CodeGraph 复核符号与调用关系。
+  事实优先级为：
+  当前源码与官方状态 > artifacts > handoff > 对话记忆。
+- parallel 执行者只更新自己的子 change comate；父 comate 只维护整体汇总，避免并发覆盖。
 
 任务不明确、设计冲突、验证失败或需要外部决策时停止猜测：
 

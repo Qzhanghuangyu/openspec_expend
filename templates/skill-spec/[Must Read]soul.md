@@ -124,10 +124,14 @@ FallaOpenSpec 面向多个相互独立的项目，只提供 `.falla/ui-knowledge
 - Android XML 必须纵向、分层排版：XML 声明独占一行，标签属性逐行书写，子节点按层级缩进，
   闭合标签位置一致；禁止把标签及多个属性压成单行。复杂布局可用简短 XML 注释标识区域，
   但不得用注释代替清晰的层级和命名。
-- 新增页面、组件、ViewModel、核心类或公共入口至少补充职责与边界注释；关键业务分支、状态转换、
-  异步取消/资源释放、兼容性处理和安全约束还要说明“为什么”及生命周期所有者。
-  不为显而易见的赋值、getter 或逐行操作写噪声注释，也不得把 PRD、operationGuidance、凭据或敏感正文
-  复制进注释。
+- 新增或实质修改的页面、组件、ViewModel、核心类和公共入口必须补充职责与边界注释。
+  新增或实质修改的方法必须有方法级说明：公共/受保护方法使用 KDoc/JavaDoc；私有方法只要包含
+  业务规则、状态转换、异步、资源操作或非显而易见分支，也必须说明目的和“为什么”。带参数的方法
+  需说明各参数的业务含义、单位/范围、可空性、所有权或回调时机；返回值、异常、线程与生命周期
+  约束不直观时一并说明。构造参数或公共属性可使用 `@property`，方法参数使用 `@param`。
+  仅标准框架回调、无自定义语义的简单 override、getter/setter 和显而易见的委托可以不重复文档；
+  不得用逐行翻译代码、重复名称或类型的噪声注释凑数，也不得把 PRD、operationGuidance、凭据或
+  敏感正文复制进注释。
 - 提交实施结果前使用项目已有 formatter/lint/resource 编译或等价检查验证触及文件，并检查 diff 中
   不存在单行堆叠 XML、缺失的关键注释、无关格式化或注释泄露。
 
@@ -194,7 +198,20 @@ single 与 parallel 均用 `falla-openspec coordination claim "<change>" --owner
 不得直接覆写 owner 绕过认领冲突；blocked/done 不通过重复 claim 自动重启。
 本地排他锁只覆盖同一真实项目目录，跨机器或不同工作树仍需事先分派文件责任并明确合并策略。
 
-### 4.6 doctor 的分组边界
+### 4.6 长任务检查点与恢复
+
+对话上下文和自动摘要不是事实源。大需求必须依靠 `tasks.md` 与各 change 的 `comate.md` 保存可恢复状态：
+
+- propose 将任务拆到一次独立实施上下文内可以完成定位、修改、验证和交接；任务跨度过大时继续拆 task，
+  不等同于自动创建子 change。
+- apply 在完成分析、开始跨文件修改、完成一组修改、开始耗时验证、获得验证结果或即将暂停时，更新
+  handoff 的滚动检查点。只保留当前任务、关键决策、修改文件、验证结论、下一步和风险，不追加流水账。
+- 恢复时依次读取官方 status/instructions、tasks、design、comate、`git status --short` 和相关 diff，
+  再用 CodeGraph 复核符号与调用关系。优先级为：当前源码与官方状态 > artifacts > handoff > 对话记忆。
+- parallel 执行者只更新自己的子 change comate；父 comate 只记录汇总，避免并发覆盖。
+- 检查点只记录项目相对路径、符号和结论，不复制大段源码、命令输出、PRD 或敏感信息。
+
+### 4.7 doctor 的分组边界
 
 `doctor --json` 的非零退出码需要读取 JSON 分组结果。`groups.installation` 失败时停止并修复
 安装；`groups.workflow` 的当前 change 错误需要解决后再实施。其他 change 的错误单独报告。
