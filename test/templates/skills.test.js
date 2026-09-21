@@ -75,6 +75,43 @@ test('Skill 覆盖 OpenSpec 1.12 操作上下文与 change 元数据', async () 
   assert.match(propose, /允许数字开头/);
 });
 
+test('Apply 阶段强制 XML 纵向格式与关键实现注释', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+  const parentSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven', 'schema.yaml'),
+    'utf8'
+  );
+  const childSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-task-driven', 'schema.yaml'),
+    'utf8'
+  );
+
+  for (const [source, content] of [
+    ['soul', soul],
+    ['apply rule', applyRule],
+    ['apply skill', applySkill],
+    ['parent schema', parentSchema],
+    ['child schema', childSchema],
+  ]) {
+    assert.match(content, /Android XML/, `${source} 缺少 Android XML 约束`);
+    assert.match(content, /属性逐行/, `${source} 缺少 XML 属性逐行要求`);
+    assert.match(content, /职责.*生命周期所有者/s, `${source} 缺少关键注释要求`);
+    assert.match(content, /只格式化.*change/s, `${source} 缺少最小格式化边界`);
+  }
+
+  assert.match(soul, /不得把 PRD、operationGuidance、凭据或敏感正文\n  复制进注释/);
+  assert.match(applyRule, /禁止用逐行翻译代码的噪声注释凑数/);
+  assert.match(applySkill, /formatter、lint、资源编译或等价检查/);
+});
+
 test('设计稿链接在所有阶段强制使用专用 MCP 且禁止浏览器降级', async () => {
   const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
   assert.match(soul, /此门禁适用于 preflight、propose、apply、archive 以及任意中间阶段/);
@@ -85,8 +122,26 @@ test('设计稿链接在所有阶段强制使用专用 MCP 且禁止浏览器降
   assert.match(soul, /必须使用 Figma MCP/);
   assert.match(soul, /不得使用浏览器、\n  Chrome、WebFetch、`curl`、网页截图或 DOM 抓取/);
   assert.match(soul, /浏览器不是 Figma MCP 的降级方案/);
+  assert.match(soul, /get_design_context.*excludeScreenshot=true/s);
+  assert.match(soul, /不得调用 `get_screenshot`/);
+  assert.match(soul, /不得把截图、截图 URL、图片块/);
   assert.match(soul, /临时资源 URL、认证信息、cookie、token/);
   assert.match(soul, /避免沿用过期\n  截图或缓存造成实现与设计生命周期不一致/);
+
+  for (const file of [
+    '[分析必读]preflight.md',
+    '[架构必读]propose.md',
+    '[模块选读]apply.md',
+    '[任务选读]archive.md',
+  ]) {
+    const phaseRule = await readFile(path.join(root, 'skill-spec', file), 'utf8');
+    assert.match(
+      phaseRule,
+      /get_design_context.*excludeScreenshot=true/s,
+      `${file} 缺少截图排除参数`
+    );
+    assert.match(phaseRule, /禁止调用 `get_screenshot`/, `${file} 缺少截图工具禁令`);
+  }
 
   const preflightRule = await readFile(
     path.join(root, 'skill-spec', '[分析必读]preflight.md'),
@@ -101,6 +156,8 @@ test('设计稿链接在所有阶段强制使用专用 MCP 且禁止浏览器降
     const content = await readFile(path.join(root, 'skills', name, 'SKILL.md'), 'utf8');
     assert.match(content, /Figma 链接只用 Figma MCP 读取/, `${name} 缺少 Figma MCP 门禁`);
     assert.match(content, /浏览器降级/, `${name} 缺少浏览器降级禁令`);
+    assert.match(content, /excludeScreenshot=true/, `${name} 缺少文本模型截图排除参数`);
+    assert.match(content, /get_screenshot/, `${name} 缺少截图工具禁令`);
   }
 });
 

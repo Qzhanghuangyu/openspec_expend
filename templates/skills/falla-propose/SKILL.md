@@ -15,6 +15,7 @@ description: Use when an existing Android Falla preflight change needs proposal 
 2. 通过 `openspec status --change "<parent>" --json` 复用已有父 change；`preflight`
    未 done 时停止，不能只检查目录。阶段中收到或继续依赖设计稿链接时执行 Soul 的 MCP 门禁：
    Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
+   调用 `get_design_context` 时必须显式传 `excludeScreenshot=true`；禁止调用 `get_screenshot`，也禁止向当前模型发送截图或截图 URL。排除截图后无法确认的视觉细节必须进入人工校准。
 3. 按官方状态依次调用：
 
    ```bash

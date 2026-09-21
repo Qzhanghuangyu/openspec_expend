@@ -64,6 +64,7 @@ Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在
 node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少
 node id 时会要求重新选择节点并复制链接。浏览器、网页截图或抓取不能作为降级方案。若 MCP
 未安装、未认证或没有设计稿权限，依赖该设计的工作会明确停止。
+Figma `get_design_context` 固定传 `excludeScreenshot=true`；不调用截图工具，也不向当前模型发送截图。
 
 ## Android 项目校验与认领
 

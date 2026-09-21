@@ -216,6 +216,7 @@ owner 使用 1–64 位字母、数字或 ._@-，不放凭据。命令核对官�
 
 这是预期行为。PRD 正文里的设计链接不会自动打开。用户必须在当前对话中明确提供带 node id、
 用于当前任务的 Figma 链接；工作流只通过 Figma MCP 读取，不使用浏览器降级。
+所有 `get_design_context` 调用固定传 `excludeScreenshot=true`，并禁止调用 `get_screenshot`，以兼容不支持图片输入的模型。
 
 ### 外部集成是否每次重装
 

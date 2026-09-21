@@ -83,4 +83,8 @@ apply:
   instruction: |
     读取官方 contextFiles 和 Falla 协作上下文。single 模式直接实施父 change；parallel 模式
     按已有子 change DAG 实施。按拓扑逐项执行并在验证成功后更新任务，不得在 apply 阶段创建、
-    拆分子 change 或切换执行模式。遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。
+    拆分子 change 或切换执行模式。Android XML 必须按属性逐行、层级缩进的纵向格式排版；
+    新增页面、组件、ViewModel、核心类或公共入口至少添加职责边界注释，关键逻辑还要说明
+    业务原因和生命周期所有者。
+    只格式化当前 change 触及的文件，完成前运行项目已有 formatter、lint、资源编译或等价检查。
+    遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。

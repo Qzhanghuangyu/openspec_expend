@@ -26,4 +26,8 @@ apply:
   tracks: tasks.md
   instruction: |
     读取官方 contextFiles，并通过 Falla 协调映射补充父 change 的 proposal、specs、design 和 tasks。
-    只实施当前子 change；验证成功后才能勾选任务并更新 comate.md。
+    只实施当前子 change；Android XML 必须按属性逐行、层级缩进的纵向格式排版，新增或修改的
+    页面、组件、ViewModel、核心类或公共入口至少添加职责边界注释，关键逻辑还要说明业务原因和
+    生命周期所有者。只格式化当前 change
+    触及的文件，并运行项目已有 formatter、lint、资源编译或等价检查；验证成功后才能勾选任务并
+    更新 comate.md。

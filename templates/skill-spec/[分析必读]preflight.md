@@ -3,6 +3,12 @@
 Preflight 位于 propose 之前，只负责创建或复用父 change、核对实现状态，并把 PRD 未明确
 事项写入正式 `preflight.md` artifact。
 
+## Figma 文本兼容模式
+
+本阶段凡调用 Figma MCP 的 `get_design_context`，都必须显式传入
+`excludeScreenshot=true`。禁止调用 `get_screenshot`，也禁止把截图、截图 URL、图片块或其他栅格化
+预览送入当前模型。排除截图后无法确认的视觉细节必须记录为人工视觉校准项，不得通过浏览器或截图绕过。
+
 ## 1. 强制流程
 
 1. 完整读取 PRD；不可访问或内容不完整时停止并请求补充。不得读取或自动跟随 PRD 正文中的

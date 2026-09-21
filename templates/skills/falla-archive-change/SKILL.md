@@ -16,6 +16,7 @@ description: Use when closing and archiving a completed or explicitly accepted A
    有该父 change 的子映射则按 parallel，否则按 single。parallel 模式的逻辑子 change 先用
    coordination resolve 获取物理名。阶段中收到或需要核对设计稿链接时执行 Soul 的 MCP 门禁：
    Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
+   调用 `get_design_context` 时必须显式传 `excludeScreenshot=true`；禁止调用 `get_screenshot`，也禁止向当前模型发送截图或截图 URL。排除截图后无法确认的视觉细节必须进入人工校准。
 3. 运行：
 
    ```bash

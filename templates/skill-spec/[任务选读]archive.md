@@ -2,6 +2,12 @@
 
 Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移动 change 目录。
 
+## Figma 文本兼容模式
+
+本阶段凡调用 Figma MCP 的 `get_design_context`，都必须显式传入
+`excludeScreenshot=true`。禁止调用 `get_screenshot`，也禁止把截图、截图 URL、图片块或其他栅格化
+预览送入当前模型。排除截图后无法确认的视觉细节必须记录为人工视觉校准项，不得通过浏览器或截图绕过。
+
 ## 1. 前置检查
 
 1. 读取父 `tasks.md` / `comate.md` 的执行模式；字段缺失时检查 `.falla/coordination.yaml`，

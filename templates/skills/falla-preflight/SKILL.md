@@ -15,6 +15,7 @@ description: Use when analyzing an Android client PRD or product request before 
 2. 完整读取 PRD。PRD 不可访问或不足以确定范围时请求补充，不开始编码。忽略 PRD 正文中的
    设计稿链接；只有用户在当前对话中另行手动提供含明确 node id、并指定用于当前任务的链接时，
    才执行 Soul 的 MCP 门禁：Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
+   调用 `get_design_context` 时必须显式传 `excludeScreenshot=true`；禁止调用 `get_screenshot`，也禁止向当前模型发送截图或截图 URL。排除截图后无法确认的视觉细节必须进入人工校准。
 3. 用 `openspec list --json` 检查同名或重叠 change。
 4. 无可复用 change 时执行：
 

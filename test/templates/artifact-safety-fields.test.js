@@ -45,7 +45,9 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(tasks, /只有用户明确要求并行分派时才改为 parallel/);
   assert.match(tasks, /空值、异常、弱网和重复操作/);
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
-  assert.match(tasks, /验证命令、variant\/设备、结果/);
+  assert.match(tasks, /Android XML 已按属性逐行、层级缩进的纵向格式排版/);
+  assert.match(tasks, /公共入口已有职责边界注释，关键逻辑已说明业务原因和生命周期所有者/);
+  assert.match(tasks, /formatter、lint、资源编译等验证命令、variant\/设备、结果/);
 
   assert.match(comate, /execution-mode\): single/);
   assert.match(comate, /验证证据/);
@@ -62,7 +64,9 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
   assert.match(tasks, /空值、异常、弱网和重复操作/);
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
   assert.match(tasks, /日志、缓存、网络请求和产物/);
-  assert.match(tasks, /验证命令、variant\/设备、结果/);
+  assert.match(tasks, /Android XML 已按属性逐行、层级缩进的纵向格式排版/);
+  assert.match(tasks, /公共入口已有职责边界注释，关键逻辑已说明业务原因和生命周期所有者/);
+  assert.match(tasks, /formatter、lint、资源编译等验证命令、variant\/设备、结果/);
 
   assert.match(comate, /验证证据/);
   assert.match(comate, /生命周期结论/);
