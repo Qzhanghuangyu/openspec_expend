@@ -376,7 +376,8 @@ test('Design 选定的 UI Knowledge 基线在 Apply 中不可被局部优化替�
     assert.match(content, /返回 propose/);
   }
   assert.match(applyRule, /design 已绑定具体知识条目时必须读取该条目/);
-  assert.match(applyRule, /实际继承关系、组件、资源和关键 API/);
+  assert.match(applyRule, /已知继承声明、组件名、资源和关键 API.*`rg`/s);
+  assert.match(applyRule, /真实调用方、间接实现.*CodeGraph/s);
 });
 
 test('长任务使用 tasks 和 comate 滚动检查点恢复上下文', async () => {
@@ -410,16 +411,28 @@ test('长任务使用 tasks 和 comate 滚动检查点恢复上下文', async ()
   }
 });
 
-test('全局规则要求使用 CodeGraph 做有界代码定位并保留文本搜索兜底', async () => {
+test('工作流按字面查找与关系分析选择 rg 或 CodeGraph', async () => {
   const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
   const preflight = await readFile(path.join(root, 'skills', 'falla-preflight', 'SKILL.md'), 'utf8');
+  const propose = await readFile(path.join(root, 'skills', 'falla-propose', 'SKILL.md'), 'utf8');
+  const apply = await readFile(path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'), 'utf8');
 
   assert.match(soul, /任务开始前由 Hook 初始化或增量同步/);
-  assert.match(soul, /优先使用 CodeGraph/);
-  assert.match(soul, /不得把完整 CodeGraph 数据库、全量图谱结果或无关源码注入上下文/);
-  assert.match(soul, /生命周期代码的核对/);
-  assert.match(preflight, /CodeGraph 验证其源码符号、调用链和影响面/);
-  assert.match(preflight, /CodeGraph 不可用时允许有界降级/);
+  assert.match(soul, /已知准确类名、方法名、文件路径、资源名、接口路径.*优先使用.*`rg`/s);
+  assert.match(soul, /调用链、继承\/实现、动态分派、状态流、生命周期、影响面和受影响测试.*CodeGraph/s);
+  assert.match(soul, /修改公共类、公共方法、共享模型、基类、Repository\/API 签名.*必须用 CodeGraph/s);
+  assert.match(soul, /不要求每个任务机械地同时调用两种工具/);
+  assert.match(soul, /文本命中冒充.*真实调用关系/s);
+  assert.match(soul, /最终结论必须核对当前磁盘源码/);
+
+  assert.match(preflight, /已知准确类名、路径、接口、字段、XML 或资源.*`rg`/s);
+  assert.match(preflight, /不知道实现入口.*CodeGraph/s);
+  assert.match(preflight, /CodeGraph 不可用时允许.*有界降级/s);
+  assert.match(propose, /已知准确参考类或文件.*`rg`/s);
+  assert.match(propose, /组件调用、继承、状态归属和生命周期.*CodeGraph/s);
+  assert.match(apply, /task 已给出准确类、方法、路径、资源或 API.*`rg`/s);
+  assert.match(apply, /修改公共或跨模块\s*符号前必须用 CodeGraph 检查影响面/);
+  assert.match(apply, /不机械地同时调用两种工具/);
 });
 
 

@@ -29,8 +29,10 @@ description: Use when analyzing an Android client PRD or product request before 
    项目根内 `.falla/ui-knowledge/components/` 与 `screen-patterns/`，不把校验通过当作完成源码关系验证。
    若项目已配置本地 RAG，可先做模糊召回，否则使用有界 Markdown 搜索。禁止查询其他项目，
    缺失条目不能作为能力不存在的证据，也不得在 preflight 自动生成或批量补全知识库。
-   对候选条目使用当前项目 CodeGraph 验证其源码符号、调用链和影响面，只读取命中的必要文件；
-   XML、Gradle、资源和精确文本可使用有界 `rg`。CodeGraph 不可用时允许有界降级。
+   已知准确类名、路径、接口、字段、XML 或资源时先使用有界 `rg`/直接读取；不知道实现入口，
+   或需要调用链、继承实现、状态归属、生命周期和影响面时使用当前项目 CodeGraph。知识候选的源码
+   关系用 CodeGraph 验证，文件、Gradle、XML、资源和精确文本用 `rg` 核对。CodeGraph 不可用时允许
+   有界降级，但文本命中不能冒充真实调用关系。
    只检查需求直接涉及的当前代码与文档；所有状态结论必须有文件、符号、模型、接口或测试
    证据。默认禁止 `git log`、`git show <commit>`、`git blame`、`git reflog`、`git rev-list` 等
    Git 历史读取。只有用户明确要求分析变更沿革、回归来源或具体提交时，才允许对相关路径执行

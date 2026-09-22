@@ -100,5 +100,5 @@ export function codeGraphContext(result) {
   if (!result.ready) {
     return '【CodeGraph】本次索引准备失败；允许降级为有界 rg/find，禁止全仓无界读取或输出原始错误。';
   }
-  return '【CodeGraph】项目索引已准备完成。定位符号、调用链、影响面和受影响测试时优先使用 CodeGraph，只读取命中的必要文件；配置、资源及精确文本可使用 rg。';
+  return '【CodeGraph】项目索引已准备完成。已知准确符号、路径、资源或文本时优先使用有界 rg/直接读取；未知入口或需要调用链、继承实现、生命周期、影响面和受影响测试时使用 CodeGraph。修改公共符号前必须检查影响面，不要求每个任务机械地同时使用两种工具。';
 }

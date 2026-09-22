@@ -25,8 +25,9 @@ description: Use when an existing Android Falla preflight change needs proposal 
    使用返回的模板、依赖和 `resolvedOutputPath`，不猜路径。若项目存在
    `.falla/project-rules/`，在创建设计和任务前按文件名排序读取其顶层普通 `.md` 文件，再筛选
    当前需求适用规则；`index.md` 仅作可选导航，required 项目规则不得依赖 RAG 召回或被忽略。
-4. proposal/specs 只描述用户可观察的业务能力。新建或重构页面时，先用 CodeGraph 核对同类
-   页面和可复用组件，在 design 中明确“页面实现结构基线”：页面承载方式、文件归属、导航入口、ViewModel 作用域，
+4. proposal/specs 只描述用户可观察的业务能力。新建或重构页面时，已知准确参考类或文件先用
+   `rg`/直接读取；不知道同类实现入口，或需要组件调用、继承、状态归属和生命周期时使用 CodeGraph。
+   在 design 中明确“页面实现结构基线”：页面承载方式、文件归属、导航入口、ViewModel 作用域，
    以及 XML / Compose 的根节点、层级、滚动与状态容器、组件复用、Insets 和生命周期所有者；
    XML 需给出简明节点树。无法确定结构基线时保留开放问题，不生成可直接实施的下游任务。
    design 还必须记录当前需求命中的项目规则 ID、级别、适用对象、落地方式和例外，并将 required

@@ -18,7 +18,9 @@ Preflight 位于 propose 之前，只负责创建或复用父 change、核对实
 3. 不存在时执行 `openspec new change "<name>" --schema falla-spec-driven --json`；propose
    不得再次创建父 change。
 4. 执行 `openspec instructions preflight --change "<name>" --json`，使用返回的模板和路径。
-5. 只读取与需求直接相关的代码、规格和接口，不做无边界仓库扫描。
+5. 只读取与需求直接相关的代码、规格和接口，不做无边界仓库扫描。已知准确类名、路径、接口、
+   字段或资源时先用有界 `rg`/直接读取；不知道实现入口，或需要调用链、状态归属、生命周期和影响面
+   时使用 CodeGraph。文本命中不能替代真实调用关系，CodeGraph 结果也不能替代 XML/资源精确核对。
 6. 用具体文件、符号、模型、接口或测试支撑实现状态。
 7. 写入 `preflight.md` 后重新执行官方 `openspec status --change "<name>" --json`。
 

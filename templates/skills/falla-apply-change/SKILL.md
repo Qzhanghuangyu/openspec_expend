@@ -67,6 +67,9 @@ description: Use when implementing or continuing an existing Android Falla paren
 - 上下文压缩或重新进入任务后，依次读取官方 status/instructions、tasks、design、comate、
   `git status --short` 和相关 diff，再用 CodeGraph 复核。当前源码与官方状态优先于 artifacts、
   handoff 和对话记忆；parallel 执行者只更新自己的子 change comate。
+- task 已给出准确类、方法、路径、资源或 API 时，先用有界 `rg`/直接读取；不知道实现入口，或需要
+  调用链、继承实现、动态分派、生命周期、影响面和受影响测试时使用 CodeGraph。修改公共或跨模块
+  符号前必须用 CodeGraph 检查影响面；不机械地同时调用两种工具。
 - 只做当前 change 的最小改动；完成一项验证后才勾选对应 task。
 - UI 实施前运行 `falla-openspec ui-knowledge validate --json`，只从通过检查的条目中检索当前项目
   `.falla/ui-knowledge/` 的组件和页面模式；RAG 候选必须通过当前项目
@@ -83,8 +86,9 @@ description: Use when implementing or continuing an existing Android Falla paren
   构造参数或公共属性使用 `@property`，方法参数使用 `@param`。简单 override、getter/setter 和
   显而易见委托可不重复文档；不写逐行翻译、重复名称或类型的噪声注释，不把 PRD、guidance、
   凭据或敏感正文复制进注释。
-- 完成前使用 CodeGraph 或有界文本检查实际继承关系、组件、资源和关键 API 与 design 的 required
-  基线一致，并检查实际 diff 符合绑定的 required 项目规则；将 Rule ID 和符合性证据写入 handoff，
+- 完成前对已知继承声明、组件、资源和关键 API 使用有界 `rg` 精确检查；需要真实调用方、间接实现
+  或影响面时使用 CodeGraph。结果必须与 design 的 required 基线一致，并检查实际 diff 符合绑定的
+  required 项目规则；将 Rule ID 和符合性证据写入 handoff，
   发现偏离时不得勾选 task。随后执行项目已有 formatter、
   lint、资源编译或等价检查，并审查 diff 中是否仍有单行堆叠 XML、关键注释缺失或无关格式化。
 - 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。
