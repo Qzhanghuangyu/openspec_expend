@@ -10,8 +10,8 @@ import { codeGraphContext, prepareCodeGraph } from './falla-codegraph.mjs';
 const MAX_INPUT_BYTES = 1024 * 1024;
 const SKILL_SPECS = {
   'falla-preflight': ['[Must Read]soul.md', '[分析必读]preflight.md'],
-  'falla-propose': ['[Must Read]soul.md', '[架构必读]propose.md'],
-  'falla-apply-change': ['[Must Read]soul.md', '[模块选读]apply.md'],
+  'falla-propose': ['[Must Read]soul.md', '[架构必读]propose.md', 'references/project-rules.md'],
+  'falla-apply-change': ['[Must Read]soul.md', '[模块选读]apply.md', 'references/project-rules.md'],
   'falla-archive-change': ['[Must Read]soul.md', '[任务选读]archive.md'],
 };
 

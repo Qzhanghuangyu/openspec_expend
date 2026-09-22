@@ -1,63 +1,69 @@
-# [架构必读] Propose（架构与任务拆解）阶段约束
+# [架构必读] Propose（方案与任务拆解）
 
-Propose 消费已完成的 preflight，把已确认需求转成 proposal、specs、design、tasks 和 comate。
-通用工具、安全、知识、范围和人工校准规则统一继承 `[Must Read]soul.md`。
+## 目标
 
-## 1. 前置与证据复用
+把已完成的 preflight 转成可实施、可验证、可交接的 proposal、specs、design、tasks 和 comate。
+本阶段只规划，不修改业务代码。
 
-1. 以 `openspec status --change "<parent>" --json` 为准确认 preflight 完成。
-2. 按官方 artifact 状态逐个调用 instructions，使用返回的依赖、模板和 `resolvedOutputPath`。
-3. 优先复用 preflight 已记录且仍有效的证据；只有证据缺失、源码已变化或设计决策需要时才补充调查，
-   不重新执行一次完整 preflight。
-4. 项目规则、UI Knowledge 和源码基线的处理统一遵守 Soul；required 结论必须由当前源码验证。
+## 输入
 
-## 2. Artifact 职责
+- 已完成的父 change 和 `preflight.md`。
+- 当前主规格与 preflight 已记录的源码证据。
+- `.falla/project-rules/` 的全部顶层规则、有效 UI Knowledge，以及用户明确提供的设计节点。
 
-- `proposal.md`：为什么改、改什么、影响什么。
-- `specs/`：只记录用户可观察、可测试的行为，不承载 View、ViewModel、控件或接口层等实现模块。
-- `design.md`：技术决策、页面实现结构基线、MVVM/组件边界、项目规则绑定、实现基线、生命周期、
-  安全、风险和人工视觉校准项。
-- `tasks.md`：只记录具体交付任务、依赖、允许编辑范围和完成条件；不重复保存执行模式或验证模式。
-- `comate.md`：执行模式、验证模式、人工验收状态、owner、协作状态、change 依赖和 handoff 的唯一来源。
+## 必须执行
 
-纯重构、工具或文档变更且无规格级行为变化时，在 `.openspec.yaml` 设置 `skip_specs: true`，
-不得创建空 requirement。
+1. 用 `openspec status --change "<parent>" --json` 确认 preflight 已完成。
+2. 按官方状态逐个调用：
 
-## 3. 任务拆解
+   ```bash
+   openspec instructions <proposal|specs|design|tasks|comate> --change "<parent>" --json
+   ```
 
-- 页面级工作先明确 ViewModel 与 View 契约，再按可独立交付的 UI 控件拆分，最后组装和联调。
-- 新建或重构页面必须先确定页面承载方式、文件归属、导航、ViewModel 作用域、根节点、滚动/状态容器、
-  组件复用、Insets、根页面/XML 修改责任和生命周期所有者。无法确定时保留开放问题，不生成下游实施任务。
-- 每项任务应能在一次独立实施上下文内完成定位、修改、验证和交接，并写明输入、允许编辑范围、
-  完成条件和前置依赖。
-- 通用质量门禁不预填成大量固定 checkbox；只把当前 change 实际需要的实现与验证任务写入 tasks。
-- `[人工]` task 必须写明前置条件、操作步骤、预期结果、variant/设备和服务端依赖。
+3. 必读 `references/project-rules.md`。如果项目规则目录存在，确定性读取全部顶层 `.md`，并在 design 中
+   审计每条 required：明确“适用/不适用/冲突/已批准例外”；未分类完整前不得继续生成 tasks/comate。
+4. 优先复用仍有效的 preflight 证据；不得重新执行一次完整 preflight。只有证据缺失、源码变化或设计决策需要时才补充调查。
+5. 明确各 artifact 的职责：
+   - proposal：为什么改、改什么、影响什么。
+   - specs：用户可观察、可测试的行为；不得把实现模块写成能力。
+   - design：技术决策、页面结构、实现基线、规则绑定、生命周期、安全、风险和人工校准。
+   - tasks：实际交付任务、允许编辑范围、完成条件和前置依赖。
+   - comate：执行/验证模式、owner、协作状态、change 依赖和 handoff。
+6. 页面工作先确定 ViewModel 与 View 契约，再拆独立控件，最后安排组装和联调。
+7. 每个 task 必须足够小，能在一次独立实施上下文内完成。通用质量门禁不复制成固定任务。
+8. 默认在父 comate 写入 `execution-mode: single` 和 `validation-mode: hybrid`。
+9. 纯重构、工具或文档变更且没有规格级行为变化时设置 `skip_specs: true`。
 
-## 4. 执行与验证模式
+## Parallel 模式
 
-模式只记录在父 `comate.md`：
+只有用户明确要求多人/多 Agent 并行、创建子 change 或独立分派时才启用：
 
-- `execution-mode: single`：默认，全部实施任务保留在父 change。
-- `execution-mode: parallel`：仅用户明确要求多人/多 agent 并行、创建子 change或独立分派时使用。
-- `validation-mode: hybrid`：默认；可在用户明确要求时改为 `human` 或 `agent`。
+1. 使用恰好两段的逻辑名 `<parent>/<child>`。
+2. 通过 `coordination register` 获取物理名，再用官方 CLI 创建 `falla-task-driven` change。
+3. 子 change 只保存自己的 tasks/comate；父 tasks 只记录协调里程碑和子 change 引用。
+4. 子 comate 只维护 `depends-on`；反向 blocks 由协调器推导。
+5. 根页面/XML 只能有一个责任方。
+6. 完成后运行 `coordination validate`。
 
-已有父 change 若存在子映射，必须保持 parallel；模式冲突时停止修复，不根据复杂度自行切换。
+## 何时暂停
 
-## 5. Parallel 子 change
+- preflight 未完成。
+- 页面结构、核心契约或 required 实现基线无法确定。
+- 任一 required 尚未完成适用性分类，或项目规则与需求、官方状态、安全约束冲突。
+- 需要 parallel，但用户尚未明确同意。
 
-1. 每个交付单元使用恰好两段的逻辑名 `<parent>/<child>`。
-2. 用 `coordination register` 获取物理名，禁止自行拼接冲突后缀。
-3. 使用官方 CLI 创建 `falla-task-driven` change，并生成 tasks/comate。
-4. 子 change 只保存自己的具体任务；父 tasks 只保存协调里程碑和子 change 引用，不复制子任务清单。
-5. 子 `comate.md` 只保存 `depends-on`；`blocks` 由协调器反向推导，不再人工维护。
-6. 根页面/XML 只能有一个明确责任方。
-7. 执行 `coordination validate`，确认节点存在、依赖无环且前置状态有效。
+## 完成标准
 
-创建官方 change 失败时，只有确认物理目录完全不存在，才可 unregister 本次孤儿映射。
+- 父 artifacts 均由官方 status 判定为 done 或合法 skipped。
+- tasks 足够小，依赖、范围和完成条件明确。
+- single 不存在子映射；parallel 的子 change 和 DAG 均合法。
+- 没有修改业务代码。
 
-## 6. 完成标准
+## 按需参考
 
-- 父 proposal、specs（或 skipped）、design、tasks、comate 均由官方 status 判定完成。
-- single 不存在子映射；parallel 至少存在一个合法子映射。
-- 所有任务范围、依赖和验证方式明确，无实现模块伪装成业务规格。
-- 本阶段不修改业务代码。
+- 设计源：`references/design-tools.md`
+- 源码定位：`references/code-search.md`
+- UI Knowledge：`references/ui-knowledge.md`
+- 项目规则门禁（必读）：`references/project-rules.md`
+- Android 实现约束：`references/android-quality.md`
+- 并行拆解与协作：`references/coordination.md`

@@ -15,14 +15,14 @@
 - ViewModel 作用域及状态、事件、UI 绑定：
 - 根页面/XML 修改责任与生命周期所有者：
 
-## 项目规则绑定
+## 项目规则审计
 
-> 如果 `.falla/project-rules/` 存在，读取其顶层普通 `.md` 文件，只记录当前需求实际命中的规则；
-> `index.md` 仅作可选导航，required 必须转成 tasks。
+> 如果 `.falla/project-rules/` 存在，按文件名读取全部顶层普通 `.md`。每条 required 都必须列出，
+> 不适用也要记录具体条件和证据；适用 required 必须转成 tasks。
 
-| Rule ID | 级别 | 适用对象 | 落地方式 | 例外及批准依据 |
-| --- | --- | --- | --- | --- |
-|  | required / preferred / reference-only |  |  |  |
+| Rule ID | 级别 | 适用性 | 命中证据或不适用原因 | 落地方式 | 例外及批准依据 |
+| --- | --- | --- | --- | --- | --- |
+|  | required / preferred / reference-only | 适用 / 不适用 / 冲突 / 已批准例外 |  |  |  |
 
 ## 已确认实现基线
 

@@ -100,6 +100,10 @@ Hook 和 marker。
   `parallel` 处理，避免既有父子 change 生命周期失配。
 - 执行模式由 propose 决定并只写入父 `comate.md`；`tasks.md` 不重复保存。apply 不得创建子 change 或切换模式。
 
+规则采用分层加载：会话只加载精简 Soul 和当前阶段文档；Figma、源码检索、UI Knowledge、
+Android 实现质量及协作细则位于 `.falla/skill-spec/references/`。`project-rules.md` 在 Propose/Apply
+强制读取；其他参考仅在阶段文档明确命中对应能力时读取。不要为了“保险”一次性加载全部参考文件。
+
 更新后执行：
 
 ```bash

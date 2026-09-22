@@ -8,7 +8,8 @@ artifacts:
     template: tasks.md
     instruction: |
       只记录当前子 change 的实际任务、输入、允许编辑范围、完成条件和前置依赖。任务应能在一次独立
-      实施上下文内完成。先核对父 design、当前边界、depends-on 和根页面/XML 责任，再添加最小实施、
+      实施上下文内完成。先核对父 design 的项目规则审计、当前边界、depends-on 和根页面/XML 责任；适用
+      required 必须落实为当前子任务的完成检查，再添加最小实施、
       自动验证及必要的 `[人工]` 项。不得复制父任务或其他子 change 的进度，不保存执行/验证模式。
     requires: []
 

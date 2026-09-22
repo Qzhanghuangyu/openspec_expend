@@ -38,9 +38,11 @@ artifacts:
     description: 技术方案、实现基线和人工校准计划
     template: design.md
     instruction: |
-      记录上下文、目标/非目标、页面实现结构基线、项目规则绑定、required/preferred/reference-only
+      记录上下文、目标/非目标、页面实现结构基线、项目规则审计、required/preferred/reference-only
       实现基线、注释与可维护性契约、MVVM/组件边界、关键决策、生命周期、安全、风险、迁移和开放问题。
-      无法确定结构基线或 required 决策时保留开放问题，不生成可直接实施的下游任务。
+      项目规则目录存在时，必须确定性读取全部顶层 Markdown；每条 required 都分类为适用、不适用、
+      冲突或已批准例外，并记录证据。适用 required 必须转成 tasks。无法确定结构基线或 required 决策时
+      保留开放问题，不生成可直接实施的下游任务。
     requires:
       - proposal
 
@@ -51,7 +53,8 @@ artifacts:
     instruction: |
       使用 checkbox 记录当前 change 的实际任务、输入、允许编辑范围、完成条件和前置依赖。
       任务应能在一次独立实施上下文内完成。只添加当前需求实际需要的实施、自动验证和 `[人工]`
-      验证项，不预填通用合规清单，不重复保存执行模式或验证模式。parallel 模式下父 tasks 只记录
+      验证项，不预填通用合规清单，不重复保存执行模式或验证模式。design 中每条适用 required 项目规则
+      必须落实为前置条件或完成检查；不适用规则只保留在 design 审计。parallel 模式下父 tasks 只记录
       协调里程碑和子 change 引用，不复制子任务清单。
     requires:
       - specs
@@ -75,6 +78,7 @@ apply:
   instruction: |
     只执行 tasks 中的当前任务，并遵守已加载的 Soul 与 Apply 阶段规则。执行模式、验证模式和协作状态
     只从 comate 读取。single 实施父 change；parallel 只实施 propose 已创建的逻辑子 change。
-    修改前复核当前任务引用的 design 基线。一次只推进一个 ready task；完成条件与最小验证满足后
+    修改前复核当前任务引用的 design 基线和项目规则审计；遗漏、适用性变化或 required 偏离时返回 propose。
+    一次只推进一个 ready task；完成条件与最小验证满足后
     立即勾选对应 checkbox 并更新结构化 handoff，禁止累计到多个 task 完成后批量更新。未完成或验证
     失败时不得勾选。规划冲突时返回 propose。

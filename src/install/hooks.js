@@ -27,6 +27,7 @@ const AGENTS_BODY = `## FallaOpenSpec Skill 约束（必读）
 - 否则读取全局入口 \`.falla/skill-spec/[Must Read]soul.md\` 和对应阶段文件：
   preflight=\`[分析必读]preflight.md\`、propose=\`[架构必读]propose.md\`、
   apply=\`[模块选读]apply.md\`、archive=\`[任务选读]archive.md\`。
+- propose/apply 还必须读取 \`.falla/skill-spec/references/project-rules.md\`；其他参考按阶段文件要求读取，不要一次性全量读取。
 - 缺少必读文件时停止。项目业务规格只从 \`openspec/specs/\` 读取，不得从旧 \`.falla/spec/\` 读取。`;
 
 function stableValue(value) {

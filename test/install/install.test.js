@@ -95,6 +95,17 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     /Stateful Interactions/
   );
   assert.match(
+    await readFile(path.join(root, '.falla', 'skill-spec', 'references', 'design-tools.md'), 'utf8'),
+    /excludeScreenshot=true/
+  );
+  assert.match(
+    await readFile(path.join(root, '.falla', 'skill-spec', 'references', 'android-quality.md'), 'utf8'),
+    /Android XML/
+  );
+  for (const reference of ['code-search.md', 'coordination.md', 'project-rules.md', 'ui-knowledge.md']) {
+    await readFile(path.join(root, '.falla', 'skill-spec', 'references', reference), 'utf8');
+  }
+  assert.match(
     await readFile(path.join(root, '.falla', 'ui-knowledge', 'README.md'), 'utf8'),
     /安装、更新、SessionStart 和普通功能任务不得扫描全仓、自动生成条目/
   );

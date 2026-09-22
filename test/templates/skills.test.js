@@ -6,6 +6,14 @@ import YAML from 'yaml';
 
 const root = path.resolve('templates');
 const expectedSkills = ['falla-apply-change', 'falla-archive-change', 'falla-preflight', 'falla-propose'];
+const expectedReferences = [
+  'android-quality.md',
+  'code-search.md',
+  'coordination.md',
+  'design-tools.md',
+  'project-rules.md',
+  'ui-knowledge.md',
+];
 const read = relative => readFile(path.join(root, relative), 'utf8');
 
 function parseFrontmatter(content, source) {
@@ -28,28 +36,47 @@ test('四个 Skill 具备合法元数据且 OpenAI 元数据一致', async () =>
   }
 });
 
-test('规则文件使用标准 OpenSpec 路径', async () => {
-  const files = (await readdir(path.join(root, 'skill-spec'))).sort();
-  assert.equal(files.length, 5);
-  const content = (await Promise.all(files.map(file => read(`skill-spec/${file}`)))).join('\n');
+test('规则目录包含五个入口文档、一个强制门禁和五个按需参考', async () => {
+  const entries = await readdir(path.join(root, 'skill-spec'), { withFileTypes: true });
+  assert.deepEqual(
+    entries.filter(entry => entry.isFile()).map(entry => entry.name).sort(),
+    ['[Must Read]soul.md', '[任务选读]archive.md', '[分析必读]preflight.md', '[架构必读]propose.md', '[模块选读]apply.md'].sort()
+  );
+  assert.deepEqual(
+    (await readdir(path.join(root, 'skill-spec', 'references'))).sort(),
+    expectedReferences
+  );
+  const contents = await Promise.all([
+    ...entries.filter(entry => entry.isFile()).map(entry => read(`skill-spec/${entry.name}`)),
+    ...expectedReferences.map(file => read(`skill-spec/references/${file}`)),
+  ]);
+  const content = contents.join('\n');
   assert.doesNotMatch(content, /mercuryspec\//);
   assert.doesNotMatch(content, /\bfalla (?:new|list|status|instructions)\b/);
   assert.match(content, /openspec\/specs/);
 });
 
-test('Soul 是跨阶段政策唯一权威入口', async () => {
+test('Soul 保持精简并只定义全局原则与事实源', async () => {
   const soul = await read('skill-spec/[Must Read]soul.md');
-  assert.match(soul, /权威职责与事实源/);
-  assert.match(soul, /设计稿链接必须走对应的 MCP/);
-  assert.match(soul, /CodeGraph 与有界文本检索分工/);
-  assert.match(soul, /项目强制规则/);
-  assert.match(soul, /当前需求范围锁/);
-  assert.match(soul, /安全与完成边界/);
+  assert.ok(soul.split('\n').length <= 80, 'Soul 不应重新膨胀为全量操作手册');
+  assert.match(soul, /当前阶段读什么/);
+  assert.match(soul, /唯一事实源/);
+  assert.match(soul, /五条原则/);
+  for (const file of expectedReferences) assert.match(soul, new RegExp(file.replace('.', '\\.')));
+  assert.doesNotMatch(soul, /excludeScreenshot=true|KDoc\/JavaDoc|source-hashes/);
+});
 
-  for (const file of ['[分析必读]preflight.md', '[架构必读]propose.md', '[模块选读]apply.md', '[任务选读]archive.md']) {
-    const phase = await read(`skill-spec/${file}`);
-    assert.match(phase, /统一继承 `\[Must Read\]soul\.md`/);
-    assert.doesNotMatch(phase, /excludeScreenshot=true/, `${file} 不应复制 Figma 参数细节`);
+test('四个阶段规则使用统一的可执行结构', async () => {
+  const files = ['[分析必读]preflight.md', '[架构必读]propose.md', '[模块选读]apply.md', '[任务选读]archive.md'];
+  for (const file of files) {
+    const content = await read(`skill-spec/${file}`);
+    assert.match(content, /## 目标/);
+    assert.match(content, /## 输入/);
+    assert.match(content, /## 必须执行/);
+    assert.match(content, /## 何时暂停/);
+    assert.match(content, /## 完成标准/);
+    assert.match(content, /## 按需参考/);
+    assert.doesNotMatch(content, /excludeScreenshot=true/, `${file} 不应复制工具参数细节`);
   }
 });
 
@@ -68,15 +95,16 @@ test('Skill 只编排命令并引用阶段权威规则', async () => {
   }
 });
 
-test('Preflight、Propose、Apply、Archive 职责边界清晰', async () => {
+test('阶段职责保持单向推进', async () => {
   const preflight = await read('skill-spec/[分析必读]preflight.md');
   const propose = await read('skill-spec/[架构必读]propose.md');
   const apply = await read('skill-spec/[模块选读]apply.md');
   const archive = await read('skill-spec/[任务选读]archive.md');
-  assert.match(preflight, /只创建或更新 `preflight\.md`/);
-  assert.match(propose, /不重新执行一次完整 preflight/);
-  assert.match(apply, /只验证\s*引用是否仍有效，不重新开展完整方案探索/s);
-  assert.match(archive, /不重新实施或重新分析需求/);
+  assert.match(preflight, /只产出 `preflight\.md`/);
+  assert.match(propose, /本阶段只规划，不修改业务代码/);
+  assert.match(propose, /不得重新执行一次完整 preflight/);
+  assert.match(apply, /不重新分析需求、不重新拆分 change/);
+  assert.match(archive, /不得在本阶段重新实施需求/);
 });
 
 test('执行和验证模式只由 comate 保存', async () => {
@@ -101,80 +129,85 @@ test('依赖只保存 depends-on，blocks 由协调器推导', async () => {
     assert.match(content, /depends-on/);
     assert.doesNotMatch(content, /\(blocks\)/);
   }
-  const soul = await read('skill-spec/[Must Read]soul.md');
+  const coordination = await read('skill-spec/references/coordination.md');
+  assert.match(coordination, /反向 blocks 由协调器推导/);
+});
+
+test('按需参考保留安全、生命周期和工具约束', async () => {
+  const design = await read('skill-spec/references/design-tools.md');
+  const search = await read('skill-spec/references/code-search.md');
+  const knowledge = await read('skill-spec/references/ui-knowledge.md');
+  const quality = await read('skill-spec/references/android-quality.md');
+  const coordination = await read('skill-spec/references/coordination.md');
+  const projectRules = await read('skill-spec/references/project-rules.md');
+
+  assert.match(design, /excludeScreenshot=true/);
+  assert.match(design, /不得使用浏览器、WebFetch、`curl`/);
+  assert.match(search, /修改公共类、公共方法.*必须用 CodeGraph/s);
+  assert.match(search, /禁止索引或输出凭据/);
+  assert.match(search, /默认分析当前工作树/);
+  assert.match(search, /只有用户明确要求分析变更沿革/);
+  assert.match(knowledge, /source-hashes/);
+  assert.match(knowledge, /禁止读取、召回、合并或复制其他项目/);
+  assert.match(quality, /Android XML/);
+  assert.match(quality, /KDoc\/JavaDoc/);
+  assert.match(quality, /页面销毁后 UI 更新/);
+  assert.match(quality, /敏感日志/);
+  assert.match(coordination, /一次只推进一个 ready task/);
+  assert.match(coordination, /跨机器或不同工作树/);
+  assert.match(projectRules, /Propose 和 Apply 必读/);
+  assert.match(projectRules, /每条 `required` 都必须.*出现/s);
+  assert.match(projectRules, /适用.*不适用.*冲突.*例外/s);
+});
+
+
+test('Propose 和 Apply 对每条 required 项目规则执行完整审计', async () => {
   const propose = await read('skill-spec/[架构必读]propose.md');
-  assert.match(soul, /反向 blocks 由 depends-on 推导/);
-  assert.match(propose, /`blocks` 由协调器反向推导/);
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const designTemplate = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const guard = await read('hooks/falla-spec-guard.mjs');
+
+  assert.match(propose, /必读 `references\/project-rules\.md`/);
+  assert.match(propose, /每条 required.*适用\/不适用\/冲突\/已批准例外/s);
+  assert.match(apply, /必读 `references\/project-rules\.md`/);
+  assert.match(apply, /遗漏、条件变化或偏离时不修改代码/s);
+  assert.match(designTemplate, /## 项目规则审计/);
+  assert.match(designTemplate, /适用 \/ 不适用 \/ 冲突 \/ 已批准例外/);
+  assert.match(parentSchema, /每条 required 都分类/);
+  assert.match(guard, /falla-propose.*references\/project-rules\.md/s);
+  assert.match(guard, /falla-apply-change.*references\/project-rules\.md/s);
+});
+
+test('Apply 使用完成即落盘的单任务循环', async () => {
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  assert.match(apply, /## 黄金规则/);
+  assert.match(apply, /一次只处理一个 ready task/);
+  assert.match(apply, /立即把对应 checkbox 从 `\[ \]` 改为 `\[x\]`/);
+  assert.match(apply, /同步更新 handoff 后，才能开始下一个 task/);
+  assert.match(apply, /不为后续 task 提前改动/);
+  assert.match(apply, /不得提前勾选或最后批量补勾/);
+  assert.match(apply, /状态落盘后重新读取 instructions\/tasks/);
 });
 
 test('OpenSpec 1.12 特殊语义仍保留', async () => {
   const propose = await read('skills/falla-propose/SKILL.md');
-  const apply = await read('skills/falla-apply-change/SKILL.md');
-  const applyRule = await read('skill-spec/[模块选读]apply.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
   const archive = await read('skills/falla-archive-change/SKILL.md');
   assert.match(propose, /skip_specs: true/);
   assert.match(propose, /允许数字开头/);
-  assert.match(applyRule, /operationGuidance/);
+  assert.match(apply, /operationGuidance/);
   assert.match(archive, /retire_capabilities: true/);
   assert.match(archive, /--no-validate/);
   assert.match(archive, /--skip-specs/);
   assert.match(archive, /不得使用 `--force`、`--skip-validate`/);
 });
 
-
-test('权威规则保留关键安全、生命周期和工具边界', async () => {
-  const soul = await read('skill-spec/[Must Read]soul.md');
-  const preflight = await read('skill-spec/[分析必读]preflight.md');
-  const propose = await read('skill-spec/[架构必读]propose.md');
-  const apply = await read('skill-spec/[模块选读]apply.md');
-  const archive = await read('skill-spec/[任务选读]archive.md');
-
-  assert.match(soul, /excludeScreenshot=true/);
-  assert.match(soul, /不得调用 `get_screenshot`/);
-  assert.match(soul, /修改公共类、公共方法.*必须用 CodeGraph/s);
-  assert.match(soul, /Android XML 必须纵向、分层排版/);
-  assert.match(soul, /KDoc\/JavaDoc/);
-  assert.match(soul, /防止泄漏与销毁后更新/);
-  assert.match(soul, /不在日志或报告中输出 token、密码、API Key/);
-  assert.match(preflight, /默认只分析当前工作树/);
-  assert.match(preflight, /不得读取 Git 历史/);
-  assert.match(propose, /页面实现结构基线/);
-  assert.match(propose, /required.*当前源码验证/s);
-  assert.match(propose, /execution-mode: parallel.*仅用户明确要求/s);
-  assert.match(apply, /建立.*范围锁/s);
-  assert.match(apply, /滚动检查点/);
-  assert.match(apply, /human-review: pending/);
-  assert.match(archive, /--no-validate/);
-  assert.match(archive, /--skip-specs/);
-  assert.match(archive, /retire_capabilities: true/);
-});
-
-test('Schema instruction 只描述 artifact，不复制跨阶段工具政策', async () => {
+test('Schema instruction 只描述 artifact，不复制工具政策', async () => {
   const parent = await read('openspec/schemas/falla-spec-driven/schema.yaml');
   const child = await read('openspec/schemas/falla-task-driven/schema.yaml');
   for (const content of [parent, child]) {
     assert.doesNotMatch(content, /excludeScreenshot|get_screenshot|Figma MCP/);
     assert.doesNotMatch(content, /codegraph prepare|ui-knowledge validate/);
-  }
-});
-
-test('Apply 每完成一个最小 task 立即落盘状态', async () => {
-  const applyRule = await read('skill-spec/[模块选读]apply.md');
-  const applySkill = await read('skills/falla-apply-change/SKILL.md');
-  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
-  const childSchema = await read('openspec/schemas/falla-task-driven/schema.yaml');
-
-  assert.match(applyRule, /单任务原子循环/);
-  assert.match(applyRule, /一次只推进一个当前可执行的最小 task/);
-  assert.match(applyRule, /立即把对应 checkbox 从 `\[ \]` 改为 `\[x\]`/);
-  assert.match(applyRule, /不得等待其他 task.*批量勾选/s);
-  assert.match(applyRule, /不得\s*为后续 task 提前修改/s);
-  assert.match(applyRule, /task 部分完成、验证失败或遇到阻塞时不得勾选/);
-  assert.match(applyRule, /状态和 handoff 已落盘后.*下一个 ready task/s);
-  assert.match(applySkill, /单任务原子循环/);
-  assert.match(applySkill, /禁止累计多个 task 后批量勾选/);
-  for (const schema of [parentSchema, childSchema]) {
-    assert.match(schema, /一次只推进一个 ready task/);
-    assert.match(schema, /立即勾选对应 checkbox/);
   }
 });

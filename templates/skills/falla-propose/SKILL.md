@@ -15,7 +15,8 @@ description: Use when an existing Android Falla preflight change needs proposal 
 - `.falla/skill-spec/[架构必读]propose.md`
 
 运行环境已经通过 Hook 注入时不要重复读取；未注入或无法确认时再读取。缺失任一文件即停止。
-通用工具、安全、知识、范围和人工验证规则统一以 Soul 为准。
+`references/project-rules.md` 是本阶段强制规则；Hook 未注入时必须显式读取。
+通用原则以 Soul 为准；具体工具、质量和协作规则只按阶段文档的“按需参考”加载。
 
 ## 编排
 

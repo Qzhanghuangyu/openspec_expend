@@ -21,6 +21,12 @@ assert.equal(report.ok, true);
 for (const relative of [
   '.falla/install-manifest.json',
   '.falla/skill-spec/[Must Read]soul.md',
+  '.falla/skill-spec/references/android-quality.md',
+  '.falla/skill-spec/references/code-search.md',
+  '.falla/skill-spec/references/coordination.md',
+  '.falla/skill-spec/references/design-tools.md',
+  '.falla/skill-spec/references/project-rules.md',
+  '.falla/skill-spec/references/ui-knowledge.md',
   '.claude/hooks/falla-spec-guard.mjs',
   '.codex/hooks/falla-spec-session.mjs',
   '.claude/skills/falla-preflight/SKILL.md',

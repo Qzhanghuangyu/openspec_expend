@@ -15,7 +15,7 @@ description: Use when closing and archiving a completed or explicitly accepted A
 - `.falla/skill-spec/[任务选读]archive.md`
 
 运行环境已经通过 Hook 注入时不要重复读取；未注入或无法确认时再读取。缺失任一文件即停止。
-通用工具、安全、设计和状态规则统一以 Soul 为准。
+通用原则以 Soul 为准；具体工具和协作规则只按阶段文档的“按需参考”加载。
 
 ## 编排
 

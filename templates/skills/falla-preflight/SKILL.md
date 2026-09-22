@@ -15,7 +15,7 @@ description: Use when analyzing an Android client PRD or product request before 
 - `.falla/skill-spec/[分析必读]preflight.md`
 
 运行环境已经通过 Hook 注入时不要重复读取；未注入或无法确认时再读取。缺失任一文件即停止。
-工具准备、Figma、CodeGraph、UI Knowledge、安全和范围边界统一以 Soul 为准，本 Skill 不重复定义。
+通用原则以 Soul 为准；具体工具或知识规则只按阶段文档的“按需参考”加载，本 Skill 不重复定义。
 
 ## 编排
 
