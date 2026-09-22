@@ -46,13 +46,19 @@ artifacts:
     description: 技术方案、MVVM 边界和 UI 人工校准计划
     template: design.md
     instruction: |
-      说明上下文、目标、非目标、决策、替代方案、风险、迁移和开放问题。
+      说明上下文、目标、非目标、决策、替代方案、风险、迁移和开放问题。若项目存在
+      `.falla/project-rules/`，按文件名排序读取其顶层普通 `.md` 文件，再筛选当前需求适用规则，
+      并在 design 记录 Rule ID、级别、适用对象、落地方式和例外；`index.md` 仅作可选导航，
+      不得依赖 RAG 召回项目强制规则。
       新建或重构页面时，先核对当前项目的同类实现和可复用组件，并明确“页面实现结构基线”：
       页面承载方式、文件归属、
       导航入口、ViewModel 作用域，以及 XML / Compose 的根节点、层级、滚动与状态容器、组件复用、
       Insets 和生命周期所有者；XML 需给出简明节点树。无法确定的结构问题必须保留为开放问题。
-      页面级变更再按 MVVM 划分 View 与 ViewModel；UI 再按可独立交付控件拆分。
-      明确 Android UI 的自动验证项与人工校准项，记录具体视觉细节，不以固定百分比代替验收。
+      design 引用 UI Knowledge 或现有源码方案时，必须按实现对象记录 required、preferred 或
+      reference-only，以及选定类/基类/API、禁止替代和例外处理。引用本身不自动成为 required；
+      required 必须经过当前源码验证，偏离时先返回 design 更新决策。页面级变更再按 MVVM 划分
+      View 与 ViewModel；UI 再按可独立交付控件拆分。明确 Android UI 的自动验证项与人工校准项，
+      记录具体视觉细节，不以固定百分比代替验收。
     requires:
       - proposal
 
@@ -61,12 +67,16 @@ artifacts:
     description: 可验证且体现依赖拓扑的任务清单
     template: tasks.md
     instruction: |
-      使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的前置依赖。
+      使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的允许编辑范围和前置依赖。
+      tasks 只覆盖当前已确认需求；不得把代码检索、知识条目、lint 或测试发现的无关问题加入重构、
+      迁移、升级、清理或告警修复任务。必须扩大范围时先更新 design/tasks 或请求用户确认。
       每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，并写明必要输入、
       允许编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。新建或重构页面时，任务顺序
       必须是“结构基线复核与最小可编译骨架 → MVVM 契约 → 独立 UI 控件 → 组装和联调”；
-      结构基线不明确时不得生成可直接实施的下游任务。
-      parallel 模式必须指定根页面/XML 的唯一修改责任，依赖根结构或页面契约的子 change 必须
+      结构基线不明确时不得生成可直接实施的下游任务。tasks 必须把 design 绑定的 required 项目
+      规则转成前置条件和完成检查，并把 required 实现
+      基线转成前置条件和完成检查，包括实际继承关系、组件、资源和关键 API；lint 或局部优化不能
+      作为替换 required 基线的理由。parallel 模式必须指定根页面/XML 的唯一修改责任，依赖根结构或页面契约的子 change 必须
       等待相应前置任务完成。
       执行模式默认是 single：所有任务保留在父 change 中，不能仅因任务分组或理论上可并行就
       创建子 change。只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才使用
@@ -81,7 +91,8 @@ artifacts:
     template: comate.md
     instruction: |
       建立父 change 协作台账并记录 execution-mode。owner、status、depends-on、blocks、handoff
-      必须完整。handoff 作为可恢复的滚动检查点，记录当前任务、关键决策、修改文件、验证结果、
+      必须完整。handoff 作为可恢复的滚动检查点，记录当前任务、关键决策、设计基线与项目规则
+      符合性、修改文件、验证结果、
       下一步和风险，不追加流水账或敏感正文。single 模式直接跟踪父 change；parallel 模式汇总
       子 change，依赖边必须双向一致且不能形成环。父 change 完成前全部子 change 必须完成或有明确交接。
     requires:
@@ -91,10 +102,18 @@ apply:
   requires: [comate]
   tracks: tasks.md
   instruction: |
-    读取官方 contextFiles 和 Falla 协作上下文。single 模式直接实施父 change；parallel 模式
+    读取官方 contextFiles 和 Falla 协作上下文。先从当前 task、design 和用户确认内容建立范围锁，
+    只修改当前需求必需内容；不得顺带重构、迁移、升级、统一风格或修复无关问题。必须扩大范围时
+    返回 propose 更新 artifacts 或请求用户确认。single 模式直接实施父 change；parallel 模式
     按已有子 change DAG 实施。按拓扑逐项执行并在验证成功后更新任务，不得在 apply 阶段创建、
     拆分子 change 或切换执行模式。新建或重构页面时先复核 design 的页面实现结构基线；缺失、
-    与当前源码冲突或根页面/XML 修改责任不明确时暂停并返回 propose 修正。Android XML 必须按属性逐行、层级缩进的纵向格式排版；
+    与当前源码冲突或根页面/XML 修改责任不明确时暂停并返回 propose 修正。实施前提取 design 的
+    required/preferred/reference-only 基线；若存在 `.falla/project-rules/`，按文件名排序读取顶层
+    普通 `.md` 文件，与 design 绑定交叉核对并将 required 项目规则作为硬约束。required 不得被 lint、
+    性能微优化或个人偏好替换，偏离时
+    必须在修改代码前返回 propose。完成任务前核对实际继承关系、组件、资源、关键 API 和项目规则
+    符合性，并在 handoff 记录 Rule ID 与证据。
+    Android XML 必须按属性逐行、层级缩进的纵向格式排版；
     新增或实质修改的类、方法和参数必须有可维护的职责说明。公共/受保护方法使用 KDoc/JavaDoc；
     私有方法包含业务规则、状态转换、异步或资源操作时也要说明目的。参数说明业务含义、单位/范围、
     可空性、所有权或回调时机；必要时补充返回值、异常、线程和生命周期约束，且不得包含敏感正文。

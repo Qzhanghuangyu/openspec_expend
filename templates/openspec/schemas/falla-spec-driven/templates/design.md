@@ -15,6 +15,24 @@
 - ViewModel 作用域及状态、事件、UI 绑定：
 - 根页面/XML 修改责任与生命周期所有者：
 
+## 项目规则绑定
+
+> 如果 `.falla/project-rules/` 存在，读取其顶层普通 `.md` 文件，只记录当前需求实际命中的规则；
+> `index.md` 仅作可选导航，required 必须转成 tasks。
+
+| Rule ID | 级别 | 适用对象 | 落地方式 | 例外及批准依据 |
+| --- | --- | --- | --- | --- |
+|  | required / preferred / reference-only |  |  |  |
+
+## 已确认实现基线
+
+> 设计中引用的知识或源码证据必须落实到具体实现对象。`required` 必须遵守；`preferred` 偏离时说明；
+> `reference-only` 只参考思路。引用知识条目本身不自动成为 required。
+
+| 实现对象 | Knowledge / 源码证据 | 约束级别 | 选定类、基类或 API | 禁止替代 | 例外处理 |
+| --- | --- | --- | --- | --- | --- |
+|  |  | required / preferred / reference-only |  |  | 返回 propose / 记录偏差 |
+
 ## MVVM 与组件边界
 
 ## 关键决策与替代方案

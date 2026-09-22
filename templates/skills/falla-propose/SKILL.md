@@ -22,19 +22,28 @@ description: Use when an existing Android Falla preflight change needs proposal 
    openspec instructions <proposal|specs|design|tasks|comate> --change "<parent>" --json
    ```
 
-   使用返回的模板、依赖和 `resolvedOutputPath`，不猜路径。
+   使用返回的模板、依赖和 `resolvedOutputPath`，不猜路径。若项目存在
+   `.falla/project-rules/`，在创建设计和任务前按文件名排序读取其顶层普通 `.md` 文件，再筛选
+   当前需求适用规则；`index.md` 仅作可选导航，required 项目规则不得依赖 RAG 召回或被忽略。
 4. proposal/specs 只描述用户可观察的业务能力。新建或重构页面时，先用 CodeGraph 核对同类
    页面和可复用组件，在 design 中明确“页面实现结构基线”：页面承载方式、文件归属、导航入口、ViewModel 作用域，
    以及 XML / Compose 的根节点、层级、滚动与状态容器、组件复用、Insets 和生命周期所有者；
    XML 需给出简明节点树。无法确定结构基线时保留开放问题，不生成可直接实施的下游任务。
-   再按 MVVM 拆 ViewModel 与 View，把 UI 拆到模块控件，并明确人工视觉校准项。先执行
+   design 还必须记录当前需求命中的项目规则 ID、级别、适用对象、落地方式和例外，并将 required
+   项目规则转成 tasks 前置条件和完成检查。对 design 引用的 UI Knowledge 或源码方案，逐个实现对象
+   记录 `required`、`preferred` 或
+   `reference-only`，以及选定类/基类/API、禁止替代和例外处理。required 只能在当前源码验证后确定；
+   apply 如需偏离必须先返回 propose 更新 design。再按 MVVM 拆 ViewModel 与 View，把 UI 拆到模块
+   控件，并明确人工视觉校准项。先执行
    `falla-openspec ui-knowledge validate --json`，只从通过检查的条目中检索当前项目的
    `.falla/ui-knowledge/`；RAG 命中的候选必须再由当前项目 CodeGraph 验证源码符号、调用关系和
    影响面，并核对依赖、资源、生命周期和验证日期后才能作为复用依据。缺失、跨项目或过期条目
    只能作为无效候选，回到当前代码和设计事实，不自动生成项目知识库。
    若是纯重构、工具或文档变更且没有规格级行为变化，在 `.openspec.yaml` 显式设置
    `skip_specs: true`，并接受官方 status 将 specs 标为 `skipped`；不得伪造空 requirement。
-5. tasks 使用 checkbox 和逻辑依赖，形成“结构基线复核与最小可编译骨架 → 契约 → 控件并行 →
+5. tasks 只覆盖当前已确认需求并写明允许编辑范围。CodeGraph、UI Knowledge、lint 或现有代码中
+   发现的无关问题不得追加为重构、迁移、升级、清理或告警修复任务。tasks 使用 checkbox 和逻辑依赖，
+   形成“结构基线复核与最小可编译骨架 → 契约 → 控件并行 →
    组装 → 联调”的 DAG。每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，
    并写明输入、编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。下游任务不得绕过结构基线；
    parallel 模式必须明确根页面/XML 的唯一修改责任，依赖根结构或页面契约的子 change 必须等待

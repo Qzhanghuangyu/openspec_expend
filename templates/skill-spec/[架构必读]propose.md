@@ -15,6 +15,8 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
 3. 依次读取官方 `openspec instructions <artifact> --change "<parent>" --json`，创建
    proposal、specs、design、tasks、comate。
 4. 每次只写官方返回的 `resolvedOutputPath`，不猜文件路径。
+5. 如果存在 `.falla/project-rules/`，在创建设计和任务前按文件名排序读取其顶层普通 `.md` 文件，
+   再筛选当前需求适用规则；`index.md` 仅作可选导航，不得依赖 RAG 召回或跳过 required 项目规则。
 
 ## 2. 拆解规则
 
@@ -22,7 +24,15 @@ Propose 把已经完成 preflight 的父 change 转换为可被团队并行认�
   页面承载方式、文件归属、导航入口、ViewModel 作用域，以及 XML / Compose 的根节点、层级、滚动容器、
   状态容器、组件复用、Insets 和生命周期所有者。XML 需给出简明节点树；无法确定时保留开放问题，
   不得生成可直接实施的下游任务。
+- design 必须记录当前需求命中的项目规则 ID、级别、适用对象、落地方式和例外；required 项目规则
+  必须转成 tasks 前置条件和完成检查，不能仅在上下文中提及。
+- design 引用 UI Knowledge 或现有源码方案时，必须为每个实现对象记录约束级别、选定类/基类/API、
+  禁止替代和例外处理。`required` 只能在当前源码验证通过后确定；`preferred` 偏离时必须记录原因；
+  `draft` 或 `reference-only` 条目不能仅凭引用自动升级。apply 如需偏离 required 基线，必须先返回
+  propose 更新 design。
 - 页面级需求再拆 ViewModel 与 View，UI 再拆顶部栏、列表项、底部栏、空状态、弹窗等独立模块控件。
+- tasks 只覆盖当前已确认需求，必须写明允许编辑范围；不得把 CodeGraph、UI Knowledge、lint 或
+  现有代码中发现的无关问题追加成重构、迁移、升级、清理或告警修复任务。
 - tasks 使用 checkbox 并显式标出依赖，顺序为“结构基线复核与最小可编译骨架 → 契约 → 控件并行 →
   组装与联调”。每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，并写明输入、
   编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。下游任务不得绕过结构基线；parallel 模式

@@ -114,7 +114,7 @@ test('Apply 阶段强制 XML 纵向格式与关键实现注释', async () => {
   assert.match(soul, /简单 override、getter\/setter/);
   assert.match(soul, /不得把 PRD、operationGuidance、凭据或.*敏感正文/s);
   assert.match(applyRule, /禁止用逐行翻译代码、重复名称或类型的噪声注释凑数/);
-  assert.match(applySkill, /formatter、lint、资源编译或等价检查/);
+  assert.match(applySkill, /formatter、\s*lint、资源编译或等价检查/);
 });
 
 test('设计稿链接在所有阶段强制使用专用 MCP 且禁止浏览器降级', async () => {
@@ -257,6 +257,126 @@ test('新页面在 Propose 固化实现结构基线并由 Apply 执行前置校�
     assert.match(content, /页面实现结构基线/);
     assert.match(content, /返回 propose 修正/);
   }
+});
+
+test('工作流锁定当前需求范围并禁止顺带优化重构', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(
+    path.join(root, 'skills', 'falla-propose', 'SKILL.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+  const parentSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven', 'schema.yaml'),
+    'utf8'
+  );
+  const childSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-task-driven', 'schema.yaml'),
+    'utf8'
+  );
+
+  for (const content of [soul, proposeRule, applyRule, proposeSkill, applySkill, parentSchema, childSchema]) {
+    assert.match(content, /当前需求|当前 task|当前子 change/);
+    assert.match(content, /重构/);
+    assert.match(content, /无关/);
+  }
+  assert.match(soul, /UI Knowledge、项目规则、CodeGraph、lint 和测试.*不是自动整改清单/s);
+  assert.match(applyRule, /建立范围锁/);
+  assert.match(applyRule, /不得顺带重构、抽象、重命名、迁移资源、升级依赖/);
+  assert.match(applyRule, /只记录为风险，不自动整改/);
+  assert.match(proposeRule, /不得把 CodeGraph、UI Knowledge、lint 或.*无关问题追加成重构/s);
+});
+
+test('项目专属 required 规则通过确定性入口绑定到 Propose 和 Apply', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(
+    path.join(root, 'skills', 'falla-propose', 'SKILL.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+  const parentSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven', 'schema.yaml'),
+    'utf8'
+  );
+  const childSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-task-driven', 'schema.yaml'),
+    'utf8'
+  );
+
+  for (const content of [soul, proposeRule, applyRule, proposeSkill, applySkill, parentSchema, childSchema]) {
+    assert.match(content, /\.falla\/project-rules\//);
+    assert.match(content, /required/);
+  }
+  assert.match(soul, /具体规则由项目维护/);
+  assert.match(soul, /不得进入工作流安装 manifest/);
+  assert.match(soul, /不能只依赖 `index.md` 或 RAG 命中/);
+  assert.match(proposeRule, /项目规则 ID、级别、适用对象、落地方式和例外/);
+  assert.match(applyRule, /项目规则不依赖 RAG 召回/);
+  assert.match(applyRule, /Rule ID 和符合性证据写入 handoff/);
+});
+
+test('Design 选定的 UI Knowledge 基线在 Apply 中不可被局部优化替换', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(
+    path.join(root, 'skills', 'falla-propose', 'SKILL.md'),
+    'utf8'
+  );
+  const applySkill = await readFile(
+    path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'),
+    'utf8'
+  );
+  const parentSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-spec-driven', 'schema.yaml'),
+    'utf8'
+  );
+  const childSchema = await readFile(
+    path.join(root, 'openspec', 'schemas', 'falla-task-driven', 'schema.yaml'),
+    'utf8'
+  );
+
+  for (const content of [soul, proposeRule, proposeSkill, parentSchema]) {
+    assert.match(content, /required/);
+    assert.match(content, /preferred/);
+    assert.match(content, /reference-only/);
+    assert.match(content, /类.*基类.*API/s);
+  }
+  for (const content of [soul, applyRule, applySkill, parentSchema, childSchema]) {
+    assert.match(content, /lint/);
+    assert.match(content, /required/);
+    assert.match(content, /返回 propose/);
+  }
+  assert.match(applyRule, /design 已绑定具体知识条目时必须读取该条目/);
+  assert.match(applyRule, /实际继承关系、组件、资源和关键 API/);
 });
 
 test('长任务使用 tasks 和 comate 滚动检查点恢复上下文', async () => {

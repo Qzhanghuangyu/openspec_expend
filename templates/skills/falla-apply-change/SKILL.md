@@ -44,8 +44,20 @@ description: Use when implementing or continuing an existing Android Falla paren
 
 - 读取官方 `contextFiles` 和 `context`；single 模式直接使用父 change；parallel 模式的子 change
   还需读取父 change 规划 artifact，不复制它们。
+- 从当前 task、design 和用户确认内容建立范围锁，只修改完成当前需求所必需的文件、符号、资源和
+  测试。不得顺带重构、抽象、重命名、迁移资源、升级依赖、替换架构、统一风格或修复无关告警。
+  UI Knowledge、项目规则、CodeGraph、lint 和测试发现的既有问题只记录风险，不自动整改。若必须扩大
+  范围，先返回 propose 更新 design/tasks 或请求用户确认；只可直接修复当前改动造成的问题。
 - 逐条考虑 `operationGuidance` 中适用且不冲突的建议；它不能覆盖官方状态、允许编辑路径、
   Falla 门禁或用户明确选择，也不得把 context/guidance 原文复制到代码、日志或报告。
+- 如果存在 `.falla/project-rules/`，必须按文件名排序读取其顶层普通 `.md` 文件，判断当前任务适用
+  规则并与 design 绑定交叉核对；`index.md` 仅作可选导航，项目规则不依赖 RAG 召回。适用的
+  required 规则未绑定到 design 时先返回 propose；required 必须遵守，preferred 偏离时记录原因，
+  reference-only 只参考；需要偏离 required 时，在修改代码前暂停并返回 propose 记录例外。
+- 实施前从 design 提取已确认实现基线：实现对象、Knowledge/源码证据、约束级别、选定类/基类/API、
+  禁止替代和例外处理。required 必须遵守；preferred 偏离时记录原因；reference-only 只参考。design
+  已绑定具体知识条目时必须读取该条目和当前源码证据。lint、性能微优化、个人偏好或通用最佳实践
+  不能覆盖 required；认为必须偏离时，在修改代码前暂停并返回 propose 更新 design。
 - 新建或重构页面时，先核对父 design 的页面实现结构基线，包括页面承载方式、文件归属、
   XML / Compose 节点结构、状态容器、ViewModel 作用域和生命周期所有者。缺失、与当前源码冲突或
   根页面/XML 修改责任不明确时暂停并返回 propose 修正。
@@ -71,8 +83,10 @@ description: Use when implementing or continuing an existing Android Falla paren
   构造参数或公共属性使用 `@property`，方法参数使用 `@param`。简单 override、getter/setter 和
   显而易见委托可不重复文档；不写逐行翻译、重复名称或类型的噪声注释，不把 PRD、guidance、
   凭据或敏感正文复制进注释。
-- 完成前执行项目已有 formatter、lint、资源编译或等价检查，并审查 diff 中是否仍有单行堆叠 XML、
-  关键注释缺失或无关格式化。
+- 完成前使用 CodeGraph 或有界文本检查实际继承关系、组件、资源和关键 API 与 design 的 required
+  基线一致，并检查实际 diff 符合绑定的 required 项目规则；将 Rule ID 和符合性证据写入 handoff，
+  发现偏离时不得勾选 task。随后执行项目已有 formatter、
+  lint、资源编译或等价检查，并审查 diff 中是否仍有单行堆叠 XML、关键注释缺失或无关格式化。
 - 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。
 - 全部任务和验证完成后才标记 done；仅 parallel 模式重新运行 coordination validate。
 - 检查空值/NPE、异步与观察者生命周期、销毁后 UI 更新和敏感日志风险。

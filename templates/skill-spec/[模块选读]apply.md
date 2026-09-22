@@ -67,6 +67,20 @@
 - 读取官方 `contextFiles` 和 `context`；parallel 子 change 还需读取父 change 的规划
   artifacts，但不复制它们。
 - `operationGuidance` 仅作建议，不能覆盖官方状态、编辑范围、Falla 门禁或用户选择。
+- 开始实施前从当前 task、design 和用户确认内容建立范围锁，只修改完成当前需求所必需的文件、符号、
+  资源和测试。不得顺带重构、抽象、重命名、迁移资源、升级依赖、替换架构、统一风格或修复无关告警。
+  UI Knowledge、项目规则、CodeGraph、lint 和测试发现的既有问题只记录为风险，不自动整改。
+- 如果当前任务必须扩大范围才能正确完成，先停止并说明新增范围、原因、影响和验证方式，返回 propose
+  更新 design/tasks 或请求用户确认；仅可直接修复由当前改动造成的编译、测试、安全或生命周期问题。
+- 如果存在 `.falla/project-rules/`，必须按文件名排序读取其顶层普通 `.md` 文件，判断当前任务适用
+  规则并与 design 绑定交叉核对；`index.md` 仅作可选导航，项目规则不依赖 RAG 召回。适用的
+  `required` 规则未绑定到 design 时先返回 propose；`required` 必须遵守，`preferred` 偏离时记录原因，
+  `reference-only` 只参考；需要偏离 required 时，在修改代码前停止并返回 propose 记录例外。
+- 实施前从 design 提取已确认实现基线，并逐项核对具体实现对象、Knowledge/源码证据、约束级别、
+  选定类/基类/API、禁止替代和例外处理。`required` 是硬约束；`preferred` 偏离时记录原因；
+  `reference-only` 只参考思路。design 已绑定具体知识条目时必须读取该条目及其当前源码证据，不能
+  只做泛化检索。lint、性能微优化、个人偏好或通用最佳实践不能覆盖 required 基线；认为必须偏离时，
+  在修改代码前停止并返回 propose 更新 design。
 - 新建或重构页面时，先确认 design 已给出页面实现结构基线，包括页面承载方式、文件归属、
   XML / Compose 节点结构、状态容器、ViewModel 作用域和生命周期所有者；缺失或与当前源码冲突时
   停止实施并返回 propose 修正。
@@ -84,8 +98,11 @@
      重复文档；禁止用逐行翻译代码、重复名称或类型的噪声注释凑数。
   4. 检查空值、异常、并发、异步取消、资源释放、销毁后 UI 更新和敏感日志。
   5. 执行与改动匹配的最小 formatter、lint、测试或编译检查。
-  6. 验证成功后才勾选 task，并简洁更新 handoff。
-  7. 重新读取 `openspec instructions apply`，以最新状态继续。
+  6. 使用 CodeGraph 或有界文本检查实际继承关系、组件、资源和关键 API 与 required 基线一致，
+     并检查实际 diff 符合 design 绑定的 required 项目规则；将 Rule ID 和符合性证据写入 handoff。
+     发现偏离时不勾选 task，先返回 propose。
+  7. 验证成功后才勾选 task，并简洁更新 handoff。
+  8. 重新读取 `openspec instructions apply`，以最新状态继续。
 
 ## 3. comate、检查点与暂停规则
 

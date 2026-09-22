@@ -7,10 +7,14 @@ artifacts:
     description: 子 change 的最小可验证任务清单
     template: tasks.md
     instruction: |
-      只描述当前子 change 的交付内容和验证方式。每项任务必须能在一次独立实施上下文内完成
+      只描述当前子 change 的交付内容和验证方式，并写明允许编辑范围。不得把代码检索、知识条目、
+      lint 或测试发现的无关问题加入重构、迁移、升级、清理或告警修复任务。每项任务必须能在一次独立实施上下文内完成
       定位、修改、验证和交接，并写明必要输入、允许编辑范围、完成条件和前置依赖。
       任务使用 checkbox，并先核对父 design 中的
-      页面实现结构基线、当前子 change 边界和父 DAG 依赖。根页面/XML 只能由指定责任方修改；
+      页面实现结构基线、required 实现基线、父 design 绑定的 required 项目规则、当前子 change
+      边界和父 DAG 依赖。若存在 `.falla/project-rules/`，按文件名排序读取其顶层普通 `.md` 文件。
+      根页面/XML 只能
+      由指定责任方修改；required 基线必须落实到当前子 change 的继承关系、组件、资源或关键 API；
       结构基线缺失或冲突时不得继续生成可直接实施的任务。不得在 apply 阶段创建或继续拆分子 change。
     requires: []
 
@@ -20,7 +24,8 @@ artifacts:
     template: comate.md
     instruction: |
       owner、status、depends-on、blocks、handoff 必须完整并与父 change 的 DAG 一致。handoff
-      作为当前子 change 的滚动检查点，记录当前任务、关键决策、修改文件、验证结果、下一步和风险，
+      作为当前子 change 的滚动检查点，记录当前任务、关键决策、设计基线与项目规则符合性、修改文件、
+      验证结果、下一步和风险，
       不追加流水账或敏感正文。进入 in-progress 前设置 owner；blocked 写明原因和下一步；done 前
       完成全部任务和验证。
     requires:
@@ -31,12 +36,18 @@ apply:
   tracks: tasks.md
   instruction: |
     读取官方 contextFiles，并通过 Falla 协调映射补充父 change 的 proposal、specs、design 和 tasks。
-    先复核父 design 的页面实现结构基线、当前子 change 边界和根页面/XML 修改责任；缺失或冲突时
+    先建立当前子 change 的范围锁，只修改任务必需内容；不得顺带重构、迁移、升级、统一风格或修复
+    无关问题。必须扩大范围时返回 propose 更新 artifacts 或请求用户确认。
+    先复核父 design 的页面实现结构基线、required 实现基线、当前子 change 边界和根页面/XML
+    修改责任；design 已绑定具体知识条目时读取该条目和当前源码证据。若存在项目规则目录，按文件名
+    排序读取顶层普通 `.md` 文件，与 design 绑定交叉核对，并将 required 规则作为硬约束。required 不得被 lint、性能
+    微优化或个人偏好替换；需要偏离时在修改代码前返回 propose。缺失或冲突时
     暂停并返回 propose 修正。只实施当前子 change；Android XML 必须按属性逐行、层级缩进的纵向格式排版。
     新增或实质修改的类、方法和参数必须有可维护的职责说明。公共/受保护方法使用 KDoc/JavaDoc；
     私有方法包含业务规则、状态转换、异步或资源操作时也要说明目的。参数说明业务含义、单位/范围、
     可空性、所有权或回调时机；必要时补充返回值、异常、线程和生命周期约束，且不得包含敏感正文。
     只格式化当前 change
     触及的文件，并运行项目已有 formatter、lint、资源编译或等价检查；验证成功后才能勾选任务并
-    更新 comate.md。在分析、跨文件修改和验证等稳定边界更新滚动检查点；上下文压缩或重新进入任务后，
+    更新 comate.md。完成前核对实际 diff 与父 design 绑定的 required 项目规则一致，并记录 Rule ID
+    与证据。在分析、跨文件修改和验证等稳定边界更新滚动检查点；上下文压缩或重新进入任务后，
     重新读取官方状态、父子 artifacts、comate、git diff 和相关源码，不依赖对话记忆继续。

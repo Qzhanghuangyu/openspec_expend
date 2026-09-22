@@ -38,6 +38,13 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(design, /## 页面实现结构基线/);
   assert.match(design, /XML \/ Compose 节点结构/);
   assert.match(design, /根页面\/XML 修改责任与生命周期所有者/);
+  assert.match(design, /## 项目规则绑定/);
+  assert.match(design, /Rule ID/);
+  assert.match(design, /required 必须转成 tasks/);
+  assert.match(design, /## 已确认实现基线/);
+  assert.match(design, /required \/ preferred \/ reference-only/);
+  assert.match(design, /选定类、基类或 API/);
+  assert.match(design, /禁止替代/);
   assert.match(design, /## 生命周期与状态恢复/);
   assert.match(design, /页面销毁后更新 UI/);
   assert.match(design, /## 安全与敏感信息/);
@@ -48,9 +55,18 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(tasks, /只有用户明确要求并行分派时才改为 parallel/);
   assert.match(tasks, /## 1\. 页面实现结构基线/);
   assert.match(tasks, /最小可编译页面骨架/);
+  assert.match(tasks, /已确认实现基线/);
+  assert.match(tasks, /选定类\/基类\/API、禁止替代和例外处理/);
+  assert.match(tasks, /required 基线/);
+  assert.match(tasks, /project-rules\//);
+  assert.match(tasks, /required 规则已转成当前任务的验收条件/);
+  assert.match(tasks, /Rule ID 与证据写入 handoff/);
+  assert.match(tasks, /不以 lint 或局部优化理由替代/);
   assert.match(tasks, /XML \/ Compose 节点结构/);
   assert.match(tasks, /一次独立实施上下文/);
   assert.match(tasks, /必要输入、允许编辑范围、完成条件和前置依赖/);
+  assert.match(tasks, /只包含当前需求必需改动/);
+  assert.match(tasks, /无顺带重构、资源迁移、依赖升级、无关格式化或既有告警修复/);
   assert.match(tasks, /空值、异常、弱网和重复操作/);
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
   assert.match(tasks, /Android XML 已按属性逐行、层级缩进的纵向格式排版/);
@@ -63,6 +79,8 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(comate, /execution-mode\): single/);
   assert.match(comate, /当前任务/);
   assert.match(comate, /已确认事实与关键决策/);
+  assert.match(comate, /设计基线符合性/);
+  assert.match(comate, /项目规则符合性/);
   assert.match(comate, /已修改文件/);
   assert.match(comate, /验证证据/);
   assert.match(comate, /生命周期结论/);
@@ -78,7 +96,13 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
 
   assert.match(tasks, /一次独立实施上下文/);
   assert.match(tasks, /必要输入、允许编辑范围、完成条件和前置依赖/);
+  assert.match(tasks, /只包含当前子 change 必需改动/);
+  assert.match(tasks, /无顺带重构、资源迁移、依赖升级、无关格式化或既有告警修复/);
   assert.match(tasks, /结构与边界复核/);
+  assert.match(tasks, /required 实现基线/);
+  assert.match(tasks, /项目规则/);
+  assert.match(tasks, /Rule ID 与证据写入 handoff/);
+  assert.match(tasks, /不以 lint 或局部优化理由替代/);
   assert.match(tasks, /根页面\/XML 只能由指定责任方修改/);
   assert.match(tasks, /空值、异常、弱网和重复操作/);
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
@@ -92,6 +116,8 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
 
   assert.match(comate, /当前任务/);
   assert.match(comate, /已确认事实与关键决策/);
+  assert.match(comate, /设计基线符合性/);
+  assert.match(comate, /项目规则符合性/);
   assert.match(comate, /已修改文件/);
   assert.match(comate, /验证证据/);
   assert.match(comate, /生命周期结论/);
