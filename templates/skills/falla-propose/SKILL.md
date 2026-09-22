@@ -42,7 +42,10 @@ description: Use when an existing Android Falla preflight change needs proposal 
    只能作为无效候选，回到当前代码和设计事实，不自动生成项目知识库。
    若是纯重构、工具或文档变更且没有规格级行为变化，在 `.openspec.yaml` 显式设置
    `skip_specs: true`，并接受官方 status 将 specs 标为 `skipped`；不得伪造空 requirement。
-5. tasks 只覆盖当前已确认需求并写明允许编辑范围。CodeGraph、UI Knowledge、lint 或现有代码中
+5. tasks 写入验证模式，默认 `hybrid`：Agent 负责 formatter、lint、单元测试、编译及静态检查，人工
+   负责真机、真实服务端联调和视觉验收。只有用户明确要求时才改为 `human` 或 `agent`。所有 `[人工]`
+   项必须写明前置条件、操作步骤、预期结果、variant/设备和服务端依赖。tasks 只覆盖当前已确认需求并写明允许编辑范围。
+   CodeGraph、UI Knowledge、lint 或现有代码中
    发现的无关问题不得追加为重构、迁移、升级、清理或告警修复任务。tasks 使用 checkbox 和逻辑依赖，
    形成“结构基线复核与最小可编译骨架 → 契约 → 控件并行 →
    组装 → 联调”的 DAG。每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，

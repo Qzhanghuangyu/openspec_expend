@@ -253,6 +253,17 @@ single 与 parallel 均用 `falla-openspec coordination claim "<change>" --owner
 `groups.knowledge` 失败只排除对应候选；`groups.integrations` 的 CodeGraph 失败允许有界降级。
 doctor 不证明图谱新鲜、MCP 连接、人工验证或 Figma/Lark 认证；这些仍在使用对应能力时检查。
 
+## 4.8 人工验证与状态同步
+
+- 新 change 默认使用 `hybrid` 验证模式：Agent 执行 formatter、lint、单元测试、编译和可自动化静态
+  检查，人工执行真机、真实服务端联调和视觉验收。只有用户明确要求时才改为 `human` 或 `agent`。
+- `human` 模式下 Agent 只整理验证清单，不主动运行验证；`agent` 模式下执行工具可完成的验证。
+- 带 `[人工]` 的 task 只能根据人工明确反馈勾选。Agent 不得因为自动化检查通过、代码已写完或用户
+  只确认部分项目而推定全部人工验证通过。
+- 等待人工验证不是 blocked：保持 `in-progress`，将 `human-review` 置为 `pending`。人工反馈失败时置为
+  `failed` 并只修复明确失败项；全部通过后置为 `passed`，再同步 tasks 和 comate done。
+- 人工通过后若实现代码、资源、配置或验证环境发生相关变化，受影响的人工验证失效并恢复为 pending。
+
 ## 5. 安全与完成边界
 
 - 不把推测写成已确认需求，不用模糊兜底替代产品决策。

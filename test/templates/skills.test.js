@@ -411,6 +411,41 @@ test('长任务使用 tasks 和 comate 滚动检查点恢复上下文', async ()
   }
 });
 
+test('默认 hybrid 验证并由人工完成真机联调与视觉验收', async () => {
+  const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
+  const proposeRule = await readFile(
+    path.join(root, 'skill-spec', '[架构必读]propose.md'),
+    'utf8'
+  );
+  const applyRule = await readFile(
+    path.join(root, 'skill-spec', '[模块选读]apply.md'),
+    'utf8'
+  );
+  const archiveRule = await readFile(
+    path.join(root, 'skill-spec', '[任务选读]archive.md'),
+    'utf8'
+  );
+  const proposeSkill = await readFile(path.join(root, 'skills', 'falla-propose', 'SKILL.md'), 'utf8');
+  const applySkill = await readFile(path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'), 'utf8');
+  const archiveSkill = await readFile(path.join(root, 'skills', 'falla-archive-change', 'SKILL.md'), 'utf8');
+
+  for (const content of [soul, proposeRule, proposeSkill]) {
+    assert.match(content, /默认.*hybrid/s);
+    assert.match(content, /`\[人工\]`/);
+    assert.match(content, /单元测试.*编译.*静态\s*检查/s);
+  }
+  assert.match(soul, /人工执行真机、真实服务端联调和视觉验收/);
+  for (const content of [applyRule, applySkill]) {
+    assert.match(content, /不执行真机、真实\s*服务端.*视觉验收/s);
+    assert.match(content, /human-review.*pending/s);
+    assert.match(content, /人工明确反馈/);
+  }
+  for (const content of [archiveRule, archiveSkill]) {
+    assert.match(content, /human-review=passed/);
+    assert.match(content, /不(?:得)?调用 Apply 代替\s*人工\s*测试/);
+  }
+});
+
 test('工作流按字面查找与关系分析选择 rg 或 CodeGraph', async () => {
   const soul = await readFile(path.join(root, 'skill-spec', '[Must Read]soul.md'), 'utf8');
   const preflight = await readFile(path.join(root, 'skills', 'falla-preflight', 'SKILL.md'), 'utf8');

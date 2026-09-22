@@ -17,7 +17,9 @@ Archive 使用官方 OpenSpec 完成 delta spec 同步与归档，不手动移�
 4. `openspec instructions archive --change "<physical>" --json`，读取 context，并只采纳适用且
    不冲突的 operationGuidance。
 5. 统计 `tasks.md` 中未完成 checkbox。
-6. 检查 `comate.md` 是否 done、handoff 是否完整。
+6. 检查 `comate.md` 是否 done、handoff 是否完整。validation-mode=hybrid/human 时必须确认
+   human-review=passed，且 `[人工]` tasks 都有人工明确反馈；pending/failed 时不得调用 Apply 代替
+   人工测试，只展示验收清单并等待结果。
 7. 仅 parallel 模式在父 change 归档前运行 coordination validate，确认所有子 change 完成或明确交接；
    single 模式直接检查父 change 的 tasks 与 comate。
 

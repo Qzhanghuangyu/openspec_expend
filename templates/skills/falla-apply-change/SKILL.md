@@ -43,7 +43,8 @@ description: Use when implementing or continuing an existing Android Falla paren
 ## 实施
 
 - 读取官方 `contextFiles` 和 `context`；single 模式直接使用父 change；parallel 模式的子 change
-  还需读取父 change 规划 artifact，不复制它们。
+  还需读取父 change 规划 artifact，不复制它们。读取 tasks 的验证模式；缺失时按 hybrid 处理，
+  不得自行切换模式。
 - 从当前 task、design 和用户确认内容建立范围锁，只修改完成当前需求所必需的文件、符号、资源和
   测试。不得顺带重构、抽象、重命名、迁移资源、升级依赖、替换架构、统一风格或修复无关告警。
   UI Knowledge、项目规则、CodeGraph、lint 和测试发现的既有问题只记录风险，不自动整改。若必须扩大
@@ -70,7 +71,11 @@ description: Use when implementing or continuing an existing Android Falla paren
 - task 已给出准确类、方法、路径、资源或 API 时，先用有界 `rg`/直接读取；不知道实现入口，或需要
   调用链、继承实现、动态分派、生命周期、影响面和受影响测试时使用 CodeGraph。修改公共或跨模块
   符号前必须用 CodeGraph 检查影响面；不机械地同时调用两种工具。
-- 只做当前 change 的最小改动；完成一项验证后才勾选对应 task。
+- hybrid 模式下执行 formatter、lint、单元测试、编译和静态检查，不执行真机、真实服务端联调或
+  视觉验收；human 模式只整理清单，agent 模式执行工具可完成的验证。实施完成后整理 `[人工]` 验收
+  清单，包含前置条件、操作步骤、预期结果、variant/设备、服务端依赖和风险。`[人工]` task 只能依据
+  人工明确反馈勾选；等待期间保持 in-progress 和 human-review=pending，失败为 failed，全部通过才为 passed。
+- 只做当前 change 的最小改动；完成一项实施或同步一项人工结果后才勾选对应 task。
 - UI 实施前运行 `falla-openspec ui-knowledge validate --json`，只从通过检查的条目中检索当前项目
   `.falla/ui-knowledge/` 的组件和页面模式；RAG 候选必须通过当前项目
   CodeGraph 再次验证源码符号、调用关系和影响面，并核对依赖、资源、API、生命周期和验证日期。
@@ -86,13 +91,13 @@ description: Use when implementing or continuing an existing Android Falla paren
   构造参数或公共属性使用 `@property`，方法参数使用 `@param`。简单 override、getter/setter 和
   显而易见委托可不重复文档；不写逐行翻译、重复名称或类型的噪声注释，不把 PRD、guidance、
   凭据或敏感正文复制进注释。
-- 完成前对已知继承声明、组件、资源和关键 API 使用有界 `rg` 精确检查；需要真实调用方、间接实现
-  或影响面时使用 CodeGraph。结果必须与 design 的 required 基线一致，并检查实际 diff 符合绑定的
-  required 项目规则；将 Rule ID 和符合性证据写入 handoff，
-  发现偏离时不得勾选 task。随后执行项目已有 formatter、
-  lint、资源编译或等价检查，并审查 diff 中是否仍有单行堆叠 XML、关键注释缺失或无关格式化。
+- hybrid/agent 模式完成自动检查前，对已知继承声明、组件、资源和关键 API 使用有界 `rg` 精确检查；需要真实
+  调用方、间接实现或影响面时使用 CodeGraph。结果必须与 design 的 required 基线一致，并检查实际
+  diff 符合绑定的 required 项目规则；随后执行最小 formatter、lint、资源编译或等价检查。human
+  模式把这些检查转为人工清单，不自行执行或宣称通过。
 - 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。
-- 全部任务和验证完成后才标记 done；仅 parallel 模式重新运行 coordination validate。
+- hybrid/human 模式只有 human-review=passed 且全部 `[人工]` task 有明确反馈后才标记 done；
+  hybrid/agent 模式还要求自动化验证通过。仅 parallel 模式重新运行 coordination validate。
 - 检查空值/NPE、异步与观察者生命周期、销毁后 UI 更新和敏感日志风险。
 
 ## 防止阶段错位

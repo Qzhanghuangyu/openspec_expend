@@ -30,7 +30,9 @@ description: Use when closing and archiving a completed or explicitly accepted A
 4. 应用 archive instructions 返回的 `context`，并只采纳适用且不冲突的 `operationGuidance`；
    guidance 不能覆盖官方状态、安全门禁或用户选择，也不得原样写入报告。
 5. 汇总非 done/skipped artifact、未完成 tasks、非 done comate，以及官方 status 返回的 delta
-   spec 路径与同步影响；仅 parallel 模式汇总未交接子 change。
+   spec 路径与同步影响；仅 parallel 模式汇总未交接子 change。validation-mode=hybrid/human 时必须确认
+   human-review=passed，且 `[人工]` tasks 都有人工明确反馈；pending/failed 时不调用 Apply 代替人工
+   测试，只展示验收清单并等待结果。
 
 ## 有告警时
 

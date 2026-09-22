@@ -3,6 +3,8 @@
 - 执行模式 (execution-mode): single
 - 负责人 (owner): unassigned
 - 状态 (status): todo
+- 验证模式 (validation-mode): hybrid
+- 人工验证状态 (human-review): pending
 - 依赖 (depends-on): []
 - 被依赖 (blocks): []
 - 交接 (handoff):
@@ -12,6 +14,8 @@
   - 项目规则符合性：
   - 已修改文件：
   - 已完成：
+  - 人工验证清单：
+  - 人工验证反馈：
   - 验证证据：
     - 命令：
     - variant / 设备：

@@ -85,6 +85,49 @@ test('多行 handoff 读取到下一个顶级字段为止且空模板标签不�
   );
 });
 
+test('hybrid/human 验证模式必须由人工确认后才能 done', () => {
+  const human = valid.replace(
+    '- 状态 (status): in-progress',
+    `- 状态 (status): in-progress
+- 验证模式 (validation-mode): human
+- 人工验证状态 (human-review): pending`
+  );
+  assert.deepEqual(parseComate(human), {
+    validationMode: 'human',
+    humanReview: 'pending',
+    owner: 'alice',
+    status: 'in-progress',
+    dependsOn: ['medal/view-model'],
+    blocks: ['medal/page-integration'],
+    handoff: '已完成数据绑定，待视觉校准',
+  });
+  assert.deepEqual(
+    validateComateRecord({ ...parseComate(human), status: 'done' }, { pendingTasks: 0 })
+      .map(({ kind }) => kind),
+    ['human-review-required']
+  );
+  assert.deepEqual(
+    validateComateRecord({
+      ...parseComate(human), status: 'done', validationMode: 'hybrid', humanReview: 'pending',
+    }, { pendingTasks: 0 }).map(({ kind }) => kind),
+    ['human-review-required']
+  );
+  assert.deepEqual(
+    validateComateRecord({
+      ...parseComate(human), status: 'done', humanReview: 'passed',
+    }, { pendingTasks: 0 }),
+    []
+  );
+  assert.throws(
+    () => parseComate(human.replace('human-review): pending', 'human-review): unknown')),
+    /human-review/
+  );
+  assert.throws(
+    () => parseComate(human.replace('validation-mode): human', 'validation-mode): agent')),
+    /not-required/
+  );
+});
+
 test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbox', () => {
   assert.deepEqual(parseTaskProgress(`- [x] 1.1 done
   - [ ] 1.1.1 nested pending

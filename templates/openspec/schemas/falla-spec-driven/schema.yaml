@@ -68,6 +68,9 @@ artifacts:
     template: tasks.md
     instruction: |
       使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的允许编辑范围和前置依赖。
+      验证模式默认 hybrid：Agent 执行 formatter、lint、单元测试、编译和静态检查，人工执行真机、
+      真实服务端联调和视觉验收。只有用户明确要求时才改为 human 或 agent；所有 `[人工]` 项写明
+      前置条件、操作步骤、预期结果、variant/设备和服务端依赖，Agent 不执行或代填。
       tasks 只覆盖当前已确认需求；不得把代码检索、知识条目、lint 或测试发现的无关问题加入重构、
       迁移、升级、清理或告警修复任务。必须扩大范围时先更新 design/tasks 或请求用户确认。
       每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，并写明必要输入、
@@ -90,7 +93,8 @@ artifacts:
     description: 父 change 的责任、依赖、状态和交接台账
     template: comate.md
     instruction: |
-      建立父 change 协作台账并记录 execution-mode。owner、status、depends-on、blocks、handoff
+      建立父 change 协作台账并记录 execution-mode、validation-mode 和 human-review。
+      owner、status、depends-on、blocks、handoff
       必须完整。handoff 作为可恢复的滚动检查点，记录当前任务、关键决策、设计基线与项目规则
       符合性、修改文件、验证结果、
       下一步和风险，不追加流水账或敏感正文。single 模式直接跟踪父 change；parallel 模式汇总
@@ -117,7 +121,10 @@ apply:
     新增或实质修改的类、方法和参数必须有可维护的职责说明。公共/受保护方法使用 KDoc/JavaDoc；
     私有方法包含业务规则、状态转换、异步或资源操作时也要说明目的。参数说明业务含义、单位/范围、
     可空性、所有权或回调时机；必要时补充返回值、异常、线程和生命周期约束，且不得包含敏感正文。
-    只格式化当前 change 触及的文件，完成前运行项目已有 formatter、lint、资源编译或等价检查。
+    只格式化当前 change 触及的文件。hybrid 模式下 Agent 执行 formatter、lint、单元测试、编译和
+    静态检查，不执行真机、真实服务端
+    联调或视觉验收；human 模式只输出人工清单，agent 模式执行工具可完成的验证。人工明确反馈后
+    同步 `[人工]` tasks 与 human-review，全部通过才允许 done。
     在分析、跨文件修改和验证等稳定边界更新 comate 的滚动检查点；上下文压缩或重新进入任务后，
     重新读取官方状态、artifacts、comate、git diff 和相关源码，不依赖对话记忆继续。
     遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。

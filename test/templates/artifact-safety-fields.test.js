@@ -52,6 +52,9 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
 
   assert.match(tasks, /## 执行模式/);
   assert.match(tasks, /模式：single/);
+  assert.match(tasks, /## 验证模式/);
+  assert.match(tasks, /模式：hybrid/);
+  assert.match(tasks, /带 `\[人工\]` 的 checkbox 只能依据人工明确反馈勾选/);
   assert.match(tasks, /只有用户明确要求并行分派时才改为 parallel/);
   assert.match(tasks, /## 1\. 页面实现结构基线/);
   assert.match(tasks, /最小可编译页面骨架/);
@@ -77,6 +80,10 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(tasks, /formatter、lint、资源编译等验证命令、variant\/设备、结果/);
 
   assert.match(comate, /execution-mode\): single/);
+  assert.match(comate, /validation-mode\): hybrid/);
+  assert.match(comate, /human-review\): pending/);
+  assert.match(comate, /人工验证清单/);
+  assert.match(comate, /人工验证反馈/);
   assert.match(comate, /当前任务/);
   assert.match(comate, /已确认事实与关键决策/);
   assert.match(comate, /设计基线符合性/);
@@ -94,6 +101,9 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
   const tasks = await readInstalledTemplate(root, 'falla-task-driven', 'tasks.md');
   const comate = await readInstalledTemplate(root, 'falla-task-driven', 'comate.md');
 
+  assert.match(tasks, /## 验证模式/);
+  assert.match(tasks, /模式：hybrid/);
+  assert.match(tasks, /带 `\[人工\]` 的 checkbox 只能依据人工明确反馈勾选/);
   assert.match(tasks, /一次独立实施上下文/);
   assert.match(tasks, /必要输入、允许编辑范围、完成条件和前置依赖/);
   assert.match(tasks, /只包含当前子 change 必需改动/);
@@ -114,6 +124,10 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
   assert.match(tasks, /返回值、异常、线程和生命周期约束/);
   assert.match(tasks, /formatter、lint、资源编译等验证命令、variant\/设备、结果/);
 
+  assert.match(comate, /validation-mode\): hybrid/);
+  assert.match(comate, /human-review\): pending/);
+  assert.match(comate, /人工验证清单/);
+  assert.match(comate, /人工验证反馈/);
   assert.match(comate, /当前任务/);
   assert.match(comate, /已确认事实与关键决策/);
   assert.match(comate, /设计基线符合性/);

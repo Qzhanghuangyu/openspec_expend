@@ -64,8 +64,8 @@
 
 ## 2. 实施与协作
 
-- 读取官方 `contextFiles` 和 `context`；parallel 子 change 还需读取父 change 的规划
-  artifacts，但不复制它们。
+- 读取官方 `contextFiles` 和 `context`；parallel 子 change 还需读取父 change 的规划 artifacts，但不
+  复制它们。读取 tasks 的验证模式；字段缺失时按 `hybrid` 处理，不得自行切换模式。
 - `operationGuidance` 仅作建议，不能覆盖官方状态、编辑范围、Falla 门禁或用户选择。
 - 开始实施前从当前 task、design 和用户确认内容建立范围锁，只修改完成当前需求所必需的文件、符号、
   资源和测试。不得顺带重构、抽象、重命名、迁移资源、升级依赖、替换架构、统一风格或修复无关告警。
@@ -99,19 +99,24 @@
      的 `@property`、`@param`、返回值或异常说明。简单 override、getter/setter 或显而易见委托可不
      重复文档；禁止用逐行翻译代码、重复名称或类型的噪声注释凑数。
   4. 检查空值、异常、并发、异步取消、资源释放、销毁后 UI 更新和敏感日志。
-  5. 执行与改动匹配的最小 formatter、lint、测试或编译检查。
-  6. 已知继承声明、组件名、资源和关键 API 时用有界 `rg` 精确检查；需要确认真实调用方、间接实现
-     或影响面时使用 CodeGraph。检查结果必须与 required 基线一致，
-     并检查实际 diff 符合 design 绑定的 required 项目规则；将 Rule ID 和符合性证据写入 handoff。
+  5. hybrid 模式执行与改动匹配的 formatter、lint、单元测试、编译和静态检查；不执行真机、真实
+     服务端联调或视觉验收。human 模式不主动运行验证，agent 模式执行工具可完成的验证。已经有与
+     当前代码版本一致的有效证据时不得无意义重复运行。
+  6. 在 hybrid/agent 模式下，已知继承声明、组件名、资源和关键 API 时用有界 `rg` 精确检查；需要
+     确认真实调用方、间接实现或影响面时使用 CodeGraph。检查结果必须与 required 基线一致，并检查
+     实际 diff 符合 design 绑定的 required 项目规则；将 Rule ID 和符合性证据写入 handoff。
      发现偏离时不勾选 task，先返回 propose。
-  7. 验证成功后才勾选 task，并简洁更新 handoff。
-  8. 重新读取 `openspec instructions apply`，以最新状态继续。
+  7. 实施和自动验证任务完成后同步勾选；带 `[人工]` 的任务只能依据人工明确反馈同步，Agent 不自行
+     执行、推定或批量勾选。hybrid/human 模式完成 Agent 职责后保持 in-progress，并将 human-review 置为 pending。
+  8. 收到人工反馈后记录 reviewer、日期、环境和逐项结果：失败则 human-review=failed，只修复明确
+     失败项；全部通过才设为 passed。相关代码、资源、配置或验证环境变化后，受影响项恢复 pending。
+  9. 重新读取 `openspec instructions apply`，以最新状态继续。
 
 ## 3. comate、检查点与暂停规则
 
 `comate.md` 是 owner、状态、依赖、交接和长任务恢复的持久事实：
 
-- 使用 claim 认领，不手工覆盖他人的 owner。
+- 使用 claim 认领，不手工覆盖他人的 owner。validation-mode=hybrid/human 时，human-review 初始为 pending。
 - `depends-on` / `blocks` 必须与 propose 的拓扑关系一致，apply 不自行修改。
 - blocked 或 done 时，handoff 必须记录完成内容、验证证据、生命周期与安全结论、
   遗留风险和恢复/接手条件。
@@ -135,7 +140,9 @@
 只有同时满足以下条件才能置为 done：
 
 - 官方 instructions 为 `all_done`，tasks 全部勾选。
-- 相关验证通过，handoff 完整。
+- hybrid/human 模式的 human-review 为 passed，且所有 `[人工]` task 都有人工明确反馈；Agent 不重复
+  执行真机、真实服务端联调或视觉验收。
+- hybrid/agent 模式的自动化验证通过，handoff 完整。
 - 生命周期、安全和人工视觉校准项已检查。
 - parallel 重新通过 coordination validate，下游依赖可以继续实施。
 

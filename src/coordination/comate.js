@@ -3,9 +3,13 @@ import { assertChangeSegment, parseLogicalReference } from './naming.js';
 
 const MAX_COMATE_BYTES = 256 * 1024;
 const STATUSES = new Set(['todo', 'in-progress', 'blocked', 'done']);
+const VALIDATION_MODES = new Set(['hybrid', 'human', 'agent']);
+const HUMAN_REVIEW_STATUSES = new Set(['pending', 'passed', 'failed', 'not-required']);
 
 const FIELDS = {
   executionMode: /^- 执行模式 \(execution-mode\):[ \t]*(.*)$/gm,
+  validationMode: /^- 验证模式 \(validation-mode\):[ \t]*(.*)$/gm,
+  humanReview: /^- 人工验证状态 \(human-review\):[ \t]*(.*)$/gm,
   owner: /^- 负责人 \(owner\):[ \t]*(.*)$/gm,
   status: /^- 状态 \(status\):[ \t]*(.*)$/gm,
   dependsOn: /^- 依赖 \(depends-on\):[ \t]*(.*)$/gm,
@@ -83,6 +87,18 @@ export function parseComate(markdown, source = 'comate.md') {
     FIELDS.executionMode,
     source
   );
+  const validationMode = readOptionalSingleField(
+    markdown,
+    'validation-mode',
+    FIELDS.validationMode,
+    source
+  );
+  const humanReview = readOptionalSingleField(
+    markdown,
+    'human-review',
+    FIELDS.humanReview,
+    source
+  );
   const owner = readSingleField(markdown, 'owner', FIELDS.owner, source);
   const status = readSingleField(markdown, 'status', FIELDS.status, source);
   const dependsOnRaw = readSingleField(markdown, 'depends-on', FIELDS.dependsOn, source);
@@ -94,9 +110,26 @@ export function parseComate(markdown, source = 'comate.md') {
   if (executionMode !== null && executionMode !== 'single' && executionMode !== 'parallel') {
     throw new FallaError(1, `${source} 的 execution-mode 无效`);
   }
+  if (validationMode !== null && !VALIDATION_MODES.has(validationMode)) {
+    throw new FallaError(1, `${source} 的 validation-mode 无效`);
+  }
+  if (humanReview !== null && !HUMAN_REVIEW_STATUSES.has(humanReview)) {
+    throw new FallaError(1, `${source} 的 human-review 无效`);
+  }
+  if (['hybrid', 'human'].includes(validationMode) && humanReview === null) {
+    throw new FallaError(1, `${source} 的 ${validationMode} 模式缺少 human-review 字段`);
+  }
+  if (validationMode === 'agent' && humanReview !== null && humanReview !== 'not-required') {
+    throw new FallaError(1, `${source} 的 agent 模式 human-review 必须为 not-required`);
+  }
+  if (validationMode === null && humanReview !== null) {
+    throw new FallaError(1, `${source} 的 human-review 缺少 validation-mode`);
+  }
 
   return {
     ...(executionMode === null ? {} : { executionMode }),
+    ...(validationMode === null ? {} : { validationMode }),
+    ...(humanReview === null ? {} : { humanReview }),
     owner,
     status,
     dependsOn: parseReferenceList(dependsOnRaw, `${source}.depends-on`),
@@ -130,6 +163,10 @@ export function validateComateRecord(record, { pendingTasks }) {
   }
   if (record.status === 'done' && !hasMeaningfulHandoff(record.handoff)) {
     issues.push({ kind: 'done-handoff-required' });
+  }
+  if (record.status === 'done' && ['hybrid', 'human'].includes(record.validationMode)
+    && record.humanReview !== 'passed') {
+    issues.push({ kind: 'human-review-required' });
   }
   return issues;
 }
