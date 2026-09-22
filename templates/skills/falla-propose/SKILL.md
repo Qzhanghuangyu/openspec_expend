@@ -31,7 +31,9 @@ description: Use when an existing Android Falla preflight change needs proposal 
    以及 XML / Compose 的根节点、层级、滚动与状态容器、组件复用、Insets 和生命周期所有者；
    XML 需给出简明节点树。无法确定结构基线时保留开放问题，不生成可直接实施的下游任务。
    design 还必须记录当前需求命中的项目规则 ID、级别、适用对象、落地方式和例外，并将 required
-   项目规则转成 tasks 前置条件和完成检查。对 design 引用的 UI Knowledge 或源码方案，逐个实现对象
+   项目规则转成 tasks 前置条件和完成检查。design 还必须为当前 change 新增或实质修改的类、方法、
+   参数、状态字段、资源所有者、非直观常量和复杂 Lambda 建立注释与可维护性契约。对 design 引用的
+   UI Knowledge 或源码方案，逐个实现对象
    记录 `required`、`preferred` 或
    `reference-only`，以及选定类/基类/API、禁止替代和例外处理。required 只能在当前源码验证后确定；
    apply 如需偏离必须先返回 propose 更新 design。再按 MVVM 拆 ViewModel 与 View，把 UI 拆到模块
@@ -45,8 +47,9 @@ description: Use when an existing Android Falla preflight change needs proposal 
 5. tasks 写入验证模式，默认 `hybrid`：Agent 负责 formatter、lint、单元测试、编译及静态检查，人工
    负责真机、真实服务端联调和视觉验收。只有用户明确要求时才改为 `human` 或 `agent`。所有 `[人工]`
    项必须写明前置条件、操作步骤、预期结果、variant/设备和服务端依赖。tasks 只覆盖当前已确认需求并写明允许编辑范围。
-   CodeGraph、UI Knowledge、lint 或现有代码中
-   发现的无关问题不得追加为重构、迁移、升级、清理或告警修复任务。tasks 使用 checkbox 和逻辑依赖，
+   CodeGraph、UI Knowledge、lint 或现有代码中发现的无关问题不得追加为重构、迁移、升级、清理或
+   告警修复任务。tasks 必须包含 Agent 注释审计项：根据当前 diff 生成变更符号清单，逐项核对职责、
+   参数、状态字段、生命周期、常量和复杂 Lambda，豁免必须记录原因。tasks 使用 checkbox 和逻辑依赖，
    形成“结构基线复核与最小可编译骨架 → 契约 → 控件并行 →
    组装 → 联调”的 DAG。每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，
    并写明输入、编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。下游任务不得绕过结构基线；

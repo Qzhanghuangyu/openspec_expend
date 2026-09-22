@@ -111,10 +111,38 @@ test('Apply 阶段强制 XML 纵向格式与关键实现注释', async () => {
   }
 
   assert.match(soul, /方法参数使用 `@param`/);
-  assert.match(soul, /简单 override、getter\/setter/);
+  assert.match(soul, /含自定义逻辑的 override 不得借此省略说明/);
+  assert.match(soul, /状态缓存、回调抑制标记、资源所有者和非直观常量/);
+  assert.match(soul, /Lambda 参数承担.*业务语义.*提取为命名方法/s);
   assert.match(soul, /不得把 PRD、operationGuidance、凭据或.*敏感正文/s);
-  assert.match(applyRule, /禁止用逐行翻译代码、重复名称或类型的噪声注释凑数/);
-  assert.match(applySkill, /formatter、\s*lint、资源编译或等价检查/);
+  assert.match(applyRule, /根据当前 diff 生成变更符号清单/);
+  assert.match(applyRule, /override 不得豁免/);
+  assert.match(applySkill, /豁免但记录原因/);
+});
+
+test('Propose 生成注释契约且 Apply/Archive 要求注释审计证据', async () => {
+  const proposeRule = await readFile(path.join(root, 'skill-spec', '[架构必读]propose.md'), 'utf8');
+  const applyRule = await readFile(path.join(root, 'skill-spec', '[模块选读]apply.md'), 'utf8');
+  const archiveRule = await readFile(path.join(root, 'skill-spec', '[任务选读]archive.md'), 'utf8');
+  const proposeSkill = await readFile(path.join(root, 'skills', 'falla-propose', 'SKILL.md'), 'utf8');
+  const applySkill = await readFile(path.join(root, 'skills', 'falla-apply-change', 'SKILL.md'), 'utf8');
+  const archiveSkill = await readFile(path.join(root, 'skills', 'falla-archive-change', 'SKILL.md'), 'utf8');
+
+  for (const content of [proposeRule, proposeSkill]) {
+    assert.match(content, /注释与可维护性契约/);
+    assert.match(content, /变更符号清单/);
+    assert.match(content, /复杂 Lambda/);
+  }
+  for (const content of [applyRule, applySkill]) {
+    assert.match(content, /当前 diff.*变更符号清单/s);
+    assert.match(content, /状态字段.*非直观常量.*复杂 Lambda/s);
+    assert.match(content, /override 不得豁免/);
+  }
+  for (const content of [archiveRule, archiveSkill]) {
+    assert.match(content, /注释审计/);
+    assert.match(content, /已检查文件\/符号/);
+    assert.match(content, /豁免原因/);
+  }
 });
 
 test('设计稿链接在所有阶段强制使用专用 MCP 且禁止浏览器降级', async () => {

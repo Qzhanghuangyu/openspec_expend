@@ -42,6 +42,9 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(design, /Rule ID/);
   assert.match(design, /required 必须转成 tasks/);
   assert.match(design, /## 已确认实现基线/);
+  assert.match(design, /## 注释与可维护性契约/);
+  assert.match(design, /文件 \/ 符号/);
+  assert.match(design, /类 \/ 方法 \/ 字段 \/ 常量 \/ Lambda/);
   assert.match(design, /required \/ preferred \/ reference-only/);
   assert.match(design, /选定类、基类或 API/);
   assert.match(design, /禁止替代/);
@@ -73,10 +76,12 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(tasks, /空值、异常、弱网和重复操作/);
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
   assert.match(tasks, /Android XML 已按属性逐行、层级缩进的纵向格式排版/);
-  assert.match(tasks, /类、方法和参数已有职责说明/);
-  assert.match(tasks, /公共\/受保护方法使用 KDoc\/JavaDoc/);
-  assert.match(tasks, /参数说明业务含义、单位\/范围、可空性、所有权或回调时机/);
-  assert.match(tasks, /返回值、异常、线程和生命周期约束/);
+  assert.match(tasks, /变更符号清单并完成注释审计/);
+  assert.match(tasks, /类：说明职责、边界和生命周期所有者/);
+  assert.match(tasks, /参数：逐项说明业务含义、单位\/范围、可空性、所有权或回调时机/);
+  assert.match(tasks, /复杂 Lambda 提取命名方法或解释参数/);
+  assert.match(tasks, /override 不得豁免/);
+  assert.match(tasks, /豁免.*记录原因/);
   assert.match(tasks, /formatter、lint、资源编译等验证命令、variant\/设备、结果/);
 
   assert.match(comate, /execution-mode\): single/);
@@ -88,6 +93,10 @@ test('父 change 模板要求记录生命周期、安全和验证证据', async 
   assert.match(comate, /已确认事实与关键决策/);
   assert.match(comate, /设计基线符合性/);
   assert.match(comate, /项目规则符合性/);
+  assert.match(comate, /注释审计/);
+  assert.match(comate, /已检查文件\/符号/);
+  assert.match(comate, /参数与生命周期说明/);
+  assert.match(comate, /豁免项及原因/);
   assert.match(comate, /已修改文件/);
   assert.match(comate, /验证证据/);
   assert.match(comate, /生命周期结论/);
@@ -118,10 +127,10 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
   assert.match(tasks, /协程、Flow、观察者、回调和监听器/);
   assert.match(tasks, /日志、缓存、网络请求和产物/);
   assert.match(tasks, /Android XML 已按属性逐行、层级缩进的纵向格式排版/);
-  assert.match(tasks, /类、方法和参数已有职责说明/);
-  assert.match(tasks, /公共\/受保护方法使用 KDoc\/JavaDoc/);
-  assert.match(tasks, /参数说明业务含义、单位\/范围、可空性、所有权或回调时机/);
-  assert.match(tasks, /返回值、异常、线程和生命周期约束/);
+  assert.match(tasks, /变更符号清单并完成注释审计/);
+  assert.match(tasks, /类职责、方法用途、每个参数语义、状态字段、生命周期、非直观常量和复杂 Lambda/);
+  assert.match(tasks, /override 不得豁免/);
+  assert.match(tasks, /豁免必须记录原因/);
   assert.match(tasks, /formatter、lint、资源编译等验证命令、variant\/设备、结果/);
 
   assert.match(comate, /validation-mode\): hybrid/);
@@ -132,6 +141,10 @@ test('子 change 模板要求完成同等级验证并结构化交接', async () 
   assert.match(comate, /已确认事实与关键决策/);
   assert.match(comate, /设计基线符合性/);
   assert.match(comate, /项目规则符合性/);
+  assert.match(comate, /注释审计/);
+  assert.match(comate, /已检查文件\/符号/);
+  assert.match(comate, /参数与生命周期说明/);
+  assert.match(comate, /豁免项及原因/);
   assert.match(comate, /已修改文件/);
   assert.match(comate, /验证证据/);
   assert.match(comate, /生命周期结论/);
