@@ -21,15 +21,13 @@ const HOOK_REGISTRATION_PATHS = new Set([
 
 const AGENTS_BODY = `## FallaOpenSpec Skill 约束（必读）
 
-使用 \`falla-preflight\` / \`falla-propose\` / \`falla-apply-change\` / \`falla-archive-change\` 前，必须先读取：
+使用 \`falla-preflight\` / \`falla-propose\` / \`falla-apply-change\` / \`falla-archive-change\` 时：
 
-- 全局入口：\`.falla/skill-spec/[Must Read]soul.md\`
-- preflight：\`.falla/skill-spec/[分析必读]preflight.md\`
-- propose：\`.falla/skill-spec/[架构必读]propose.md\`
-- apply：\`.falla/skill-spec/[模块选读]apply.md\`
-- archive：\`.falla/skill-spec/[任务选读]archive.md\`
-
-项目业务规格只从 \`openspec/specs/\` 读取；不得从旧 \`.falla/spec/\` 读取规则。缺少必读文件时停止执行对应 Skill。`;
+- 若 Hook 已把规则注入当前上下文，不要重复读取。
+- 否则读取全局入口 \`.falla/skill-spec/[Must Read]soul.md\` 和对应阶段文件：
+  preflight=\`[分析必读]preflight.md\`、propose=\`[架构必读]propose.md\`、
+  apply=\`[模块选读]apply.md\`、archive=\`[任务选读]archive.md\`。
+- 缺少必读文件时停止。项目业务规格只从 \`openspec/specs/\` 读取，不得从旧 \`.falla/spec/\` 读取。`;
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);

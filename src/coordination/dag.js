@@ -78,9 +78,9 @@ export async function validateCoordination(root, options) {
       for (const localIssue of validateComateRecord(node.comate, {
         pendingTasks: node.tasks.pending,
       })) {
-        errors.push(issue(localIssue.kind, logical, undefined, localIssue.count
-          ? { count: localIssue.count }
-          : undefined));
+        const { kind, ...details } = localIssue;
+        errors.push(issue(kind, logical, undefined,
+          Object.keys(details).length > 0 ? details : undefined));
       }
       if (node.comate.status === 'done' && node.officialStatus?.isPlanningComplete === false) {
         errors.push(issue('artifacts-incomplete', logical));
@@ -100,19 +100,8 @@ export async function validateCoordination(root, options) {
         errors.push(issue('missing-dependency', logical, dependency));
         continue;
       }
-      if (!upstream.blocks.includes(logical)) {
-        errors.push(issue('asymmetric-edge', logical, dependency));
-      }
       if ((record.status === 'in-progress' || record.status === 'done') && upstream.status !== 'done') {
         errors.push(issue('dependency-not-done', logical, dependency));
-      }
-    }
-    for (const blocked of record.blocks) {
-      const downstream = nodes.get(blocked);
-      if (!downstream) {
-        errors.push(issue('missing-blocked-change', logical, blocked));
-      } else if (!downstream.dependsOn.includes(logical)) {
-        errors.push(issue('asymmetric-edge', logical, blocked));
       }
     }
   }

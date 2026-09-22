@@ -1,95 +1,63 @@
-# [架构必读] Propose（提案与拆解）阶段约束
+# [架构必读] Propose（架构与任务拆解）阶段约束
 
-Propose 把已经完成 preflight 的父 change 转换为可被团队并行认领的任务图。
+Propose 消费已完成的 preflight，把已确认需求转成 proposal、specs、design、tasks 和 comate。
+通用工具、安全、知识、范围和人工校准规则统一继承 `[Must Read]soul.md`。
 
-## Figma 文本兼容模式
+## 1. 前置与证据复用
 
-本阶段凡调用 Figma MCP 的 `get_design_context`，都必须显式传入
-`excludeScreenshot=true`。禁止调用 `get_screenshot`，也禁止把截图、截图 URL、图片块或其他栅格化
-预览送入当前模型。排除截图后无法确认的视觉细节必须记录为人工视觉校准项，不得通过浏览器或截图绕过。
+1. 以 `openspec status --change "<parent>" --json` 为准确认 preflight 完成。
+2. 按官方 artifact 状态逐个调用 instructions，使用返回的依赖、模板和 `resolvedOutputPath`。
+3. 优先复用 preflight 已记录且仍有效的证据；只有证据缺失、源码已变化或设计决策需要时才补充调查，
+   不重新执行一次完整 preflight。
+4. 项目规则、UI Knowledge 和源码基线的处理统一遵守 Soul；required 结论必须由当前源码验证。
 
-## 1. 前置与官方 artifact
+## 2. Artifact 职责
 
-1. 复用 preflight 已创建的父 change，不创建第二个父 change。
-2. 用 `openspec status --change "<parent>" --json` 确认 `preflight` 为 done；目录存在不等于完成。
-3. 依次读取官方 `openspec instructions <artifact> --change "<parent>" --json`，创建
-   proposal、specs、design、tasks、comate。
-4. 每次只写官方返回的 `resolvedOutputPath`，不猜文件路径。
-5. 如果存在 `.falla/project-rules/`，在创建设计和任务前按文件名排序读取其顶层普通 `.md` 文件，
-   再筛选当前需求适用规则；`index.md` 仅作可选导航，不得依赖 RAG 召回或跳过 required 项目规则。
+- `proposal.md`：为什么改、改什么、影响什么。
+- `specs/`：只记录用户可观察、可测试的行为，不承载 View、ViewModel、控件或接口层等实现模块。
+- `design.md`：技术决策、页面实现结构基线、MVVM/组件边界、项目规则绑定、实现基线、生命周期、
+  安全、风险和人工视觉校准项。
+- `tasks.md`：只记录具体交付任务、依赖、允许编辑范围和完成条件；不重复保存执行模式或验证模式。
+- `comate.md`：执行模式、验证模式、人工验收状态、owner、协作状态、change 依赖和 handoff 的唯一来源。
 
-## 2. 拆解规则
+纯重构、工具或文档变更且无规格级行为变化时，在 `.openspec.yaml` 设置 `skip_specs: true`，
+不得创建空 requirement。
 
-- 新建或重构页面时，已知准确参考类或文件则先用 `rg`/直接读取；不知道同类实现入口，或需要分析
-  组件调用、继承、状态归属和生命周期时使用 CodeGraph。完成核对后在 design 中确定“页面实现结构基线”：
-  页面承载方式、文件归属、导航入口、ViewModel 作用域，以及 XML / Compose 的根节点、层级、滚动容器、
-  状态容器、组件复用、Insets 和生命周期所有者。XML 需给出简明节点树；无法确定时保留开放问题，
-  不得生成可直接实施的下游任务。
-- design 必须记录当前需求命中的项目规则 ID、级别、适用对象、落地方式和例外；required 项目规则
-  必须转成 tasks 前置条件和完成检查，不能仅在上下文中提及。
-- design 引用 UI Knowledge 或现有源码方案时，必须为每个实现对象记录约束级别、选定类/基类/API、
-  禁止替代和例外处理。`required` 只能在当前源码验证通过后确定；`preferred` 偏离时必须记录原因；
-  `draft` 或 `reference-only` 条目不能仅凭引用自动升级。apply 如需偏离 required 基线，必须先返回
-  propose 更新 design。
-- design 必须为当前 change 新增或实质修改的类、方法、参数、状态字段、资源所有者、非直观常量
-  和复杂 Lambda 建立“注释与可维护性契约”；不能只写笼统的“补充注释”。
-- 页面级需求再拆 ViewModel 与 View，UI 再拆顶部栏、列表项、底部栏、空状态、弹窗等独立模块控件。
-- tasks 只覆盖当前已确认需求，必须写明允许编辑范围；不得把 CodeGraph、UI Knowledge、lint 或
-  现有代码中发现的无关问题追加成重构、迁移、升级、清理或告警修复任务。
-- tasks 必须写入验证模式，默认 `hybrid`：Agent 负责 formatter、lint、单元测试、编译及静态检查，
-  人工负责真机、真实服务端联调和视觉验收。只有用户明确要求时才改为 `human` 或 `agent`。所有
-  `[人工]` 项必须写明前置条件、操作步骤、预期结果、variant/设备和服务端依赖。
-- tasks 必须包含 Agent 执行的注释审计项：先从当前 diff 生成变更符号清单，再逐项核对类职责、
-  方法用途、每个参数语义、状态字段、生命周期、非直观常量和复杂 Lambda；豁免必须记录原因。
-- tasks 使用 checkbox 并显式标出依赖，顺序为“结构基线复核与最小可编译骨架 → 契约 → 控件并行 →
-  组装与联调”。每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，并写明输入、
-  编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。下游任务不得绕过结构基线；parallel 模式
-  必须明确根页面/XML 的唯一修改责任。
-- `specs/` 只承载用户可观察、可测试的业务行为，不承载实现模块。
-- 纯重构、工具或文档变更且没有规格级行为变化时，在 `.openspec.yaml` 显式设置
-  `skip_specs: true`；官方 status 中 `skipped` 表示依赖已满足，不创建空 delta spec。
-- design 明确可自动验证的 UI 实现和留给人工校准的具体视觉项，不用固定百分比判断完成。
+## 3. 任务拆解
 
-## 3. 选择执行模式
+- 页面级工作先明确 ViewModel 与 View 契约，再按可独立交付的 UI 控件拆分，最后组装和联调。
+- 新建或重构页面必须先确定页面承载方式、文件归属、导航、ViewModel 作用域、根节点、滚动/状态容器、
+  组件复用、Insets、根页面/XML 修改责任和生命周期所有者。无法确定时保留开放问题，不生成下游实施任务。
+- 每项任务应能在一次独立实施上下文内完成定位、修改、验证和交接，并写明输入、允许编辑范围、
+  完成条件和前置依赖。
+- 通用质量门禁不预填成大量固定 checkbox；只把当前 change 实际需要的实现与验证任务写入 tasks。
+- `[人工]` task 必须写明前置条件、操作步骤、预期结果、variant/设备和服务端依赖。
 
-### 3.1 single（默认）
+## 4. 执行与验证模式
 
-- 新 change 未收到用户明确的并行拆分要求时，`tasks.md` 中写入 `执行模式：single`。
-- 重跑已有 change 时，若 `.falla/coordination.yaml` 已存在该父 change 的子映射，则保留
-  `parallel` 并复用已有子 change，不得降级为 single 或重复创建。
-- ViewModel、View、独立控件、组装和联调只作为父 change 内的任务组，不创建额外 change 目录。
-- apply 直接实施父 change，并按 `tasks.md` 的依赖顺序推进。
-- 不调用 `coordination register`，也不创建 `falla-task-driven` change。
+模式只记录在父 `comate.md`：
 
-### 3.2 parallel（显式启用）
+- `execution-mode: single`：默认，全部实施任务保留在父 change。
+- `execution-mode: parallel`：仅用户明确要求多人/多 agent 并行、创建子 change或独立分派时使用。
+- `validation-mode: hybrid`：默认；可在用户明确要求时改为 `human` 或 `agent`。
 
-只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才写入
-`执行模式：parallel` 并创建子 change。任务规模较大、存在 ViewModel/View 分层或理论上可并行，
-都不能单独作为启用依据。
+已有父 change 若存在子映射，必须保持 parallel；模式冲突时停止修复，不根据复杂度自行切换。
 
-parallel 模式下：
+## 5. Parallel 子 change
 
-1. 为每个独立认领、独立验证和独立交接的交付单元确定逻辑名 `<parent>/<child>`。
-   逻辑名必须恰好两段；View 是拆解类别，不得形成 `<parent>/view/<component>` 第三层。
-2. 使用 `falla-openspec coordination register "<parent>/<child>" --json` 获得唯一物理名。
-   默认物理名中间的 `child` 是固定字面量；例如 `medal/view-model` 映射为
-   `medal-child-view-model`，`medal/top-bar` 映射为 `medal-child-top-bar`。
-   每段只使用小写字母、数字和单连字符，并允许数字开头。只有冲突时工具才追加逻辑引用
-   SHA-256 的前 8 位；agent 不得自行编造后缀。
-3. 使用官方 `openspec new change "<physical>" --schema falla-task-driven --json` 创建 change。
-4. 用官方 instructions 创建子 change 的 `tasks.md` 和 `comate.md`。
-5. `depends-on` 与 `blocks` 使用逻辑名，并保持双向一致。
-6. 执行 `falla-openspec coordination validate --change "<parent>" --json`。
+1. 每个交付单元使用恰好两段的逻辑名 `<parent>/<child>`。
+2. 用 `coordination register` 获取物理名，禁止自行拼接冲突后缀。
+3. 使用官方 CLI 创建 `falla-task-driven` change，并生成 tasks/comate。
+4. 子 change 只保存自己的具体任务；父 tasks 只保存协调里程碑和子 change 引用，不复制子任务清单。
+5. 子 `comate.md` 只保存 `depends-on`；`blocks` 由协调器反向推导，不再人工维护。
+6. 根页面/XML 只能有一个明确责任方。
+7. 执行 `coordination validate`，确认节点存在、依赖无环且前置状态有效。
 
-如果官方 change 创建失败，停止并检查返回的物理 change 是否已经落盘。只有物理 change
-完全不存在时，才可显式运行
-`falla-openspec coordination unregister "<parent>/<child>" --json` 清理本次孤儿映射；
-物理 change 已存在时不得移除映射、删除文件或伪造成功。
+创建官方 change 失败时，只有确认物理目录完全不存在，才可 unregister 本次孤儿映射。
 
-## 4. 完成标准
+## 6. 完成标准
 
-- 父 change 的 proposal、specs、design、tasks、comate 全部由官方 status 判定 done。
-- single 模式不创建子 change 或 coordination 映射。
-- parallel 模式的所有子 change 都是 OpenSpec 顶层物理 change，并能通过逻辑名解析；每个子
-  change 至少有 `.openspec.yaml`、`tasks.md` 和 `comate.md`，DAG 无缺失节点、非对称边或环。
-- 无实现模块伪装成业务规格。
+- 父 proposal、specs（或 skipped）、design、tasks、comate 均由官方 status 判定完成。
+- single 不存在子映射；parallel 至少存在一个合法子映射。
+- 所有任务范围、依赖和验证方式明确，无实现模块伪装成业务规格。
+- 本阶段不修改业务代码。

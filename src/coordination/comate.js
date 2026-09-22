@@ -7,6 +7,7 @@ const VALIDATION_MODES = new Set(['hybrid', 'human', 'agent']);
 const HUMAN_REVIEW_STATUSES = new Set(['pending', 'passed', 'failed', 'not-required']);
 
 const FIELDS = {
+  formatVersion: /^- 格式版本 \(format-version\):[ \t]*(.*)$/gm,
   executionMode: /^- 执行模式 \(execution-mode\):[ \t]*(.*)$/gm,
   validationMode: /^- 验证模式 \(validation-mode\):[ \t]*(.*)$/gm,
   humanReview: /^- 人工验证状态 \(human-review\):[ \t]*(.*)$/gm,
@@ -55,6 +56,30 @@ function hasMeaningfulHandoff(value) {
   });
 }
 
+function handoffFieldHasValue(value, field) {
+  const lines = String(value).split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(\s*)[-*]\s+([^:：]+)[:：][ \t]*(.*)$/);
+    if (!match || match[2].trim() !== field) continue;
+    if (match[3].trim()) return true;
+    const indent = match[1].length;
+    for (let nested = index + 1; nested < lines.length; nested += 1) {
+      const candidate = lines[nested];
+      if (!candidate.trim()) continue;
+      const child = candidate.match(/^(\s*)[-*]\s+([^:：]+)[:：][ \t]*(.*)$/);
+      if (child && child[1].length <= indent) break;
+      const content = candidate.trim().replace(/^[-*]\s+/, '').trim();
+      const label = content.match(/^[^:：]+[:：][ \t]*(.*)$/);
+      if (content && (!label || label[1].trim())) return true;
+    }
+  }
+  return false;
+}
+
+const REQUIRED_DONE_HANDOFF_FIELDS = [
+  '已完成', '注释审计', '验证证据', '生命周期结论', '安全与敏感信息结论', '遗留风险与恢复条件',
+];
+
 function assertChangeReference(reference, source) {
   if (reference.includes('/')) return parseLogicalReference(reference).logical;
   return assertChangeSegment(reference, source);
@@ -81,6 +106,11 @@ export function parseComate(markdown, source = 'comate.md') {
   if (typeof markdown !== 'string' || Buffer.byteLength(markdown) > MAX_COMATE_BYTES) {
     throw new FallaError(1, `${source} 无效或超过 256 KiB 限制`);
   }
+  const formatVersionRaw = readOptionalSingleField(markdown, 'format-version', FIELDS.formatVersion, source);
+  const formatVersion = formatVersionRaw === null ? null : Number(formatVersionRaw);
+  if (formatVersionRaw !== null && formatVersionRaw !== '2') {
+    throw new FallaError(1, `${source} 的 format-version 无效`);
+  }
   const executionMode = readOptionalSingleField(
     markdown,
     'execution-mode',
@@ -102,7 +132,7 @@ export function parseComate(markdown, source = 'comate.md') {
   const owner = readSingleField(markdown, 'owner', FIELDS.owner, source);
   const status = readSingleField(markdown, 'status', FIELDS.status, source);
   const dependsOnRaw = readSingleField(markdown, 'depends-on', FIELDS.dependsOn, source);
-  const blocksRaw = readSingleField(markdown, 'blocks', FIELDS.blocks, source);
+  const blocksRaw = readOptionalSingleField(markdown, 'blocks', FIELDS.blocks, source);
   const handoff = readMultilineField(markdown, 'handoff', FIELDS.handoff, source);
 
   if (!owner) throw new FallaError(1, `${source} 的 owner 不能为空`);
@@ -127,13 +157,15 @@ export function parseComate(markdown, source = 'comate.md') {
   }
 
   return {
+    ...(formatVersion === null ? {} : { formatVersion }),
     ...(executionMode === null ? {} : { executionMode }),
     ...(validationMode === null ? {} : { validationMode }),
     ...(humanReview === null ? {} : { humanReview }),
     owner,
     status,
     dependsOn: parseReferenceList(dependsOnRaw, `${source}.depends-on`),
-    blocks: parseReferenceList(blocksRaw, `${source}.blocks`),
+    // blocks 是旧版兼容字段。反向依赖由 depends-on 推导，不再作为事实源。
+    ...(blocksRaw === null ? {} : { blocks: parseReferenceList(blocksRaw, `${source}.blocks`) }),
     handoff,
   };
 }
@@ -167,6 +199,21 @@ export function validateComateRecord(record, { pendingTasks }) {
   if (record.status === 'done' && ['hybrid', 'human'].includes(record.validationMode)
     && record.humanReview !== 'passed') {
     issues.push({ kind: 'human-review-required' });
+  }
+  if (record.formatVersion === 2) {
+    if (!record.validationMode) issues.push({ kind: 'validation-mode-required' });
+    if (record.blocks !== undefined) issues.push({ kind: 'deprecated-blocks-field' });
+    if (record.status === 'done') {
+      const missing = REQUIRED_DONE_HANDOFF_FIELDS.filter(
+        field => !handoffFieldHasValue(record.handoff, field)
+      );
+      if (missing.length > 0) issues.push({ kind: 'done-handoff-incomplete', fields: missing });
+      if (['hybrid', 'human'].includes(record.validationMode)
+        && record.humanReview === 'passed'
+        && !handoffFieldHasValue(record.handoff, '人工验证反馈')) {
+        issues.push({ kind: 'human-review-evidence-required' });
+      }
+    }
   }
   return issues;
 }

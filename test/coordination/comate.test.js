@@ -141,3 +141,45 @@ test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbo
     pending: 2,
   });
 });
+
+test('新 comate 可省略 blocks，旧 blocks 仅作为兼容字段读取', () => {
+  const withoutBlocks = valid.replace('- 被依赖 (blocks): [medal/page-integration]\n', '');
+  assert.equal(parseComate(withoutBlocks).blocks, undefined);
+  assert.deepEqual(parseComate(valid).blocks, ['medal/page-integration']);
+});
+
+
+test('v2 comate 将结构化完成证据下沉为机器门禁', () => {
+  const complete = `# comate
+
+- 格式版本 (format-version): 2
+- 负责人 (owner): alice
+- 状态 (status): done
+- 验证模式 (validation-mode): hybrid
+- 人工验证状态 (human-review): passed
+- 依赖 (depends-on): []
+- 交接 (handoff):
+  - 已完成：实现与验证完成
+  - 注释审计：已检查变更符号
+  - 人工验证反馈：reviewer 于 2026-09-22 验证通过
+  - 验证证据：npm test 通过
+  - 生命周期结论：无泄漏和销毁后更新
+  - 安全与敏感信息结论：无敏感信息输出
+  - 遗留风险与恢复条件：无
+`;
+  assert.deepEqual(validateComateRecord(parseComate(complete), { pendingTasks: 0 }), []);
+
+  const incomplete = complete.replace('  - 安全与敏感信息结论：无敏感信息输出\n', '  - 安全与敏感信息结论：\n');
+  assert.deepEqual(
+    validateComateRecord(parseComate(incomplete), { pendingTasks: 0 })
+      .map(({ kind }) => kind),
+    ['done-handoff-incomplete']
+  );
+
+  const deprecated = complete.replace('- 依赖 (depends-on): []\n', '- 依赖 (depends-on): []\n- 被依赖 (blocks): []\n');
+  assert.equal(
+    validateComateRecord(parseComate(deprecated), { pendingTasks: 0 })
+      .some(({ kind }) => kind === 'deprecated-blocks-field'),
+    true
+  );
+});

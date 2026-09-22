@@ -7,12 +7,9 @@ artifacts:
     description: PRD 实现状态、边界、异常与兼容性分析
     template: preflight.md
     instruction: |
-      完整读取 PRD，并用当前代码、接口、模型或测试证据核实现状。
-      默认禁止读取 git log/show/blame/reflog/rev-list 等提交历史；只有用户明确要求分析变更沿革、
-      回归来源或具体提交时，才可对相关路径执行一次有界批量查询，不得重复或全仓扫描。
-      分别检查 Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps。
-      每个问题标明 Missing Definition、Conflict、Implementation Risk 或 Decision Required，
-      并给出 Blocker、Major 或 Minor 阻塞级别。此阶段不得创建其他 artifact 或修改业务代码。
+      记录当前实现证据、Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps
+      以及 Missing Definition、Conflict、Implementation Risk、Decision Required。每项问题标明
+      Blocker、Major 或 Minor 及其实际阻断范围。本 artifact 不包含方案设计或代码修改。
     requires: []
 
   - id: proposal
@@ -20,10 +17,8 @@ artifacts:
     description: 说明变更动机、范围和业务能力
     template: proposal.md
     instruction: |
-      基于 preflight 创建精简提案。能力必须是用户可观察、可测试的业务行为，
-      不得把 UI、ViewModel、控件或接口层等实现模块写成能力规格。
-      纯重构、工具或文档变更且没有规格级行为变化时，必须在 `.openspec.yaml`
-      显式设置 `skip_specs: true`，不得创建虚假的空能力或 requirement。
+      基于 preflight 说明为什么改、改什么和影响范围。能力必须是用户可观察、可测试的业务行为，
+      不得把 View、ViewModel、控件或接口层写成能力。无规格级行为变化时设置 `skip_specs: true`。
     requires:
       - preflight
 
@@ -32,77 +27,45 @@ artifacts:
     description: 用户可观察行为的 delta specs
     template: spec.md
     instruction: |
-      为 proposal 中每项新增或修改能力创建 delta spec。
-      使用 ADDED、MODIFIED、REMOVED、RENAMED Requirements 标题；
-      每项 Requirement 至少包含一个使用四级标题的 Scenario，并使用 WHEN/THEN。
-      修改既有能力前读取 openspec/specs 中的完整原需求。
-      若 change 已设置 `skip_specs: true`，官方 status 会把本 artifact 标为 skipped，
-      此时不得创建 specs 文件。
+      为 proposal 中的能力变化创建 delta spec。使用 ADDED、MODIFIED、REMOVED、RENAMED Requirements；
+      每项 Requirement 至少包含一个四级标题 Scenario，并使用 WHEN/THEN。修改前读取完整原需求。
+      `skip_specs: true` 时不得创建 specs 文件。
     requires:
       - proposal
 
   - id: design
     generates: design.md
-    description: 技术方案、MVVM 边界和 UI 人工校准计划
+    description: 技术方案、实现基线和人工校准计划
     template: design.md
     instruction: |
-      说明上下文、目标、非目标、决策、替代方案、风险、迁移和开放问题。若项目存在
-      `.falla/project-rules/`，按文件名排序读取其顶层普通 `.md` 文件，再筛选当前需求适用规则，
-      并在 design 记录 Rule ID、级别、适用对象、落地方式和例外；`index.md` 仅作可选导航，
-      不得依赖 RAG 召回项目强制规则。
-      新建或重构页面时，先核对当前项目的同类实现和可复用组件，并明确“页面实现结构基线”：
-      页面承载方式、文件归属、
-      导航入口、ViewModel 作用域，以及 XML / Compose 的根节点、层级、滚动与状态容器、组件复用、
-      Insets 和生命周期所有者；XML 需给出简明节点树。无法确定的结构问题必须保留为开放问题。
-      design 引用 UI Knowledge 或现有源码方案时，必须按实现对象记录 required、preferred 或
-      reference-only，以及选定类/基类/API、禁止替代和例外处理。引用本身不自动成为 required；
-      required 必须经过当前源码验证，偏离时先返回 design 更新决策。为当前 change 新增或实质修改
-      的类、方法、参数、状态字段、资源所有者、非直观常量和复杂 Lambda 建立注释与可维护性契约，
-      逐项说明要求和豁免。页面级变更再按 MVVM 划分 View 与 ViewModel；UI 再按可独立交付控件拆分。
-      明确 Android UI 的自动验证项与人工校准项，
-      记录具体视觉细节，不以固定百分比代替验收。
+      记录上下文、目标/非目标、页面实现结构基线、项目规则绑定、required/preferred/reference-only
+      实现基线、注释与可维护性契约、MVVM/组件边界、关键决策、生命周期、安全、风险、迁移和开放问题。
+      无法确定结构基线或 required 决策时保留开放问题，不生成可直接实施的下游任务。
     requires:
       - proposal
 
   - id: tasks
     generates: tasks.md
-    description: 可验证且体现依赖拓扑的任务清单
+    description: 当前父 change 的具体实施与验证任务
     template: tasks.md
     instruction: |
-      使用 `- [ ] X.Y` checkbox 格式拆分任务，并显式记录每项任务的允许编辑范围和前置依赖。
-      验证模式默认 hybrid：Agent 执行 formatter、lint、单元测试、编译和静态检查，人工执行真机、
-      真实服务端联调和视觉验收。只有用户明确要求时才改为 human 或 agent；所有 `[人工]` 项写明
-      前置条件、操作步骤、预期结果、variant/设备和服务端依赖，Agent 不执行或代填。
-      tasks 只覆盖当前已确认需求；必须包含 Agent 注释审计任务，根据当前 diff 生成变更符号清单，
-      核对类、方法、每个参数、状态字段、生命周期、非直观常量和复杂 Lambda，豁免记录原因。
-      不得把代码检索、知识条目、lint 或测试发现的无关问题加入重构、
-      迁移、升级、清理或告警修复任务。必须扩大范围时先更新 design/tasks 或请求用户确认。
-      每项任务必须能在一次独立实施上下文内完成定位、修改、验证和交接，并写明必要输入、
-      允许编辑范围、完成条件和前置依赖；跨度过大时继续拆 task。新建或重构页面时，任务顺序
-      必须是“结构基线复核与最小可编译骨架 → MVVM 契约 → 独立 UI 控件 → 组装和联调”；
-      结构基线不明确时不得生成可直接实施的下游任务。tasks 必须把 design 绑定的 required 项目
-      规则转成前置条件和完成检查，并把 required 实现
-      基线转成前置条件和完成检查，包括实际继承关系、组件、资源和关键 API；lint 或局部优化不能
-      作为替换 required 基线的理由。parallel 模式必须指定根页面/XML 的唯一修改责任，依赖根结构或页面契约的子 change 必须
-      等待相应前置任务完成。
-      执行模式默认是 single：所有任务保留在父 change 中，不能仅因任务分组或理论上可并行就
-      创建子 change。只有用户明确要求多人/多 agent 并行、创建子 change 或独立分派时，才使用
-      parallel，并在 propose 阶段创建子 change；apply 阶段不得重新拆分或切换模式。
+      使用 checkbox 记录当前 change 的实际任务、输入、允许编辑范围、完成条件和前置依赖。
+      任务应能在一次独立实施上下文内完成。只添加当前需求实际需要的实施、自动验证和 `[人工]`
+      验证项，不预填通用合规清单，不重复保存执行模式或验证模式。parallel 模式下父 tasks 只记录
+      协调里程碑和子 change 引用，不复制子任务清单。
     requires:
       - specs
       - design
 
   - id: comate
     generates: comate.md
-    description: 父 change 的责任、依赖、状态和交接台账
+    description: 父 change 的唯一协作状态台账
     template: comate.md
     instruction: |
-      建立父 change 协作台账并记录 execution-mode、validation-mode 和 human-review。
-      owner、status、depends-on、blocks、handoff
-      必须完整。handoff 作为可恢复的滚动检查点，记录当前任务、关键决策、设计基线与项目规则
-      符合性、修改文件、验证结果、
-      下一步和风险，不追加流水账或敏感正文。single 模式直接跟踪父 change；parallel 模式汇总
-      子 change，依赖边必须双向一致且不能形成环。父 change 完成前全部子 change 必须完成或有明确交接。
+      保存 format-version: 2、execution-mode、validation-mode、human-review、owner、status、depends-on 和 handoff。
+      tasks 不重复保存模式；反向 blocks 由 depends-on 推导，不落盘。handoff 是滚动检查点，done 时
+      必须完整填写已完成、注释审计、验证证据、生命周期结论、安全结论和遗留风险；hybrid/human
+      还必须填写人工验证反馈。parallel 父记录只保存整体决策，不复制子 handoff。
     requires:
       - tasks
 
@@ -110,27 +73,8 @@ apply:
   requires: [comate]
   tracks: tasks.md
   instruction: |
-    读取官方 contextFiles 和 Falla 协作上下文。先从当前 task、design 和用户确认内容建立范围锁，
-    只修改当前需求必需内容；不得顺带重构、迁移、升级、统一风格或修复无关问题。必须扩大范围时
-    返回 propose 更新 artifacts 或请求用户确认。single 模式直接实施父 change；parallel 模式
-    按已有子 change DAG 实施。按拓扑逐项执行并在验证成功后更新任务，不得在 apply 阶段创建、
-    拆分子 change 或切换执行模式。新建或重构页面时先复核 design 的页面实现结构基线；缺失、
-    与当前源码冲突或根页面/XML 修改责任不明确时暂停并返回 propose 修正。实施前提取 design 的
-    required/preferred/reference-only 基线；若存在 `.falla/project-rules/`，按文件名排序读取顶层
-    普通 `.md` 文件，与 design 绑定交叉核对并将 required 项目规则作为硬约束。required 不得被 lint、
-    性能微优化或个人偏好替换，偏离时
-    必须在修改代码前返回 propose。完成任务前核对实际继承关系、组件、资源、关键 API 和项目规则
-    符合性，并在 handoff 记录 Rule ID 与证据。
-    Android XML 必须按属性逐行、层级缩进的纵向格式排版；
-    根据当前 diff 生成变更符号清单并完成注释审计。类说明职责和边界；方法说明用途、关键分支、
-    副作用和原因；每个参数说明业务含义、单位/范围、可空性、所有权或回调时机；必要时补充返回值、
-    异常、线程和生命周期约束。状态缓存、回调抑制、资源所有者和非直观常量说明用途或来源。复杂
-    Lambda 提取命名方法或说明参数；公共/受保护方法使用 KDoc/JavaDoc，方法参数使用 `@param`。
-    含自定义状态、资源或生命周期逻辑的 override 不得豁免。
-    只格式化当前 change 触及的文件。hybrid 模式下 Agent 执行 formatter、lint、单元测试、编译和
-    静态检查，不执行真机、真实服务端
-    联调或视觉验收；human 模式只输出人工清单，agent 模式执行工具可完成的验证。人工明确反馈后
-    同步 `[人工]` tasks 与 human-review，全部通过才允许 done。
-    在分析、跨文件修改和验证等稳定边界更新 comate 的滚动检查点；上下文压缩或重新进入任务后，
-    重新读取官方状态、artifacts、comate、git diff 和相关源码，不依赖对话记忆继续。
-    遇到不明确、设计冲突或阻塞时暂停并更新 comate.md。
+    只执行 tasks 中的当前任务，并遵守已加载的 Soul 与 Apply 阶段规则。执行模式、验证模式和协作状态
+    只从 comate 读取。single 实施父 change；parallel 只实施 propose 已创建的逻辑子 change。
+    修改前复核当前任务引用的 design 基线。一次只推进一个 ready task；完成条件与最小验证满足后
+    立即勾选对应 checkbox 并更新结构化 handoff，禁止累计到多个 task 完成后批量更新。未完成或验证
+    失败时不得勾选。规划冲突时返回 propose。

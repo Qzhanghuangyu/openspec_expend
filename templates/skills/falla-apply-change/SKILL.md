@@ -5,105 +5,49 @@ description: Use when implementing or continuing an existing Android Falla paren
 
 # Falla Apply Change
 
-只实施 propose 阶段已经建立的 change，并让官方 OpenSpec 状态与 Falla 协作状态保持一致。
+只实施 propose 已建立的父 change 或逻辑子 change。
 
-## 开始前
+## 权威规则
 
-1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
-   `.falla/skill-spec/[模块选读]apply.md`；缺失时停止。
-   apply 阶段不读取 preflight、propose 或 archive 阶段文档，也不重新执行这些阶段。
-   按 Soul 的索引准备规则执行本阶段 CodeGraph prepare；运行 `falla-openspec doctor --json` 并按分组
-   判断安装与当前任务的错误，知识或图谱失败按对应降级规则处理。
-2. 读取父 `tasks.md` / `comate.md` 中的执行模式；缺失时先检查 `.falla/coordination.yaml`：已有当前父 change 的映射则沿用 `parallel`，否则按 `single` 处理；不得自行升级。
-   - single：直接实施父 change，不创建子 change，不调用映射或 DAG 命令；认领仍使用 claim。
-   - parallel：只实施 propose 阶段已经创建的子 change。逻辑 `<parent>/<child>` 先解析为物理名：
+执行前确认已加载：
 
-     ```bash
-     falla-openspec coordination resolve "<parent>/<child>" --json
-     falla-openspec coordination validate --change "<parent>" --json
-     ```
+- `.falla/skill-spec/[Must Read]soul.md`
+- `.falla/skill-spec/[模块选读]apply.md`
 
-3. parallel 模式下，上游依赖未 done、映射异常或 DAG 校验失败时停止，不绕过。阶段中收到或继续依赖
-   设计稿链接时执行 Soul 的 MCP 门禁：Figma 链接只用 Figma MCP 读取，禁止用浏览器降级，
-   调用 `get_design_context` 时必须显式传 `excludeScreenshot=true`；禁止调用 `get_screenshot`，也禁止向当前模型发送截图或截图 URL。排除截图后无法确认的视觉细节必须进入人工校准。
-   并核对当前节点，不能把早期截图或缓存当作最新设计。
-4. 使用物理名读取官方事实：
+运行环境已经通过 Hook 注入时不要重复读取；未注入或无法确认时再读取。缺失任一文件即停止。
+通用工具、安全、生命周期、范围锁、项目规则和实现质量要求统一以 Soul 为准。
+
+## 编排
+
+1. 从父 `comate.md` 读取唯一执行模式；parallel 使用逻辑子 change，single 使用父 change。
+2. parallel 先解析目标；只有需要整体拓扑报告时执行定向校验：
+
+   ```bash
+   falla-openspec coordination resolve "<parent>/<child>" --json
+   falla-openspec coordination validate --change "<parent>" --json
+   ```
+
+3. 使用物理名读取官方事实：
 
    ```bash
    openspec status --change "<physical>" --json
    openspec instructions apply --change "<physical>" --json
    ```
 
-   按 instructions 的状态处理：`blocked` 时报告缺失项和恢复条件，不认领或修改业务代码；
-   `all_done` 时不重复实施，只核对验证和交接；只有 `ready` 才继续认领。
-5. `ready` 时执行 `falla-openspec coordination claim "<change>" --owner "<id>" --json`，single 使用父名，
-   parallel 使用逻辑子名。沿用当前已约定身份；认领冲突时停止，不直接改 owner 绕过。已 blocked
-   的任务须先明确解除原因，不用 claim 自动重启。
+4. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：
 
-## 实施
+   ```bash
+   falla-openspec coordination claim "<change>" --owner "<id>" --json
+   ```
 
-- 读取官方 `contextFiles` 和 `context`；single 模式直接使用父 change；parallel 模式的子 change
-  还需读取父 change 规划 artifact，不复制它们。读取 tasks 的验证模式；缺失时按 hybrid 处理，
-  不得自行切换模式。
-- 从当前 task、design 和用户确认内容建立范围锁，只修改完成当前需求所必需的文件、符号、资源和
-  测试。不得顺带重构、抽象、重命名、迁移资源、升级依赖、替换架构、统一风格或修复无关告警。
-  UI Knowledge、项目规则、CodeGraph、lint 和测试发现的既有问题只记录风险，不自动整改。若必须扩大
-  范围，先返回 propose 更新 design/tasks 或请求用户确认；只可直接修复当前改动造成的问题。
-- 逐条考虑 `operationGuidance` 中适用且不冲突的建议；它不能覆盖官方状态、允许编辑路径、
-  Falla 门禁或用户明确选择，也不得把 context/guidance 原文复制到代码、日志或报告。
-- 如果存在 `.falla/project-rules/`，必须按文件名排序读取其顶层普通 `.md` 文件，判断当前任务适用
-  规则并与 design 绑定交叉核对；`index.md` 仅作可选导航，项目规则不依赖 RAG 召回。适用的
-  required 规则未绑定到 design 时先返回 propose；required 必须遵守，preferred 偏离时记录原因，
-  reference-only 只参考；需要偏离 required 时，在修改代码前暂停并返回 propose 记录例外。
-- 实施前从 design 提取已确认实现基线：实现对象、Knowledge/源码证据、约束级别、选定类/基类/API、
-  禁止替代和例外处理。required 必须遵守；preferred 偏离时记录原因；reference-only 只参考。design
-  已绑定具体知识条目时必须读取该条目和当前源码证据。lint、性能微优化、个人偏好或通用最佳实践
-  不能覆盖 required；认为必须偏离时，在修改代码前暂停并返回 propose 更新 design。
-- 新建或重构页面时，先核对父 design 的页面实现结构基线，包括页面承载方式、文件归属、
-  XML / Compose 节点结构、状态容器、ViewModel 作用域和生命周期所有者。缺失、与当前源码冲突或
-  根页面/XML 修改责任不明确时暂停并返回 propose 修正。
-- 不依赖对话记忆维持长任务状态。完成分析、开始跨文件修改、完成一组修改、开始耗时验证、
-  获得验证结果或即将暂停时，将当前任务、关键决策、修改文件、验证结论、下一步和风险写入当前
-  change 的 handoff 滚动检查点；不追加流水账，不复制大段源码或敏感正文。
-- 上下文压缩或重新进入任务后，依次读取官方 status/instructions、tasks、design、comate、
-  `git status --short` 和相关 diff，再用 CodeGraph 复核。当前源码与官方状态优先于 artifacts、
-  handoff 和对话记忆；parallel 执行者只更新自己的子 change comate。
-- task 已给出准确类、方法、路径、资源或 API 时，先用有界 `rg`/直接读取；不知道实现入口，或需要
-  调用链、继承实现、动态分派、生命周期、影响面和受影响测试时使用 CodeGraph。修改公共或跨模块
-  符号前必须用 CodeGraph 检查影响面；不机械地同时调用两种工具。
-- hybrid 模式下执行 formatter、lint、单元测试、编译和静态检查，不执行真机、真实服务端联调或
-  视觉验收；human 模式只整理清单，agent 模式执行工具可完成的验证。实施完成后整理 `[人工]` 验收
-  清单，包含前置条件、操作步骤、预期结果、variant/设备、服务端依赖和风险。`[人工]` task 只能依据
-  人工明确反馈勾选；等待期间保持 in-progress 和 human-review=pending，失败为 failed，全部通过才为 passed。
-- 只做当前 change 的最小改动；完成一项实施或同步一项人工结果后才勾选对应 task。
-- UI 实施前运行 `falla-openspec ui-knowledge validate --json`，只从通过检查的条目中检索当前项目
-  `.falla/ui-knowledge/` 的组件和页面模式；RAG 候选必须通过当前项目
-  CodeGraph 再次验证源码符号、调用关系和影响面，并核对依赖、资源、API、生命周期和验证日期。
-  禁止跨项目召回；知识库不存在、未命中或验证失效时继续核对当前代码，不得虚构可复用组件。
-- UI 实施保留需要人工校准的视觉项，并写入 handoff。普通实施不得顺带批量生成知识库；只有当前
-  tasks 明确包含知识沉淀时，才能按模板新增或更新条目。
-- 先核对当前项目的格式和注释惯例，只格式化当前 change 触及的文件。Android XML 必须纵向分层：
-  声明独占一行、标签属性逐行、子节点缩进、闭合标签对齐；禁止把标签和多个属性压成单行。
-- 根据当前 diff 生成变更符号清单，覆盖新增或实质修改的类、方法、参数、状态字段、资源所有者、
-  非直观常量和复杂 Lambda，并逐项审计注释。类说明职责与边界；方法说明用途、关键分支、副作用和
-  原因；参数逐项说明业务含义、单位/范围、可空性、所有权或回调时机；必要时说明返回值、异常、线程
-  和生命周期。公共 API 使用 KDoc/JavaDoc 的 `@property`、`@param` 等。含自定义状态、资源或生命周期
-  逻辑的 override 不得豁免；简单无副作用 override/getter/setter/委托可豁免但记录原因。复杂 Lambda
-  应提取命名方法或说明参数语义；不写噪声注释，不复制 PRD、guidance、凭据或敏感正文。
-- hybrid/agent 模式完成自动检查前，对已知继承声明、组件、资源和关键 API 使用有界 `rg` 精确检查；需要真实
-  调用方、间接实现或影响面时使用 CodeGraph。结果必须与 design 的 required 基线一致，并检查实际
-  diff 符合绑定的 required 项目规则；随后执行最小 formatter、lint、资源编译或等价检查。human
-  模式把这些检查转为人工清单，不自行执行或宣称通过。
-- 不明确、设计冲突或执行错误时暂停，把 comate 改为 blocked 并记录原因、进度、下一步。
-- hybrid/human 模式只有 human-review=passed 且全部 `[人工]` task 有明确反馈后才标记 done；
-  hybrid/agent 模式还要求自动化验证通过。仅 parallel 模式重新运行 coordination validate。
-- 检查空值/NPE、异步与观察者生命周期、销毁后 UI 更新和敏感日志风险。
+   claim 会在项目锁内重新检查官方状态和依赖；不得绕过该复核。
+5. 按阶段规则执行“单任务原子循环”：一次只处理一个 ready task；完成条件与最小验证满足后立即
+   勾选该 checkbox 并更新 `comate.md` handoff，禁止累计多个 task 后批量勾选。验证模式只从当前
+   `comate.md` 读取。
+6. task 未完成或验证失败时不得勾选；先把进度、失败证据和恢复条件写入 handoff，再暂停或继续修复。
+7. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
+8. 完成前运行阶段规则要求的定向门禁；parallel 再运行 coordination validate。
 
-## 防止阶段错位
+## 边界
 
-- `falla-preflight`、`falla-propose`、`falla-apply-change`、`falla-archive-change` 是
-  Agent Skill 名称，不是 Shell 命令；不得在终端执行它们。
-- change/artifact 操作使用官方 `openspec ...`；所有模式都用 Falla claim 认领。parallel 才使用
-  coordination register/resolve/validate；apply 不执行 register。
-- apply 不创建子 change，也不把 single 模式改成 parallel。
-- 依赖未完成时停在 apply 并更新当前 comate，不回退重建 preflight/proposal，也不提前归档。
+不得创建或拆分 change，不得切换执行/验证模式，不得自动 archive、commit、push、merge 或 rebase。

@@ -98,7 +98,11 @@ async function readRecord(root, reference, officialStatus, errors) {
   }
   const tasks = parseTaskProgress(tasksMarkdown);
   for (const localIssue of validateComateRecord(comate, { pendingTasks: tasks.pending })) {
-    errors.push(issue(localIssue.kind, reference, undefined, localIssue.count));
+    const { kind, count, ...details } = localIssue;
+    errors.push({
+      ...issue(kind, reference, undefined, count),
+      ...(Object.keys(details).length > 0 ? { details } : {}),
+    });
   }
   if (comate.status === 'done' && officialStatus?.isPlanningComplete === false) {
     errors.push(issue('artifacts-incomplete', reference));

@@ -98,7 +98,7 @@ Hook 和 marker。
 - 任务较多、存在 MVVM 分层或理论上可并行，不足以自动切换为 `parallel`。
 - 重跑旧 change 时，如果 `.falla/coordination.yaml` 已存在该父 change 的映射，则继续按
   `parallel` 处理，避免既有父子 change 生命周期失配。
-- 执行模式由 propose 决定；apply 不得创建子 change 或切换模式。
+- 执行模式由 propose 决定并只写入父 `comate.md`；`tasks.md` 不重复保存。apply 不得创建子 change 或切换模式。
 
 更新后执行：
 
@@ -231,3 +231,12 @@ owner 使用 1–64 位字母、数字或 ._@-，不放凭据。命令核对官�
 - 更新完成后重新创建 Agent 会话。
 - 写入阶段会复核计划时文件哈希，但不提供跨文件事务；中途中断时保留现状，重跑相同版本 install
   并检查 doctor，不删除 manifest 或绕过漂移保护。最终核对与文件替换间仍有极短的外部编辑竞争窗口。
+
+
+### 工作流事实源迁移
+
+2026-09-22 起，新模板使用 `format-version: 2`，只在父 `comate.md` 保存 execution-mode，并在各 change 的 `comate.md` 保存
+validation-mode。`tasks.md` 只保存任务进度；新 comate 只写 `depends-on`，反向 blocks 由协调器推导。
+旧 change 中已有的 `blocks` 字段仍可读取但不再参与 DAG 判定。更新模板不会自动改写已有 change；
+继续实施旧 change 时应先把模式字段归并到 comate，并补全 done handoff 的注释审计、验证证据、
+生命周期、安全和遗留风险结论。

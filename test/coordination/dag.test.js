@@ -33,7 +33,7 @@ async function createGraph(nodes) {
   return root;
 }
 
-test('双向无环依赖返回可开始节点', async () => {
+test('单向依赖可推导反向关系并返回可开始节点', async () => {
   const root = await createGraph([
     {
       name: 'view-model', status: 'done', dependsOn: [], blocks: ['medal/list-card'],
@@ -49,7 +49,7 @@ test('双向无环依赖返回可开始节点', async () => {
   assert.deepEqual(report.errors, []);
 });
 
-test('发现非对称依赖和不存在的节点', async () => {
+test('忽略旧 blocks 字段并发现不存在的依赖节点', async () => {
   const root = await createGraph([
     {
       name: 'list-card', status: 'todo', dependsOn: ['medal/missing'], blocks: [],

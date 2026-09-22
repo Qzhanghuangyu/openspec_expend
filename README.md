@@ -14,6 +14,22 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 - 当前支持 OpenSpec `>=1.12.0 <1.13.0`，契约测试固定使用 `1.12.0`。
 - 安装不提供 `--force`，遇到用户修改或受管内容漂移会停止。
 
+## 职责与事实源
+
+| 内容 | 唯一事实源 |
+| --- | --- |
+| artifact 规划和生命周期 | 官方 OpenSpec status / instructions |
+| 实施任务及完成进度 | `tasks.md` checkbox |
+| 父 change 执行模式 | 父 `comate.md` 的 `execution-mode` |
+| 验证模式、人工验收、owner、阻塞与交接 | 当前 change 的 `comate.md` |
+| 子 change 正向依赖 | 子 `comate.md` 的 `depends-on` |
+| 逻辑名到物理名 | `.falla/coordination.yaml` |
+
+新 `comate.md` 使用 `format-version: 2`。`tasks.md` 不重复保存执行模式或验证模式；`blocks` 由 `depends-on` 反向推导，不再写入新 comate。
+Apply 一次只推进一个 ready task；该 task 完成并通过最小验证后立即勾选 checkbox、更新 handoff，再进入
+下一项，禁止把多个 task 的状态累计到最后批量更新。Soul 定义跨阶段规则，阶段文档定义阶段决策，
+Skill 只编排命令，Schema instruction 只约束对应 artifact，模板只提供结构。
+
 ## 初始化与更新
 
 完整操作说明见 [`docs/installation-and-update.md`](docs/installation-and-update.md)，包含首次初始化、
@@ -129,9 +145,9 @@ falla-openspec coordination unregister "medal/achievement-detail" --json
 
 物理 change 已存在时 unregister 会拒绝，不会删除任何 change 文件。
 
-映射只保存在 `.falla/coordination.yaml`。负责人、状态、依赖和交接仍以各 change 的
-`comate.md` 为唯一事实来源；`coordination validate` 检查依赖对称性、缺失节点、环、前置状态、
-tasks 完成度和 OpenSpec artifact 状态。
+映射只保存在 `.falla/coordination.yaml`。负责人、状态、正向依赖和交接以各 change 的
+`comate.md` 为唯一事实来源；反向 blocks 由正向依赖推导。`coordination validate` 检查缺失节点、环、
+前置状态、tasks 完成度、结构化 handoff 和 OpenSpec artifact 状态。
 
 ## OpenSpec 1.12 兼容
 

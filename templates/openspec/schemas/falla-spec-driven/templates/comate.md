@@ -1,12 +1,12 @@
 # comate
 
+- 格式版本 (format-version): 2
 - 执行模式 (execution-mode): single
 - 负责人 (owner): unassigned
 - 状态 (status): todo
 - 验证模式 (validation-mode): hybrid
 - 人工验证状态 (human-review): pending
 - 依赖 (depends-on): []
-- 被依赖 (blocks): []
 - 交接 (handoff):
   - 当前任务：
   - 已确认事实与关键决策：

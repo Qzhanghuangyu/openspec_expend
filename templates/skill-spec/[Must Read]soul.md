@@ -28,7 +28,18 @@ validate、spec 同步和 archive。Falla 不复制这些实现，只补充 Andr
 
 `preflight → proposal → specs → design → tasks → comate → apply → archive`
 
-所有业务规格和 change 位于 `openspec/`；`.falla/skill-spec/` 只保存工作流规则。
+所有业务规格位于 `openspec/specs/`，change 位于 `openspec/changes/`；`.falla/skill-spec/` 只保存工作流规则。
+
+### 1.1 权威职责与事实源
+
+- Soul 只定义跨阶段不变量；阶段细节由对应 `[阶段必读]` 文档定义。Skill 只负责编排命令，
+  Schema instruction 只约束单个 artifact，模板只提供结构。相同政策不得在这些层手工复制。
+- 官方 OpenSpec status/instructions 是规划和 artifact 生命周期事实源。
+- `tasks.md` 是实施任务与 checkbox 进度事实源，不保存执行模式或验证模式。
+- 父 `comate.md` 是 execution-mode 的唯一事实源；各 change 的 v2 comate 是 validation-mode、
+  human-review、owner、协作状态、depends-on 和 handoff 的唯一事实源。
+- `.falla/coordination.yaml` 只保存逻辑名到物理名映射；反向 blocks 由 depends-on 推导，不落盘。
+- README 和安装手册只说明使用方式，不定义高于上述文件的新规则。
 
 ## 2. 两个核心问题
 
@@ -222,14 +233,11 @@ parallel 模式下，子 change 必须在 propose 阶段一次性创建，apply 
 
 ### 4.5 comate.md 是协作事实
 
-每个父、子 change 都维护 `comate.md`，记录：
+每个父、子 change 都维护 `comate.md`，记录 owner、todo / in-progress / blocked / done、
+validation-mode、human-review、depends-on 和 handoff；父 change 额外记录 execution-mode。
 
-- owner；
-- todo / in-progress / blocked / done；
-- depends-on / blocks；
-- handoff。
-
-依赖边必须双向一致且无环。owner、状态和依赖不复制到协调索引，避免双重事实来源。
+依赖只保存正向 `depends-on`，反向 blocks 由协调器推导；依赖图必须无缺失节点和环。owner、状态和
+依赖不复制到协调索引，避免双重事实来源。`tasks.md` 不重复保存执行模式或验证模式。
 
 single 与 parallel 均用 `falla-openspec coordination claim "<change>" --owner "<id>" --json`
 认领；parallel 使用逻辑子 change 名。使用已约定的当前工程师或 Agent 标识，不自行替换他人 owner。
@@ -258,8 +266,9 @@ doctor 不证明图谱新鲜、MCP 连接、人工验证或 Figma/Lark 认证；
 
 ## 4.8 人工验证与状态同步
 
-- 新 change 默认使用 `hybrid` 验证模式：Agent 执行 formatter、lint、单元测试、编译和可自动化静态
-  检查，人工执行真机、真实服务端联调和视觉验收。只有用户明确要求时才改为 `human` 或 `agent`。
+- 新 change 在 `comate.md` 中默认使用 `hybrid` 验证模式：Agent 执行 formatter、lint、单元测试、
+  编译和可自动化静态检查，人工执行真机、真实服务端联调和视觉验收。只有用户明确要求时才改为
+  `human` 或 `agent`；`tasks.md` 只用 `[人工]` 标识具体人工任务，不重复保存模式。
 - `human` 模式下 Agent 只整理验证清单，不主动运行验证；`agent` 模式下执行工具可完成的验证。
 - 带 `[人工]` 的 task 只能根据人工明确反馈勾选。Agent 不得因为自动化检查通过、代码已写完或用户
   只确认部分项目而推定全部人工验证通过。

@@ -5,73 +5,44 @@ description: Use when closing and archiving a completed or explicitly accepted A
 
 # Falla Archive Change
 
-用官方 OpenSpec 同步 delta spec 并归档，保留协作审计记录。
+使用官方 OpenSpec 同步 delta spec 并归档，保留协作审计记录。
 
-## 归档前
+## 权威规则
 
-1. 读取 `.falla/skill-spec/[Must Read]soul.md` 和
-   `.falla/skill-spec/[任务选读]archive.md`；缺失时停止。需要源码证据时按 Soul 的索引准备规则
-   执行 CodeGraph prepare。
-2. 读取父 `tasks.md` / `comate.md` 的执行模式；字段缺失时检查 `.falla/coordination.yaml`，
-   有该父 change 的子映射则按 parallel，否则按 single。parallel 模式的逻辑子 change 先用
-   coordination resolve 获取物理名。阶段中收到或需要核对设计稿链接时执行 Soul 的 MCP 门禁：
-   Figma 链接只用 Figma MCP 读取，禁止用浏览器降级。
-   调用 `get_design_context` 时必须显式传 `excludeScreenshot=true`；禁止调用 `get_screenshot`，也禁止向当前模型发送截图或截图 URL。排除截图后无法确认的视觉细节必须进入人工校准。
-3. 运行：
+执行前确认已加载：
+
+- `.falla/skill-spec/[Must Read]soul.md`
+- `.falla/skill-spec/[任务选读]archive.md`
+
+运行环境已经通过 Hook 注入时不要重复读取；未注入或无法确认时再读取。缺失任一文件即停止。
+通用工具、安全、设计和状态规则统一以 Soul 为准。
+
+## 编排
+
+1. 从父 `comate.md` 读取执行模式；parallel 逻辑子 change 通过 coordination resolve 获取物理名。
+2. 执行：
 
    ```bash
    openspec validate "<physical>" --strict --json --no-interactive
    openspec status --change "<physical>" --json
    openspec instructions archive --change "<physical>" --json
-   # 仅 parallel 模式执行
+   ```
+
+3. 按阶段规则汇总未完成项、人工验证、handoff 和 delta spec 影响。parallel 父 change 归档前执行：
+
+   ```bash
    falla-openspec coordination validate --change "<parent>" --json
    ```
 
-4. 应用 archive instructions 返回的 `context`，并只采纳适用且不冲突的 `operationGuidance`；
-   guidance 不能覆盖官方状态、安全门禁或用户选择，也不得原样写入报告。
-5. 汇总非 done/skipped artifact、未完成 tasks、非 done comate，并检查 handoff 的注释审计是否列出
-   已检查文件/符号及豁免原因；再汇总官方 status 返回的 delta
-   spec 路径与同步影响；仅 parallel 模式汇总未交接子 change。validation-mode=hybrid/human 时必须确认
-   human-review=passed，且 `[人工]` tasks 都有人工明确反馈；pending/failed 时不调用 Apply 代替人工
-   测试，只展示验收清单并等待结果。
+4. 用户已明确要求归档当前 change，且没有未接受告警时执行：
 
-## 有告警时
+   ```bash
+   openspec archive "<physical>" --json --yes
+   ```
 
-告警必须展示，但沿用 Falla 现有规则：它们不是自动的绝对阻断。向用户提供三个明确选择：
+5. 只有用户针对本次告警明确确认时才追加 `--no-validate` 或 `--skip-specs`。能力退役只有在用户明确
+   确认后才设置 `retire_capabilities: true`。
 
-1. 先修复再归档；
-2. 明确接受告警后继续；
-3. 明确跳过 spec 同步后继续。
+## 边界
 
-不要自行勾选任务、解除 blocked、编造 abandoned/cancelled 流程或猜测用户选择。
-若 delta 会移除某能力的最后一项 requirement，只有用户明确确认退役后才可设置
-`.openspec.yaml` 的 `retire_capabilities: true`；该操作会删除主规格，不得根据空结果自动推断。
-只有用户针对本次操作明确确认时，才可使用：
-
-- validate 失败继续：`--no-validate`；
-- 不同步 delta spec：`--skip-specs`；
-- 已完成人工确认：`--yes`。
-
-`--skip-validate` 和 `--force` 不是允许的参数，不得编造或替换。用户接受 validate 告警
-但没有要求跳过 spec 同步时，完整命令必须是：
-
-```bash
-openspec archive "<physical>" --json --yes --no-validate
-```
-
-只有用户另行明确选择“不更新主规格”，才变为：
-
-```bash
-openspec archive "<physical>" --json --yes --no-validate --skip-specs
-```
-
-## 执行
-
-无告警或已经修复并通过 validate 时使用
-`openspec archive "<physical>" --json --yes`。
-
-根据本次明确选择追加例外参数。single 模式只归档父 change；parallel 模式先分别归档子
-change，全部完成或明确交接后再归档父 change。不得手工 `mv`，不得执行 Skill 名称作为命令。
-
-官方命令失败时停止；成功后保留 coordination 映射与归档内 `comate.md`，并报告归档位置、
-spec 同步结果和仍存在的告警。
+不得使用 `--force`、`--skip-validate` 或手工移动目录。parallel 先归档子 change，再归档父 change。
