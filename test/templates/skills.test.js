@@ -156,6 +156,11 @@ test('按需参考保留安全、生命周期和工具约束', async () => {
   assert.match(coordination, /一次只推进一个 ready task/);
   assert.match(coordination, /跨机器或不同工作树/);
   assert.match(projectRules, /Propose 和 Apply 必读/);
+  assert.match(projectRules, /不得只读取索引/);
+  assert.match(projectRules, /`index.md` 若存在，应只作文件与 Rule ID 导航/);
+  assert.match(projectRules, /目录漏列文件时.*仍读取磁盘上全部顶层规则文件/s);
+  assert.match(projectRules, /旧项目若仍把规则正文写在 `index.md`，继续审计/);
+  assert.match(projectRules, /保持 Rule ID 不变.*避免同一条规则在两处重复定义/s);
   assert.match(projectRules, /每条 `required` 都必须.*出现/s);
   assert.match(projectRules, /适用.*不适用.*冲突.*例外/s);
 });
