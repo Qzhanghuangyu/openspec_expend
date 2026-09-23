@@ -77,6 +77,7 @@ export async function validateCoordination(root, options) {
       nodes.set(logical, node.comate);
       for (const localIssue of validateComateRecord(node.comate, {
         pendingTasks: node.tasks.pending,
+        humanTasks: node.tasks.humanTasks,
       })) {
         const { kind, ...details } = localIssue;
         errors.push(issue(kind, logical, undefined,

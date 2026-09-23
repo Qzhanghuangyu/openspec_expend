@@ -32,6 +32,12 @@ Skill 只编排命令，Schema instruction 只约束对应 artifact，模板只�
 UI Knowledge、Android 质量和协作细则位于 `.falla/skill-spec/references/`。其中 `project-rules.md` 在
 Propose/Apply 强制读取；其他参考仅在当前任务命中时读取。
 
+`hybrid` 且 tasks 没有 `[人工]` 项时，`human-review` 可设为 `not-required`；有人工项时须按人工
+反馈达到 `passed`，`human` 模式始终需要人工确认。每项任务必须可验证，但不默认新增单测。
+签名/资源/XML/构建配置变化做受影响模块编译，并按需做页面退出运行检查；静态生命周期核对
+不能替代实测，无法实测的必要项
+保持未完成并交接给人工。
+
 ## 初始化与更新
 
 第一次安装：初始化项目的 OpenSpec，再运行 `falla-openspec install`。

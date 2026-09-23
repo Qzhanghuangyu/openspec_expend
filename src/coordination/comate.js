@@ -173,16 +173,18 @@ export function parseComate(markdown, source = 'comate.md') {
 export function parseTaskProgress(markdown) {
   let total = 0;
   let complete = 0;
+  let humanTasks = 0;
   for (const line of String(markdown).split('\n')) {
     const match = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/);
     if (!match) continue;
     total += 1;
     if (match[1].toLowerCase() === 'x') complete += 1;
+    if (match[2].includes('[人工]')) humanTasks += 1;
   }
-  return { total, complete, pending: total - complete };
+  return { total, complete, pending: total - complete, humanTasks };
 }
 
-export function validateComateRecord(record, { pendingTasks }) {
+export function validateComateRecord(record, { pendingTasks, humanTasks }) {
   const issues = [];
   if (record.status !== 'todo' && record.owner === 'unassigned') {
     issues.push({ kind: 'owner-required' });
@@ -196,8 +198,11 @@ export function validateComateRecord(record, { pendingTasks }) {
   if (record.status === 'done' && !hasMeaningfulHandoff(record.handoff)) {
     issues.push({ kind: 'done-handoff-required' });
   }
+  // A missing task count is not proof that human review is unnecessary.
+  const reviewNotRequired = record.validationMode === 'hybrid'
+    && humanTasks === 0 && record.humanReview === 'not-required';
   if (record.status === 'done' && ['hybrid', 'human'].includes(record.validationMode)
-    && record.humanReview !== 'passed') {
+    && record.humanReview !== 'passed' && !reviewNotRequired) {
     issues.push({ kind: 'human-review-required' });
   }
   if (record.formatVersion === 2) {

@@ -30,9 +30,9 @@
 
 ## 未明确事项
 
-## [Stateful Interactions][Missing Definition] 问题标题
+## [主干/退出安全/兼容差额][Missing Definition] 问题标题
 
-- 检查维度：Stateful Interactions
+- 检查维度：主干 / 退出安全 / 兼容差额
 - 问题类型：Missing Definition
 - PRD 位置：
 - 当前理解：

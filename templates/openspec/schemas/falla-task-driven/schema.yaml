@@ -9,8 +9,11 @@ artifacts:
     instruction: |
       只记录当前子 change 的实际任务、输入、允许编辑范围、完成条件和前置依赖。任务应能在一次独立
       实施上下文内完成。先核对父 design 的项目规则审计、当前边界、depends-on 和根页面/XML 责任；适用
-      required 必须落实为当前子任务的完成检查，再添加最小实施、
-      自动验证及必要的 `[人工]` 项。新增/实质修改的符号逐项审计注释。
+      required 必须落实为当前子任务的完成检查，再添加最小实施与可验证的完成条件；不默认新增单测。
+      签名、资源、XML 或构建配置变化配受影响模块编译。页面退出先静态核对释放与 NPE 风险；
+      需证明释放行为时做运行时检查，Agent 无法实测则保留 `[人工]` 任务。
+      不预排完整状态矩阵或全量检查，静态核对不能代替运行时证据。
+      新增/实质修改的符号逐项审计注释。
       不得复制父任务或其他子 change 的进度，
       不保存执行/验证模式。
     requires: []
@@ -22,8 +25,9 @@ artifacts:
     instruction: |
       保存 format-version: 2、validation-mode、human-review、owner、status、depends-on 和 handoff。子 change 不保存
       execution-mode；反向 blocks 由 depends-on 推导，不落盘。handoff 是滚动检查点，done 时必须完整
-      填写已完成、注释审计、验证证据、生命周期结论、安全结论和遗留风险；hybrid/human 还必须填写
-      人工验证反馈。
+      填写已完成、注释审计、验证证据、生命周期结论、安全结论和遗留风险；静态生命周期核对与运行时
+      退出检查分开写。hybrid 无 `[人工]` 任务时 human-review 可为 not-required；有人工任务或 human
+      模式时须由人工确认 passed 并填写反馈。
     requires:
       - tasks
 

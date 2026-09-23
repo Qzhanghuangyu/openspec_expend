@@ -97,7 +97,10 @@ async function readRecord(root, reference, officialStatus, errors) {
     return { reference, resolved, comate, tasks: null, officialStatus };
   }
   const tasks = parseTaskProgress(tasksMarkdown);
-  for (const localIssue of validateComateRecord(comate, { pendingTasks: tasks.pending })) {
+  for (const localIssue of validateComateRecord(comate, {
+    pendingTasks: tasks.pending,
+    humanTasks: tasks.humanTasks,
+  })) {
     const { kind, count, ...details } = localIssue;
     errors.push({
       ...issue(kind, reference, undefined, count),

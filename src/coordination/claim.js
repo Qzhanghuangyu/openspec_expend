@@ -49,7 +49,11 @@ async function assertDependenciesDone(root, dependencies, statusProvider) {
     }
     if (record.status !== 'done') throw new FallaError(1, `依赖尚未完成：${dependency}`);
     const tasks = await readChangeRecordFile(root, resolved.path, 'tasks.md', true);
-    if (tasks === null || validateComateRecord(record, { pendingTasks: parseTaskProgress(tasks).pending }).length > 0) {
+    const progress = tasks === null ? null : parseTaskProgress(tasks);
+    if (progress === null || validateComateRecord(record, {
+      pendingTasks: progress.pending,
+      humanTasks: progress.humanTasks,
+    }).length > 0) {
       throw new FallaError(1, `依赖验证未完成：${dependency}`);
     }
     if (resolved.lifecycle === 'active') {

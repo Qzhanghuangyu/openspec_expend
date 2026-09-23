@@ -33,7 +33,8 @@ description: Use when an existing Android Falla preflight change needs proposal 
    “设计源证据”，后续会话以它为准，不另建资源台账。纯重构、工具或文档变更使用官方
    `skip_specs: true` 语义。
 4. `comate.md` 是执行模式和验证模式的唯一记录：默认 `execution-mode: single`、
-   `validation-mode: hybrid`。`tasks.md` 不重复保存这些字段。
+   `validation-mode: hybrid`。无 `[人工]` task 时 human-review 为 `not-required`，否则为 `pending`；
+   `tasks.md` 不重复保存这些字段。
 5. 只有用户明确要求并行分派时才创建子 change：
 
    ```bash

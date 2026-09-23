@@ -85,7 +85,7 @@ test('多行 handoff 读取到下一个顶级字段为止且空模板标签不�
   );
 });
 
-test('hybrid/human 验证模式必须由人工确认后才能 done', () => {
+test('存在人工任务的 hybrid 与 human 模式必须由人工确认后才能 done', () => {
   const human = valid.replace(
     '- 状态 (status): in-progress',
     `- 状态 (status): in-progress
@@ -109,7 +109,13 @@ test('hybrid/human 验证模式必须由人工确认后才能 done', () => {
   assert.deepEqual(
     validateComateRecord({
       ...parseComate(human), status: 'done', validationMode: 'hybrid', humanReview: 'pending',
-    }, { pendingTasks: 0 }).map(({ kind }) => kind),
+    }, { pendingTasks: 0, humanTasks: 1 }).map(({ kind }) => kind),
+    ['human-review-required']
+  );
+  assert.deepEqual(
+    validateComateRecord({
+      ...parseComate(human), status: 'done', validationMode: 'hybrid', humanReview: 'not-required',
+    }, { pendingTasks: 0, humanTasks: 1 }).map(({ kind }) => kind),
     ['human-review-required']
   );
   assert.deepEqual(
@@ -128,6 +134,31 @@ test('hybrid/human 验证模式必须由人工确认后才能 done', () => {
   );
 });
 
+test('hybrid 无人工任务可标记 not-required，有人工任务不能跳过人工验收', () => {
+  const complete = parseComate(valid);
+  const record = {
+    ...complete,
+    status: 'done',
+    validationMode: 'hybrid',
+    humanReview: 'not-required',
+  };
+  assert.deepEqual(validateComateRecord(record, { pendingTasks: 0, humanTasks: 0 }), []);
+  assert.deepEqual(
+    validateComateRecord(record, { pendingTasks: 0, humanTasks: 1 }).map(({ kind }) => kind),
+    ['human-review-required']
+  );
+  assert.deepEqual(
+    validateComateRecord(record, { pendingTasks: 0 }).map(({ kind }) => kind),
+    ['human-review-required']
+  );
+  assert.deepEqual(
+    validateComateRecord({ ...record, validationMode: 'human' }, {
+      pendingTasks: 0, humanTasks: 0,
+    }).map(({ kind }) => kind),
+    ['human-review-required']
+  );
+});
+
 test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbox', () => {
   assert.deepEqual(parseTaskProgress(`- [x] 1.1 done
   - [ ] 1.1.1 nested pending
@@ -139,7 +170,9 @@ test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbo
     total: 5,
     complete: 3,
     pending: 2,
+    humanTasks: 0,
   });
+  assert.equal(parseTaskProgress('- [x] 1.1 implement\n- [x] 2.1 [人工] verify\n').humanTasks, 1);
 });
 
 test('新 comate 可省略 blocks，旧 blocks 仅作为兼容字段读取', () => {
@@ -168,6 +201,19 @@ test('v2 comate 将结构化完成证据下沉为机器门禁', () => {
   - 遗留风险与恢复条件：无
 `;
   assert.deepEqual(validateComateRecord(parseComate(complete), { pendingTasks: 0 }), []);
+
+  const noHumanTasks = complete
+    .replace('human-review): passed', 'human-review): not-required')
+    .replace('  - 人工验证反馈：reviewer 于 2026-09-22 验证通过\n', '');
+  assert.deepEqual(
+    validateComateRecord(parseComate(noHumanTasks), { pendingTasks: 0, humanTasks: 0 }),
+    []
+  );
+  assert.deepEqual(
+    validateComateRecord(parseComate(noHumanTasks), { pendingTasks: 0, humanTasks: 1 })
+      .map(({ kind }) => kind),
+    ['human-review-required']
+  );
 
   const incomplete = complete.replace('  - 安全与敏感信息结论：无敏感信息输出\n', '  - 安全与敏感信息结论：\n');
   assert.deepEqual(

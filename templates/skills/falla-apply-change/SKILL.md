@@ -45,10 +45,11 @@ description: Use when implementing or continuing an existing Android Falla paren
    ```
 
    claim 会在项目锁内重新检查官方状态和依赖；不得绕过该复核。
-6. 按阶段规则执行“单任务原子循环”：一次只处理一个 ready task；完成条件与最小验证满足后立即
+6. 按阶段规则执行“单任务原子循环”：一次只处理一个 ready task；按改动风险完成定向验证后立即
    勾选该 checkbox 并更新 `comate.md` handoff，禁止累计多个 task 后批量勾选。验证模式只从当前
    `comate.md` 读取。
-7. task 未完成或验证失败时不得勾选；先把进度、失败证据和恢复条件写入 handoff，再暂停或继续修复。
+7. task 未完成、验证失败或所需退出实测未执行时不得勾选对应验证项；把静态核对与运行时结果分开
+   写入 handoff，缺少 `[人工]` 验证项时返回 Propose 补齐，再暂停或继续修复。
 8. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
 9. 勾选前逐项核对本 task 新增/实质修改的符号及注释，豁免要写出具体符号和原因；
    不因代码短或编译通过而跳过。

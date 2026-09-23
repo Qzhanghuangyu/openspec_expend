@@ -1,5 +1,8 @@
 # comate
 
+> `hybrid` 无 `[人工]` task 时将 human-review 设为 `not-required`；有人工 task 保持 `pending`，
+> 仅依据人工反馈改为 `passed`。`human` 模式始终需要人工确认。
+
 - 格式版本 (format-version): 2
 - 执行模式 (execution-mode): single
 - 负责人 (owner): unassigned
@@ -22,6 +25,9 @@
   - 人工验证清单：
   - 人工验证反馈：
   - 验证证据：
+    - 定向测试 / 受影响模块编译（不适用写原因）：
+    - 静态生命周期核对（不适用写原因）：
+    - 运行时退出检查（设备、步骤、结果；未执行写原因与待办）：
     - 命令：
     - variant / 设备：
     - 结果：

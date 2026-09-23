@@ -38,11 +38,17 @@
 
 ## 验证模式
 
-- 默认 `hybrid`：Agent 执行 formatter、lint、单元测试、编译和静态检查；人工执行真机、真实服务端
-  联调和视觉验收。
-- `human`：Agent 只整理验证清单；`agent`：执行工具能够完成的验证。
+- 默认 `hybrid`：Agent 按完成条件验证，不默认新增单测；签名、资源、XML 或构建配置变化做受影响
+  模块编译；页面退出静态核对清理与 NPE，需证明释放时做运行时退出检查。
+  不机械运行全量 formatter、lint、测试或构建；人工核对确需真机、真实服务端或视觉环境的部分。
+- `human`：Agent 只整理包含上述风险触发项的具体验证清单，实际结果由人工提供；`agent`：执行
+  工具能够完成的验证。
 - `[人工]` task 只能根据人工明确反馈勾选。
-- 等待人工验证保持 `in-progress` 和 `human-review: pending`；失败为 `failed`，全部通过后为 `passed`。
+- `hybrid` 且 tasks 没有 `[人工]` 项时可设 `human-review: not-required`；有人工项时不得使用
+  `not-required`，等待期间保持 `in-progress` 和 `pending`，失败为 `failed`，全部通过后为 `passed`。
+  `human` 模式即使没有显式 `[人工]` task，也必须有人工确认及反馈。
+- 静态生命周期核对与运行时退出结果分开记录；所需实测不可执行时保留未完成的验证项、原因和恢复
+  条件，规划缺少 `[人工]` 项则回 Propose 补齐。不得把未实测写成“无泄漏”。
 - 相关代码、资源、配置或验证环境变化后，受影响的人工验证恢复 pending。
 
 ## Doctor 边界

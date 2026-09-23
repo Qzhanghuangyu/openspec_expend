@@ -4,11 +4,12 @@ description: Falla 父需求工作流：preflight、规格、设计、任务与�
 artifacts:
   - id: preflight
     generates: preflight.md
-    description: PRD 实现状态、边界、异常与兼容性分析
+    description: PRD 实现状态、主干可执行性、退出安全与兼容性分析
     template: preflight.md
     instruction: |
-      记录当前实现证据、Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps
-      以及 Missing Definition、Conflict、Implementation Risk、Decision Required。每项问题标明
+      记录当前实现证据、受影响方法的主干可执行性、页面退出时的释放/NPE 风险，以及阻断主干的
+      模型、接口与架构差额。不枚举交互状态或推测性异常边界；PRD 明确要求的其他行为仍需照实记录。
+      对实际问题标明 Missing Definition、Conflict、Implementation Risk 或 Decision Required，以及
       Blocker、Major 或 Minor 及其实际阻断范围。飞书文档/Wiki PRD 须核对正文和可见评论
       完整线程（含已解决评论及回复），在 preflight 留下评论位置/ID、状态、精简结论及冲突；
       未取得完整评论不得把正文视为完整需求，未决讨论不自动成为已确认需求。
@@ -64,9 +65,12 @@ artifacts:
     template: tasks.md
     instruction: |
       使用 checkbox 记录当前 change 的实际任务、输入、允许编辑范围、完成条件和前置依赖。
-      任务应能在一次独立实施上下文内完成。只添加当前需求实际需要的实施、自动验证和 `[人工]`
-      验证项，不预填通用合规清单，不重复保存执行模式或验证模式。design 中每条适用 required 项目规则
-      必须落实为前置条件或完成检查；不适用规则只保留在 design 审计。parallel 模式下父 tasks 只记录
+      任务应能在一次独立实施上下文内完成。只添加当前需求实际需要的实施、定向验证和 `[人工]`
+      验证项。每项任务须可验证，不默认新增单测；签名、资源、XML 或构建配置变更配受影响模块编译；
+      需证明页面退出释放时安排运行时检查，Agent 无法实测则留下 `[人工]` 项。静态核对与运行时证据
+      分开记录，不预排完整状态矩阵或全量检查。不预填通用合规清单，不重复保存执行模式或验证模式。
+      design 中每条适用 required 项目规则必须落实为前置条件或完成检查；不适用规则只保留在 design
+      审计。parallel 模式下父 tasks 只记录
       协调里程碑和子 change 引用，不复制子任务清单。新增或实质修改的符号逐项纳入注释审计，
       不能按方法行数豁免。
     requires:
@@ -80,8 +84,9 @@ artifacts:
     instruction: |
       保存 format-version: 2、execution-mode、validation-mode、human-review、owner、status、depends-on 和 handoff。
       tasks 不重复保存模式；反向 blocks 由 depends-on 推导，不落盘。handoff 是滚动检查点，done 时
-      必须完整填写已完成、注释审计、验证证据、生命周期结论、安全结论和遗留风险；hybrid/human
-      还必须填写人工验证反馈。parallel 父记录只保存整体决策，不复制子 handoff。
+      必须完整填写已完成、注释审计、验证证据、生命周期结论、安全结论和遗留风险；静态生命周期
+      核对与运行时退出检查分开写。hybrid 无 `[人工]` 任务时 human-review 可为 not-required；有人工
+      任务或 human 模式时须由人工确认 passed 并填写反馈。parallel 父记录只保存整体决策，不复制子 handoff。
     requires:
       - tasks
 
