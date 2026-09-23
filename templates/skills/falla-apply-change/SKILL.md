@@ -35,19 +35,24 @@ description: Use when implementing or continuing an existing Android Falla paren
    openspec instructions apply --change "<physical>" --json
    ```
 
-4. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：
+4. 设计相关 task 先读取父 `design.md` 的“设计源证据”，核对所需本地资源存在且哈希吻合；已有事实
+   可复用。资源/元数据缺失、用户告知设计变化或要求以最新设计为准时只重读已授权节点，不要求重复提供同一链接；新节点
+   或范围扩大要重新确认，设计结论变更回 Propose 修正。
+5. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：
 
    ```bash
    falla-openspec coordination claim "<change>" --owner "<id>" --json
    ```
 
    claim 会在项目锁内重新检查官方状态和依赖；不得绕过该复核。
-5. 按阶段规则执行“单任务原子循环”：一次只处理一个 ready task；完成条件与最小验证满足后立即
+6. 按阶段规则执行“单任务原子循环”：一次只处理一个 ready task；完成条件与最小验证满足后立即
    勾选该 checkbox 并更新 `comate.md` handoff，禁止累计多个 task 后批量勾选。验证模式只从当前
    `comate.md` 读取。
-6. task 未完成或验证失败时不得勾选；先把进度、失败证据和恢复条件写入 handoff，再暂停或继续修复。
-7. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
-8. 完成前运行阶段规则要求的定向门禁；parallel 再运行 coordination validate。
+7. task 未完成或验证失败时不得勾选；先把进度、失败证据和恢复条件写入 handoff，再暂停或继续修复。
+8. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
+9. 勾选前逐项核对本 task 新增/实质修改的符号及注释，豁免要写出具体符号和原因；
+   不因代码短或编译通过而跳过。
+10. 完成前运行阶段规则要求的定向门禁；parallel 再运行 coordination validate。
 
 ## 边界
 

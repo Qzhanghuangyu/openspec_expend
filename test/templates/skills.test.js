@@ -179,6 +179,78 @@ test('Propose 和 Apply 对每条 required 项目规则执行完整审计', asyn
   assert.match(guard, /falla-apply-change.*references\/project-rules\.md/s);
 });
 
+test('XML 页面在 design 中列简要布局层级，Compose 不强加 XML', async () => {
+  const designTemplate = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+
+  assert.match(designTemplate, /### XML 布局结构/);
+  assert.match(designTemplate, /res\/layout\/<页面>\.xml/);
+  assert.match(designTemplate, /└─ <状态容器类型>/);
+  assert.match(designTemplate, /纯 Compose 或非页面变更写“不适用”/);
+  assert.match(parentSchema, /使用 XML 的页面须在 design 中列出实际或拟新增的 res\/layout 文件及简要节点树/);
+  assert.match(propose, /使用 XML 的页面在 `design\.md` 列出布局文件与关键节点层级/);
+  assert.match(designTemplate, /现有结构须核对源码/);
+  assert.match(designTemplate, /不写完整 XML 属性/);
+});
+
+test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授权范围', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const preflightSkill = await read('skills/falla-preflight/SKILL.md');
+  const preflightTemplate = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const proposeSkill = await read('skills/falla-propose/SKILL.md');
+  const designTemplate = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const designRules = await read('skill-spec/references/design-tools.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const applySkill = await read('skills/falla-apply-change/SKILL.md');
+  const childSchema = await read('openspec/schemas/falla-task-driven/schema.yaml');
+
+  assert.match(preflightTemplate, /## 设计节点交接/);
+  assert.match(preflightTemplate, /file key、精确 node id/);
+  assert.match(preflightTemplate, /不保存原始链接、查询参数/);
+  assert.match(preflight, /写入 `preflight\.md` 的“设计节点交接”/);
+  assert.match(preflightSkill, /写入 `preflight\.md` 的“设计节点交接”/);
+  assert.match(parentSchema, /在 preflight 中持久记录确认范围/);
+  assert.match(propose, /先读 `preflight\.md` 的“设计节点交接”/);
+  assert.match(propose, /先把最小授权记录追加到 preflight/);
+  assert.match(proposeSkill, /可写后归并到 `design\.md`/);
+  assert.match(designTemplate, /## 设计源证据/);
+  assert.match(designTemplate, /项目内相对路径、下载状态及本地普通文件哈希/);
+  assert.match(designTemplate, /状态（未核对 \/ 已核对 \/ 失败）/);
+  assert.match(designRules, /不要求用户重复粘贴同一链接/);
+  assert.match(designRules, /已记录的授权仅覆盖原 change 和精确节点/);
+  assert.match(designRules, /哈希吻合时可直接复用/);
+  assert.match(designRules, /不跟随符号链接或越界路径/);
+  assert.match(designRules, /超出已确认范围，先请用户确认/);
+  assert.match(designRules, /Apply 暂停当前任务并返回 Propose/);
+  assert.match(apply, /复用本地资源前核对文件存在且哈希吻合/);
+  assert.match(applySkill, /核对所需本地资源存在且哈希吻合/);
+  assert.match(childSchema, /复用本地资源前核对文件/);
+});
+
+test('注释豁免须逐符号审计，不能把短方法当简单方法跳过', async () => {
+  const quality = await read('skill-spec/references/android-quality.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const tasks = await read(`openspec/schemas/${schema}/templates/tasks.md`);
+    const comate = await read(`openspec/schemas/${schema}/templates/comate.md`);
+    assert.match(tasks, /逐符号审计注释/);
+    assert.match(comate, /已补注释的符号与说明/);
+    assert.match(comate, /豁免项及原因（逐符号列出/);
+  }
+  assert.match(quality, /方法短不等于简单/);
+  assert.match(quality, /生命周期回调、事件处理和状态\/异步方法不能仅凭行数豁免/);
+  assert.match(quality, /缺项不得勾选 task/);
+  assert.match(design, /短方法不能自动豁免/);
+  assert.match(parentSchema, /不能按方法行数豁免/);
+  assert.match(apply, /方法短、编译通过或“简单方法”不是豁免理由/);
+  assert.match(apply, /缺注释或未审计时不勾选 task/);
+});
+
 test('Apply 使用完成即落盘的单任务循环', async () => {
   const apply = await read('skill-spec/[模块选读]apply.md');
   assert.match(apply, /## 黄金规则/);

@@ -33,7 +33,8 @@ description: Use when analyzing an Android client PRD or product request before 
    openspec instructions preflight --change "<name>" --json
    ```
 
-5. 按阶段规则核实现状、记录问题，并只写入返回的 `resolvedOutputPath`。
+5. 按阶段规则核实现状、记录问题。用户明确提供当前 change 的 Figma 节点时，先把授权范围和
+   file key / node id 写入 `preflight.md` 的“设计节点交接”；只写入返回的 `resolvedOutputPath`。
 6. 执行 `openspec status --change "<name>" --json`，确认 `preflight` 为 `done`。
 
 ## 边界

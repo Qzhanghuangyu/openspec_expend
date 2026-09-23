@@ -10,6 +10,8 @@ artifacts:
       记录当前实现证据、Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps
       以及 Missing Definition、Conflict、Implementation Risk、Decision Required。每项问题标明
       Blocker、Major 或 Minor 及其实际阻断范围。本 artifact 不包含方案设计或代码修改。
+      用户在当前对话明确提供用于本 change 的 Figma 节点时，在 preflight 中持久记录确认范围、日期、
+      file key 和精确 node id，供后续会话交接；不自动跟随 PRD 链接，不保存原始 URL 或凭据。
     requires: []
 
   - id: proposal
@@ -40,6 +42,13 @@ artifacts:
     instruction: |
       记录上下文、目标/非目标、页面实现结构基线、项目规则审计、required/preferred/reference-only
       实现基线、注释与可维护性契约、MVVM/组件边界、关键决策、生命周期、安全、风险、迁移和开放问题。
+      使用 XML 的页面须在 design 中列出实际或拟新增的 res/layout 文件及简要节点树：根容器、关键内容、
+      滚动与状态容器的父子关系和必要 id。现有节点核对源码，拟新增节点标明，未知项留待确认；
+      不罗列完整属性或每个控件。纯 Compose 或非页面变更注明不适用。
+      使用 Figma 时，把 preflight 的设计节点交接归并到 design 的“设计源证据”章节，记录用户授权、
+      file key、精确 node id、核对日期、实施所需设计事实、完整资源清单/项目内目标路径、
+      下载状态/文件哈希、未决项和重新核对条件，供后续会话复用；不复制完整设计正文、截图、
+      认证信息或临时资源 URL。
       项目规则目录存在时，必须确定性读取全部顶层 Markdown；每条 required 都分类为适用、不适用、
       冲突或已批准例外，并记录证据。适用 required 必须转成 tasks。无法确定结构基线或 required 决策时
       保留开放问题，不生成可直接实施的下游任务。
@@ -55,7 +64,8 @@ artifacts:
       任务应能在一次独立实施上下文内完成。只添加当前需求实际需要的实施、自动验证和 `[人工]`
       验证项，不预填通用合规清单，不重复保存执行模式或验证模式。design 中每条适用 required 项目规则
       必须落实为前置条件或完成检查；不适用规则只保留在 design 审计。parallel 模式下父 tasks 只记录
-      协调里程碑和子 change 引用，不复制子任务清单。
+      协调里程碑和子 change 引用，不复制子任务清单。新增或实质修改的符号逐项纳入注释审计，
+      不能按方法行数豁免。
     requires:
       - specs
       - design
@@ -78,7 +88,9 @@ apply:
   instruction: |
     只执行 tasks 中的当前任务，并遵守已加载的 Soul 与 Apply 阶段规则。执行模式、验证模式和协作状态
     只从 comate 读取。single 实施父 change；parallel 只实施 propose 已创建的逻辑子 change。
-    修改前复核当前任务引用的 design 基线和项目规则审计；遗漏、适用性变化或 required 偏离时返回 propose。
-    一次只推进一个 ready task；完成条件与最小验证满足后
+    修改前复核当前任务引用的 design 基线、设计源证据和项目规则审计；已记录事实可跨会话复用，
+    缺少资源时只补读 design 中已授权的精确节点。遗漏、适用性变化或 required 偏离时返回 propose。
+    新增/实质修改的符号逐项核对注释
+    或明确豁免理由，未完成不得勾选。一次只推进一个 ready task；完成条件与最小验证满足后
     立即勾选对应 checkbox 并更新结构化 handoff，禁止累计到多个 task 完成后批量更新。未完成或验证
     失败时不得勾选。规划冲突时返回 propose。

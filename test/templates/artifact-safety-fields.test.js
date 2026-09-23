@@ -24,7 +24,7 @@ async function readTemplate(root, schema, file) {
 function assertStructuredHandoff(comate) {
   for (const field of [
     '当前任务', '已确认事实与关键决策', '设计基线符合性', '项目规则符合性',
-    '注释审计', '已检查文件/符号', '参数与生命周期说明', '豁免项及原因',
+    '注释审计', '已检查文件/符号', '已补注释的符号与说明', '参数与生命周期说明', '豁免项及原因',
     '已修改文件', '已完成', '人工验证清单', '人工验证反馈', '验证证据',
     '生命周期结论', '安全与敏感信息结论', '下一步准确操作', '遗留风险与恢复条件',
   ]) assert.match(comate, new RegExp(field));

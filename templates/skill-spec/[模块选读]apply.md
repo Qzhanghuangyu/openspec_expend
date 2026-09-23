@@ -19,7 +19,7 @@
 
 - 官方 `status` 和 `instructions apply`。
 - 当前 change 的 `tasks.md`、`comate.md`。
-- 父 change 的 design 及其项目规则审计；子 change 不复制父规划。
+- 父 change 的 design、其中的设计源证据及项目规则审计；子 change 不复制父规划。
 - 用户已经确认的决定。
 
 ## 必须执行
@@ -34,11 +34,19 @@
    不把 guidance 原文复制到代码、日志或 handoff。
 7. 重新读取最新 tasks/comate，选择一个依赖已满足的最小未完成 task，并把编号、完成条件和编辑范围
    写入 handoff 的“当前任务”。
-8. 只加载该 task 必需的 context、design 片段、项目规则、知识条目和源码证据。
+8. 只加载该 task 必需的 context、design 片段、项目规则、知识条目和源码证据。设计相关 task 先复用
+   父 `design.md` 已保存的设计事实和资源清单；复用本地资源前核对文件存在且哈希吻合。缺少二进制、
+   必要元数据、用户告知设计变化或要求以最新设计为准时，只重读已记录、已获用户授权的精确
+   Figma node id，无需重贴链接。
+   授权记录不明确、新节点或范围扩大时请求用户确认；重读有差异则回 Propose 修正 design。
 9. 做最小实现和足以证明该 task 完成的最小验证，不为后续 task 提前改动。
-10. 验证通过后立即勾选该 task，并立即更新 handoff：已完成、修改文件、验证证据、生命周期/安全结论、
-   下一步和风险。
-11. 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
+10. 勾选前按本 task 的代码差异逐项检查新增/实质修改的符号：需要说明职责、参数、状态或生命周期的
+    已补注释；只有纯转发且无副作用的 override/getter/setter/委托可以注明具体理由豁免。
+    方法短、编译通过或“简单方法”不是豁免理由。将已检查符号、已补注释和逐项豁免写入 handoff；
+    缺注释或未审计时不勾选 task。
+11. 验证通过且上述条件满足后立即勾选该 task，并立即更新 handoff：已完成、修改文件、验证证据、
+    生命周期/安全结论、下一步和风险。
+12. 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
 
 ## 何时暂停
 
@@ -50,7 +58,7 @@
 
 ## 完成标准
 
-- 当前 task 的完成条件和适用验证均满足，并已立即勾选。
+- 当前 task 的完成条件、逐符号注释审计和适用验证均满足，才可立即勾选。
 - `[人工]` task 只依据人工明确反馈勾选；相关实现或环境变化后恢复 pending。
 - 全部 tasks 完成且结构化 handoff 完整后，才可把 comate 设为 done。
 - parallel 完成后重新运行 coordination validate。

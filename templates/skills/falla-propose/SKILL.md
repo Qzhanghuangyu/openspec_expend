@@ -28,7 +28,9 @@ description: Use when an existing Android Falla preflight change needs proposal 
    ```
 
    只使用返回的模板、依赖和 `resolvedOutputPath`。
-3. 按阶段规则生成 proposal、specs、design、tasks 和 comate。纯重构、工具或文档变更使用官方
+3. 先读 preflight 的“设计节点交接”，再按阶段规则生成 proposal、specs、design、tasks 和 comate。
+   新节点若早于 design 可写，先把最小授权记录追加到 preflight；可写后归并到 `design.md` 的
+   “设计源证据”，后续会话以它为准，不另建资源台账。纯重构、工具或文档变更使用官方
    `skip_specs: true` 语义。
 4. `comate.md` 是执行模式和验证模式的唯一记录：默认 `execution-mode: single`、
    `validation-mode: hybrid`。`tasks.md` 不重复保存这些字段。

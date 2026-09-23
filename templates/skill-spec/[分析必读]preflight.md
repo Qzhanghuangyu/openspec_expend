@@ -9,7 +9,7 @@
 
 - 用户提供的 PRD 或需求说明。
 - 当前项目代码、接口、模型、测试和已有规格。
-- 可选：用户在当前对话明确提供的设计节点。
+- 可选：用户在当时对话明确提供的设计节点，或本 change 已记录的“设计节点交接”。
 
 ## 必须执行
 
@@ -34,7 +34,10 @@
    - Code Compatibility Gaps：需求与现有模型、接口、权限、架构及模块边界的差异。
 7. 每个问题标记 `Missing Definition / Conflict / Implementation Risk / Decision Required`，以及
    `Blocker / Major / Minor`，并说明具体阻断的 artifact 或实施决策。
-8. 写入官方返回的 `resolvedOutputPath`，再运行 status 确认 preflight 为 `done`。
+8. 如果用户在当前对话明确提供用于此 change 的 Figma 节点，把授权范围、日期、file key 和精确
+   node id 写入 `preflight.md` 的“设计节点交接”。只保存稳定引用和必要的分析状态，不保留原始链接或
+   凭据；读取失败也要记录脱敏原因与恢复条件。不得从 PRD 链接推断授权。
+9. 写入官方返回的 `resolvedOutputPath`，再运行 status 确认 preflight 为 `done`。
 
 ## 何时暂停
 

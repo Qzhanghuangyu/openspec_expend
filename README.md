@@ -34,55 +34,17 @@ Propose/Apply 强制读取；其他参考仅在当前任务命中时读取。
 
 ## 初始化与更新
 
-完整操作说明见 [`docs/installation-and-update.md`](docs/installation-and-update.md)，包含首次初始化、
-Figma/CodeGraph/Lark 可选集成、源码修改后的目标项目更新、受管文件冲突处理和会话重启要求。安装后同一
-手册也会写入目标项目的 `.falla/installation-and-update.md`，无需返回源码仓库即可查阅。
+第一次安装：初始化项目的 OpenSpec，再运行 `falla-openspec install`。
+以后更新：查看 `.falla/install-manifest.json`，用原来的 `--tools` 重跑 `install`。
+两次都要运行 `doctor`，结束后重开 Agent 会话。命令和排障方法见[安装手册](docs/installation-and-update.md)；它也会复制到目标项目的 `.falla/installation-and-update.md`。
 
-要求 Node.js 20.19 或更高版本。
+安装手册的首次安装示例带了 Figma、CodeGraph 和 Lark；用不到就删掉对应的 `--with-*` 参数。受管文件有冲突时，安装器会停止，不会用 `--force` 覆盖你的修改。
+UI 知识库的具体用法见 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md) 或目标项目的 `.falla/ui-knowledge/README.md`。
 
-```bash
-npm install -g @fission-ai/openspec@1.12.0
-cd /path/to/falla-openspec
-npm install
-npm link
-```
-
-在目标项目中先初始化官方 OpenSpec，再安装扩展：
-
-```bash
-openspec init --tools none /path/to/project
-falla-openspec install /path/to/project --tools claude,codex --non-interactive
-falla-openspec doctor /path/to/project --json
-```
-
-`install` 会安装两套 Falla Schema、规则文档、所选工具的 Skill 与 Hook，并用
-`.falla/install-manifest.json` 记录受管文件哈希。重复安装是幂等的；marker 外的用户内容会保留，
-受管文件或 marker 内发生漂移时不会被静默覆盖。
-
-修改本仓库的工作流源码不会自动更新已经安装的目标项目。保持原 `tools` 选择并对目标项目重复
-执行 `falla-openspec install` 即可更新；更新前应读取目标项目的
-`.falla/install-manifest.json`，更新后运行 `doctor` 并重新创建 Agent 会话。详细命令见安装手册；
-第 0 节提供了可独立复制的完整使用实例。注意文件名是 `install-manifest.json`，不是
-`install-mainfest.json`。
-
-交互终端下可省略 `--non-interactive` 选择工具。Figma MCP、CodeGraph 和 Lark CLI 只有显式选择或传入
-`--with-figma`、`--with-codegraph`、`--with-lark` 时才会首次安装；`--with-lark` 只通过 npm 安装 CLI，不运行 Lark 的交互授权向导，
-也不会自动申请飞书权限。需要飞书能力时再按业务域或具体 scope 做最小授权。安装器默认确保目标项目的 `.gitignore`
-包含 `.codegraph/`；启用 CodeGraph 后，每个目标项目维护独立的本地索引，任务开始前由 Hook 执行增量同步。
-AI 定位符号、调用链和影响面时优先查询图谱，再读取少量命中文件。
-
-安装器还会在每个目标项目创建 `.falla/ui-knowledge/` 的通用协议、配置示例和条目模板，但不会
-扫描业务代码或生成项目专属 UI 组件知识库。不同项目的 Markdown、RAG 本地索引和 CodeGraph 图谱
-完全隔离；组件与页面模式由各项目成员，或经用户明确授权的 AI 单独维护。RAG 负责模糊召回，
-CodeGraph 负责源码关系验证。详细约定见
-[`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md)。
-简洁 RAG 操作见安装到项目后的 `.falla/ui-knowledge/RAG-QUICKSTART.md`。
-
-Falla 不读取或自动跟随 PRD 正文中的设计稿链接。只有用户在当前对话中另行手动提供含明确
-node id、并指定用于当前任务的 Figma 链接时，工作流才通过 Figma MCP 读取对应节点；缺少
-node id 时会要求重新选择节点并复制链接。浏览器、网页截图或抓取不能作为降级方案。若 MCP
-未安装、未认证或没有设计稿权限，依赖该设计的工作会明确停止。
-Figma `get_design_context` 固定传 `excludeScreenshot=true`；不调用截图工具，也不向当前模型发送截图。
+Falla 不会自动打开 PRD 正文中的设计链接。首次授权时，请在对话中提供带 node id、用于当前 change 的 Figma 链接。
+Preflight 收到链接会先在 `preflight.md` 留下节点交接；Propose 把它归并到 `design.md`。后续窗口读取记录，
+同一节点无需重贴链接。设计变化时重新核对，新节点或范围扩大仍需确认。
+设计只能通过 Figma MCP 读取，不用浏览器或截图代替。`get_design_context` 使用 `excludeScreenshot=true`；没有权限就停止依赖该设计的工作。
 
 ## Android 项目校验与认领
 

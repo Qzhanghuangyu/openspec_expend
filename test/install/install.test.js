@@ -88,7 +88,7 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
     path.join(root, '.falla', 'installation-and-update.md'),
     'utf8'
   );
-  assert.match(installedManual, /重复执行 install 完成更新/);
+  assert.match(installedManual, /## 以后更新/);
   assert.doesNotMatch(installedManual, /androidCopy|\$HOME\/android\/|\/Users\/|\/home\//);
   assert.match(
     await readFile(path.join(root, '.falla', 'skill-spec', '[分析必读]preflight.md'), 'utf8'),

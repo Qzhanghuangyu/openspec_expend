@@ -3,6 +3,7 @@
 > execution-mode 只存在于父 `comate.md`，validation-mode 只存在于当前 `comate.md`。
 > 本文件只保存当前子 change 的具体任务；不得复制父任务清单或其他子 change 的进度。
 > apply 一次只推进一个 ready task；完成并验证后立即勾选，未完成时不得提前或批量补勾。
+> 新增或实质修改代码的任务须逐符号审计注释。
 
 ## 1. 前置与边界
 
