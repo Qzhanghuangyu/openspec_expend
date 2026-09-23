@@ -19,7 +19,8 @@ description: Use when analyzing an Android client PRD or product request before 
 
 ## 编排
 
-1. 完整读取 PRD；输入不可访问或不足以确定范围时请求补充。
+1. 完整读取 PRD；飞书文档/Wiki 还须按阶段规则读取评论及回复（含已解决评论与分页），
+   核对正文和明确确认的评论结论；权限不足或评论不完整时暂停，不把讨论当成已确认需求。
 2. 执行 `openspec list --json`，优先复用同名或范围重叠的 change。
 3. 无可复用 change 时执行：
 

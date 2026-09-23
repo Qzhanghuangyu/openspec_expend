@@ -194,6 +194,29 @@ test('XML 页面在 design 中列简要布局层级，Compose 不强加 XML', as
   assert.match(designTemplate, /不写完整 XML 属性/);
 });
 
+test('飞书 PRD 的 Preflight 合并正文与完整评论线程，未决意见不算已确认', async () => {
+  const phase = await read('skill-spec/[分析必读]preflight.md');
+  const skill = await read('skills/falla-preflight/SKILL.md');
+  const schema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const template = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+
+  assert.match(phase, /docs \+fetch --doc "<PRD URL>" --scope full/);
+  assert.match(phase, /drive \+list-comments --url "<PRD URL>" --solved-status all --comment-scope all/);
+  assert.match(phase, /# 对每个 comment_id/);
+  assert.match(phase, /drive \+list-replies --url "<PRD URL>" --comment-id "<id>"/);
+  assert.match(phase, /reference_map\.comments/);
+  assert.match(phase, /--page-token/);
+  assert.match(phase, /“已解决”不等于已确认/);
+  assert.match(phase, /记录正文版本和评论核对时间/);
+  assert.match(phase, /评论接口无权限、失败或分页\/截断未补齐时/);
+  assert.match(phase, /不复制整段评论或个人信息/);
+  assert.match(skill, /读取评论及回复（含已解决评论与分页）/);
+  assert.match(schema, /飞书文档\/Wiki PRD 须核对正文和可见评论/);
+  assert.match(template, /## 飞书 PRD 评论核对/);
+  assert.match(template, /正文与已确认评论合并后的需求口径/);
+  assert.doesNotMatch(phase, /docs \+(?:get|export)/);
+});
+
 test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授权范围', async () => {
   const preflight = await read('skill-spec/[分析必读]preflight.md');
   const preflightSkill = await read('skills/falla-preflight/SKILL.md');

@@ -53,7 +53,7 @@ node bin/falla-openspec.js doctor "$TARGET_PROJECT" --json
 
 - `--with-figma`：给所选 Agent 配 Figma MCP/插件。登录和设计稿权限还要单独确认。
 - `--with-codegraph`：先在本机装好 CodeGraph CLI。敏感项目先检查 `codegraph telemetry status`，再启用索引。
-- `--with-lark`：只安装 Lark CLI，不会替你申请权限。用到飞书时再按需授权，例如文档使用 `lark-cli auth login --domain docs --no-wait --json`；别无参数运行 `lark-cli auth login`。
+- `--with-lark`：只安装 Lark CLI，不会替你申请权限。飞书 PRD 的正文与评论需要 `docs`、`drive` 业务域，可用 `lark-cli auth login --domain docs --domain drive --no-wait --json` 按需授权；别无参数运行 `lark-cli auth login`。
 
 这些集成安装失败会给 warning，不会撤销已安装的工作流文件。CodeGraph 的 `.codegraph/` 和 UI 知识索引 `.falla/ui-knowledge/.index/` 都是项目本地缓存，不要提交或跨项目共用。
 

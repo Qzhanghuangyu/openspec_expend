@@ -9,7 +9,10 @@ artifacts:
     instruction: |
       记录当前实现证据、Stateful Interactions、Boundary and Exception Cases、Code Compatibility Gaps
       以及 Missing Definition、Conflict、Implementation Risk、Decision Required。每项问题标明
-      Blocker、Major 或 Minor 及其实际阻断范围。本 artifact 不包含方案设计或代码修改。
+      Blocker、Major 或 Minor 及其实际阻断范围。飞书文档/Wiki PRD 须核对正文和可见评论
+      完整线程（含已解决评论及回复），在 preflight 留下评论位置/ID、状态、精简结论及冲突；
+      未取得完整评论不得把正文视为完整需求，未决讨论不自动成为已确认需求。
+      本 artifact 不包含方案设计或代码修改。
       用户在当前对话明确提供用于本 change 的 Figma 节点时，在 preflight 中持久记录确认范围、日期、
       file key 和精确 node id，供后续会话交接；不自动跟随 PRD 链接，不保存原始 URL 或凭据。
     requires: []
