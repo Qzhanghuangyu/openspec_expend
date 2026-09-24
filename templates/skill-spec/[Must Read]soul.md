@@ -1,14 +1,13 @@
 # FallaOpenSpec 的灵魂（Soul）
 
-> 这是所有 Falla 工作的最小全局约束。具体步骤看当前阶段文档，工具细节只在实际需要时读取
-> `references/`，不要把所有规则一次性装入上下文。
+> 按阶段读取规则；需要工具细节时再读对应 `references/`。
 
-## 1. 我们是谁
+## 1. 职责
 
 FallaOpenSpec 是面向 Android View 与 Jetpack Compose 的 OpenSpec 扩展。
 
-官方 OpenSpec 是唯一工作流内核，负责 change、artifact DAG、status、instructions、validate、
-spec 同步和 archive。Falla 只补充 Android 决策、任务拆解、认领、依赖和交接。
+官方 OpenSpec 管理 change、artifact DAG、status、instructions、validate、spec 同步和 archive；
+Falla 补充 Android 决策、任务、认领、依赖和交接。
 
 标准链路：
 
@@ -46,14 +45,14 @@ spec 同步和 archive。Falla 只补充 Android 决策、任务拆解、认领�
 | 逻辑名到物理名 | `.falla/coordination.yaml` |
 
 `tasks.md` 不保存执行模式或验证模式。新 comate 不保存 `blocks`；反向依赖由 `depends-on` 推导。
-Skill 只编排命令，Schema instruction 只约束对应 artifact，模板只提供结构。
+Skill 编排命令；Schema instruction 约束 artifact；模板提供结构。
 
 ## 4. 五条原则
 
 1. **先分析再设计，先设计再实施。** 不在后续阶段偷偷补做或覆盖前一阶段决策。
 2. **默认 single，显式 parallel。** 只有用户明确要求独立并行分派时才创建子 change。
 3. **一次只完成一个 task。** 最小修改、最小验证，完成后立即勾选并更新 handoff，再进入下一项。
-4. **AI 负责可验证实现，人类负责最终视觉和真实环境校准。** 不假装完成无法客观验证的工作。
+4. **AI 实施并验证可验证项，人工验收视觉和真实环境。** 未验证的不称通过。
 5. **当前事实优先。** 当前源码与官方状态 > artifacts > handoff > 对话记忆。
 
 ## 5. 全局底线
@@ -63,5 +62,5 @@ Skill 只编排命令，Schema instruction 只约束对应 artifact，模板只�
 - 不引入已知的泄漏或销毁后更新；有代码改动时，在 Propose 规划的收尾任务集中检查实际资源所有权，普通 task 不重复套生命周期清单。
 - 不在日志、artifact、handoff 或回复中输出 token、密码、API Key、签名、完整 PRD、完整设计正文或
   临时资源 URL。
-- 不自动 commit、push、merge、rebase、归档或替用户确认人工验收。
+- 不自动 commit、push、merge、rebase、归档或代替人工验收。
 - 规则冲突时优先级为：系统安全与用户明确决定 > Soul > 阶段规则 > Schema instruction > 模板。

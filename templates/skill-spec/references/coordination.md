@@ -7,8 +7,8 @@
 ## 执行模式
 
 - `single` 是默认模式：一个父 change 跟踪全部任务。
-- `parallel` 只在用户明确要求多人/多 Agent 并行、创建子 change 或独立分派时启用。
-- 任务多、存在 MVVM 分层或理论上可并行，都不能自动切换为 parallel。
+- `parallel` 仅在用户明确要求多人/多 Agent 并行、子 change 或独立分派时启用；任务多、MVVM
+  分层或理论可并行均不足以启用。
 - 子 change 只能在 propose 创建；apply 不创建、拆分或切换模式。
 
 ## Parallel 命名与映射
@@ -16,7 +16,7 @@
 - 逻辑名固定为 `<parent>/<child>`，恰好两段。
 - 物理 change 由 `coordination register` 返回，位于 `openspec/changes/`。
 - `.falla/coordination.yaml` 只保存逻辑名到物理名映射。
-- 子 change 使用 `falla-task-driven`，只包含自己的 tasks/comate，并引用父 design。
+- 子 change 使用 `falla-task-driven`，保存自己的 tasks/comate，引用父 design。
 - 创建官方 change 失败时，只有物理目录完全不存在才能 unregister 映射。
 
 ## 协作状态
@@ -30,12 +30,11 @@
 
 ## 任务和检查点
 
-- task 必须能在一次独立实施上下文内完成；跨度过大时返回 propose 继续拆分。
-- Apply 一次只推进一个 ready task，完成并验证后立即勾选并更新 handoff。
-- 计划中的集成验证失败时先保持集成任务未完成；只有失败证据同时推翻某个实施任务自身的完成条件，
-  才恢复那个已勾选的实施任务，避免把尚未执行的最终构建误认为前序任务失败。
-- 已勾选任务被新的构建或运行证据推翻时，将受影响任务恢复未完成，更新 handoff 中的失败证据和
-  恢复条件；修复并重新满足完成条件后才可再次勾选，不保留失效的“已通过”结论。
+- task 须能在一次实施上下文完成；过大则返回 propose 拆分。Apply 一次只推进一个 ready task，
+  验证后立即勾选并更新 handoff。
+- 集成验证失败时保持集成任务未完成；仅当失败证据推翻实施任务的完成条件，才将该任务恢复未完成。
+- 已勾选任务被新的构建或运行证据推翻时，更新 handoff 的失败证据和恢复条件，复验后重勾，
+  不保留失效结论。
 - 若受影响 change 已是 `done`，先确认未归档并暂停下游执行。parallel 中先通知各 owner，按逆依赖
   顺序把已启动的下游子 change 设为 `blocked`，记录失效证据与待复验项；父 owner 将父 `done` 同步恢复
   `in-progress`。仅各自 owner 修改自己的子 comate，不覆盖他人 owner。然后由原 owner 将受影响
@@ -44,16 +43,15 @@
   协调校验均不通过，不得只撤销 checkbox。已归档 change 不原地重开，返回 Propose 规划新 change。
 - 修复上游后按依赖顺序由各 owner 手动解除 `blocked` 并复验受影响任务；`blocked`/`done` 不可通过
   重复 claim 自动重启。恢复前后运行 `coordination validate`，确认依赖、checkbox 与 comate 一致。
-- handoff 只保存当前任务、关键决策、修改文件、验证结果、下一步和风险，不追加流水账。
+- handoff 只保存当前任务、决策、修改文件、验证结果、下一步和风险，不写流水账。
 - 恢复时依次读取官方 status/instructions、tasks、design、comate、`git status --short` 和相关 diff。
 - parallel 执行者只更新自己的子 comate；父 comate 只保存整体决策和跨节点问题。
 
 ## 验证模式
 
-- 默认 `hybrid`：Agent 按完成条件验证，不默认新增单测；受影响代码/资源在规划的集成节点按
-  `android-quality.md` 执行构建，平时只做当前 task 的可测试完成条件；有代码改动时，
-  在 Propose 安排的最终收尾任务集中核对实际生命周期和资源释放风险，不为每项任务重复检查。
-  不机械运行全量 formatter、lint、测试或构建；人工核对确需真机、真实服务端或视觉环境的部分。
+- 默认 `hybrid`：Agent 验证当前 task 的完成条件，不默认新增单测；规划的集成节点按
+  `android-quality.md` 构建，代码收尾任务集中核对实际生命周期与资源释放。全量 formatter、lint、
+  测试和构建不作为每项任务的固定动作；真机、真实服务端或视觉环境由人工核对。
 - `human`：Agent 只整理包含上述风险触发项的具体验证清单，实际结果由人工提供；`agent`：执行
   工具能够完成的验证。
 - `[人工]` task 只能根据人工明确反馈勾选。
@@ -62,11 +60,11 @@
 - `hybrid` 且 tasks 没有 `[人工]` 项时可设 `human-review: not-required`；有人工项时不得使用
   `not-required`，等待期间保持 `in-progress` 和 `pending`，失败为 `failed`，全部通过后为 `passed`。
   `human` 模式即使没有显式 `[人工]` task，也必须有人工确认及反馈。
-- 最终收尾检查只记录实际持有的资源及核对结论；无须释放时注明“不适用”，不为了检查而增加回收。
+- 最终收尾只记录实际资源及结论；无须释放时注明“不适用”，不增加无依据的回收。
   必要项无法检查时记录原因和恢复条件，回 Propose 补 `[人工]` 项；未获反馈不得称“无泄漏”。
 - 相关代码、资源、配置或验证环境变化后，受影响的人工验证恢复 pending。
 
 ## Doctor 边界
 
-`doctor` 用于安装、升级和排障。installation 或当前 change 的 workflow 错误必须修复；knowledge
+`doctor` 用于安装、升级和排障。installation 或当前 change 的 workflow 错误须修复；knowledge
 错误只排除对应候选；CodeGraph 不可用允许有界降级。doctor 不证明索引新鲜、MCP 连接或人工验证。

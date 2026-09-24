@@ -2,7 +2,7 @@
 
 ## 目标
 
-确认实施和验收已经结束，使用官方 OpenSpec 同步 delta spec 并归档。不得在本阶段重新实施需求。
+确认实施与验收完成，使用官方 OpenSpec 同步 delta spec 并归档。不得在本阶段重新实施需求。
 
 ## 输入
 
@@ -22,7 +22,7 @@
    openspec instructions archive --change "<physical>" --json
    ```
 
-3. 汇总非 done/skipped artifact、未完成 tasks、comate 状态、handoff、人工验证和 delta spec 影响。
+3. 核对非 done/skipped artifact、未完成 tasks、comate、handoff、人工验证和 delta spec 影响。
 4. parallel 父 change 归档前运行 coordination validate，并先归档子 change。
 5. 用户明确要求归档且没有未接受告警时执行：
 
@@ -33,9 +33,9 @@
 ## 何时暂停
 
 - 官方命令失败。
-- 有未完成任务、未通过人工验证或未交接阻塞项，而用户尚未决定如何处理。
+- 未完成任务、未通过人工验证或未交接阻塞项尚无处理决定。
 - validate 失败但用户尚未明确接受 `--no-validate`。
-- 用户尚未明确选择跳过 spec 同步或退役能力。
+- 跳过 spec 同步或退役能力尚无用户决定。
 
 不得使用 `--force` 或不存在的 `--skip-validate`，不得手工移动 change 目录。
 
