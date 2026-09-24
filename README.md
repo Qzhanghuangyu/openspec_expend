@@ -51,9 +51,13 @@ UI 知识库的具体用法见 [`docs/ui-component-knowledge-base.md`](docs/ui-c
 Falla 不会自动打开 PRD 正文中的设计链接。首次授权时，请在对话中提供带 node id、用于当前 change 的 Figma 链接。
 Preflight 收到链接会先在 `preflight.md` 留下节点交接；Propose 把它归并到 `design.md`。后续窗口读取记录，
 同一节点无需重贴链接。设计变化时重新核对，新节点或范围扩大仍需确认。
-设计只能通过 Figma MCP 读取，不用浏览器或截图代替。`get_design_context` 使用 `excludeScreenshot=true`；没有权限就停止依赖该设计的工作。
+设计节点默认只通过 Figma MCP 读取，不用浏览器或截图代替；仅 MCP 无原生导出能力且另获授权时才有
+受限 REST 降级。`get_design_context` 使用 `excludeScreenshot=true`；没有权限就停止依赖该设计的工作。
 UI 复现只从已授权节点提取少量关键文本规格；运行时核对可观察的层级、文案与边界，无法通过文本
 判断的图标、字体渲染和动效由人工对照设计与 App，反馈文字差异与验收结论，不向模型上传图片。
+工程资源另走“用图”管线：已有正式资源或符合设计的成品原图直接复用；需要节点效果时对已授权
+节点原生导出 PNG/SVG，透明新 PNG 入库前验收 Alpha。截图或预览不可代替切图；design 只保留
+必需资源的项目内路径与哈希，不预记导出和验收细节，具体规则见 `templates/skill-spec/references/design-tools.md`。
 项目确认使用 AutoSizeConfig 按宽适配，且 1× 设计画布宽等于 `design_width_in_dp` 时，可将设计
 尺寸/间距的数值按同数值 dp 实现；这不等于物理像素。设计稿高度和 `design_height_in_dp` 都不
 代表运行时内容高度，后者须结合实际窗口与 Insets 核对，不按两种高度的比例压缩整页。

@@ -246,6 +246,7 @@ test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授�
   assert.match(proposeSkill, /可写后归并到 `design\.md`/);
   assert.match(designTemplate, /## 设计源证据/);
   assert.match(designTemplate, /项目内相对路径、下载状态及本地普通文件哈希/);
+  assert.match(designTemplate, /不记录导出方式、倍率或逐项验收过程/);
   assert.match(designTemplate, /状态（未核对 \/ 已核对 \/ 失败）/);
   assert.match(designRules, /不要求用户重复粘贴同一链接/);
   assert.match(designRules, /已记录的授权仅覆盖原 change 和精确节点/);
@@ -267,7 +268,8 @@ test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且�
   const readme = await readFile('README.md', 'utf8');
 
   assert.match(designRules, /excludeScreenshot=true/);
-  assert.match(designRules, /禁止调用 `get_screenshot`/);
+  assert.match(designRules, /默认不调用 `get_screenshot`/);
+  assert.match(designRules, /get_screenshot\(contentsOnly=true\)/);
   assert.match(designRules, /未经核实不把 Figma\s*数值直接当成 Android dp/);
   assert.match(design, /### 关键节点文本规格/);
   assert.match(design, /Android 目标节点/);
@@ -279,7 +281,7 @@ test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且�
   assert.match(quality, /不把完整层级、真实业务数据或截图写进 handoff/);
   assert.match(quality, /不要求向模型上传图片/);
   assert.match(apply, /需要视觉复现验收时保持独立 `\[人工\]`/);
-  assert.match(apply, /不索要或\s*读取截图/);
+  assert.match(apply, /不索要或\s*读取页面\/人工截图作视觉判断/);
   assert.match(readme, /反馈文字差异与验收结论，不向模型上传图片/);
 
   for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
@@ -293,6 +295,38 @@ test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且�
     assert.match(tasks, /反馈只记录区域、预期\/实际差异及通过\/待改/);
     assert.match(tasks, /不向模型传截图/);
     assert.match(comate, /UI 视觉（适用时填人工确认的页面\/状态、设备配置、区域、预期与实际、通过或待改；不传截图）/);
+  }
+});
+
+test('Figma 用图仅复用成品或原生导出，透明新 PNG 验收后才可交付', async () => {
+  const rules = await read('skill-spec/references/design-tools.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const readme = await readFile('README.md', 'utf8');
+
+  assert.match(rules, /看图（理解设计）与用图（交付资源）是两条管线/);
+  assert.match(rules, /`rawImages` 是原始图片，`export` 是节点渲染结果/);
+  assert.match(rules, /原生 Export/);
+  assert.match(rules, /`png` 或 `svg`/);
+  assert.match(rules, /`scale=3` 对应 xxhdpi/);
+  assert.match(rules, /`sips -g hasAlpha <file>`.*`hasAlpha: yes`/);
+  assert.match(rules, /已有正式资源\/成品原图不强制新增 Alpha/);
+  assert.match(rules, /MCP 无原生导出能力时，须先取得用户.*REST 降级授权/);
+  assert.match(rules, /临时资源 URL 仅可通过批准的二进制下载方式/);
+  assert.match(design, /不记录导出方式、倍率或逐项验收过程/);
+  assert.match(propose, /design 不预记导出方式、倍率或验收过程/);
+  assert.match(apply, /新导出透明 PNG 入库前核验 Alpha/);
+  assert.match(apply, /项目内路径与哈希/);
+  assert.match(readme, /截图或预览不可代替切图/);
+  assert.match(readme, /不预记导出和验收细节/);
+
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const instructions = await read(`openspec/schemas/${schema}/schema.yaml`);
+    const tasks = await read(`openspec/schemas/${schema}/templates/tasks.md`);
+    assert.match(instructions, /透明验收/);
+    assert.match(tasks, /透明 PNG/);
+    assert.match(tasks, /禁止截图替代|不用截图代替资源/);
   }
 });
 
