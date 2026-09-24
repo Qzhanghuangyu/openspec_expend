@@ -348,6 +348,22 @@ test('注释豁免须逐符号审计，不能把短方法当简单方法跳过',
   assert.match(apply, /缺注释或未审计时不勾选 task/);
 });
 
+test('Propose 按能力与依赖拆任务，不强制固定 MVVM 或控件切法', async () => {
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const parent = await read('openspec/schemas/falla-spec-driven/templates/tasks.md');
+  const child = await read('openspec/schemas/falla-task-driven/templates/tasks.md');
+  const schema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+
+  assert.match(propose, /契约 → 独立逻辑\/组件 → 组装联调/);
+  assert.match(propose, /不强制 View\/ViewModel 两项或每控件一项/);
+  assert.match(propose, /输入、交付物、允许编辑范围、可测试完成条件和前置编号/);
+  assert.match(propose, /跨子 change 的机器依赖只写在子 comate/);
+  assert.match(parent, /依赖：2\.1、2\.2/);
+  assert.match(parent, /parallel 父任务只记子 change 里程碑/);
+  assert.match(child, /不接管其他子 change/);
+  assert.match(schema, /按依赖拓扑排列/);
+});
+
 test('生命周期与资源释放只在代码完成后集中检查，必要缺口交人工', async () => {
   const preflight = await read('skill-spec/[分析必读]preflight.md');
   const propose = await read('skill-spec/[架构必读]propose.md');

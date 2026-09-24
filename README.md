@@ -26,8 +26,9 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 | 逻辑名到物理名 | `.falla/coordination.yaml` |
 
 新 `comate.md` 使用 `format-version: 2`。`tasks.md` 不重复保存执行模式或验证模式；`blocks` 由 `depends-on` 反向推导，不再写入新 comate。
-Apply 一次只推进一个 ready task；该 task 完成并通过最小验证后立即勾选 checkbox、更新 handoff，再进入
-下一项，禁止把多个 task 的状态累计到最后批量更新。Soul 定义跨阶段规则，阶段文档定义阶段决策，
+Propose 按能力和依赖拆任务，不强制固定 MVVM/控件切法；parallel 须用户明确要求。Apply 一次只推进
+一个 ready task，完成并通过最小验证后立即勾选 checkbox、更新 handoff，不批量补勾。
+Soul 定义跨阶段规则，阶段文档定义阶段决策，
 Skill 只编排命令，Schema instruction 只约束对应 artifact，模板只提供结构。Figma、源码检索、
 UI Knowledge、Android 质量和协作细则位于 `.falla/skill-spec/references/`。其中 `project-rules.md` 在
 Propose/Apply 强制读取；其他参考仅在当前任务命中时读取。
