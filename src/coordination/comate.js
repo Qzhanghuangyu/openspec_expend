@@ -77,7 +77,7 @@ function handoffFieldHasValue(value, field) {
 }
 
 const REQUIRED_DONE_HANDOFF_FIELDS = [
-  '已完成', '注释审计', '验证证据', '生命周期结论', '安全与敏感信息结论', '遗留风险与恢复条件',
+  '已完成', '注释审计', '验证证据', '安全与敏感信息结论', '遗留风险与恢复条件',
 ];
 
 function assertChangeReference(reference, source) {

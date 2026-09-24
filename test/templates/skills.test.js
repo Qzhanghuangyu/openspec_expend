@@ -288,8 +288,8 @@ test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且�
     const comate = await read(`openspec/schemas/${schema}/templates/comate.md`);
     assert.match(instructions, /运行时节点核对/);
     assert.match(instructions, /独立 `\[人工\]` 视觉\s*验收任务/);
-    assert.match(tasks, /无法运行时将必要核对移至 4\.1/);
-    assert.match(tasks, /4\.2 \[人工\] <Figma UI 复现的视觉验收/);
+    assert.match(tasks, /无法运行时将必要核对移至 5\.1/);
+    assert.match(tasks, /5\.2 \[人工\] <Figma UI 复现的视觉验收/);
     assert.match(tasks, /反馈只记录区域、预期\/实际差异及通过\/待改/);
     assert.match(tasks, /不向模型传截图/);
     assert.match(comate, /UI 视觉（适用时填人工确认的页面\/状态、设备配置、区域、预期与实际、通过或待改；不传截图）/);
@@ -346,6 +346,46 @@ test('注释豁免须逐符号审计，不能把短方法当简单方法跳过',
   assert.match(parentSchema, /不能按方法行数豁免/);
   assert.match(apply, /方法短、编译通过或“简单方法”不是豁免理由/);
   assert.match(apply, /缺注释或未审计时不勾选 task/);
+});
+
+test('生命周期与资源释放只在代码完成后集中检查，必要缺口交人工', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const quality = await read('skill-spec/references/android-quality.md');
+  const parentPreflight = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const source = await readFile('src/coordination/comate.js', 'utf8');
+
+  assert.match(preflight, /不预设生命周期或 NPE 检查清单/);
+  assert.doesNotMatch(parentPreflight, /退出安全/);
+  assert.match(propose, /在全部实施任务之后安排一次独立的生命周期与资源释放收尾检查/);
+  assert.match(propose, /无代码改动不安排此项/);
+  assert.match(apply, /普通任务只保证自身完成条件可测试，不重复安排生命周期/);
+  assert.match(quality, /页面没有需要主动释放的资源时记/);
+  assert.match(quality, /按整个 change 的最终代码判断所有权/);
+  assert.match(quality, /Adapter\/ItemView 常规复用只复位绑定状态，不做整页式 `destroy`/);
+  assert.match(quality, /确实自行持有播放器、计时器或/);
+  assert.match(quality, /已负责取消其协程时不重复手动取消/);
+  assert.match(quality, /按其真实持有者和使用边界成对 `remove`\/`unregister`/);
+  assert.match(quality, /不强清 Glide\/Coil 等图片框架的全局缓存/);
+  assert.match(quality, /多 Flavor 项目使用已核实的精确变体任务/);
+  assert.match(quality, /:app:assembleDemoDebug/);
+  assert.match(design, /不需要主动释放时不得添加清理代码/);
+  assert.doesNotMatch(source, /'生命周期结论'/);
+
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const instructions = await read(`openspec/schemas/${schema}/schema.yaml`);
+    const tasks = await read(`openspec/schemas/${schema}/templates/tasks.md`);
+    const comate = await read(`openspec/schemas/${schema}/templates/comate.md`);
+    assert.match(instructions, /全部实施任务后安排一次独立的生命周期与资源释放收尾检查/);
+    assert.match(tasks, /## 4\. 代码完成后的收尾检查/);
+    assert.match(tasks, /无资源需主动释放则记录不适用，不添加额外回收逻辑/);
+    assert.doesNotMatch(tasks, /生命周期、可空边界/);
+    assert.match(tasks, /必要项无法检查则回 Propose 安排独立/);
+    assert.match(tasks, /5\.1 \[人工\]/);
+    assert.doesNotMatch(comate, /静态生命周期核对|运行时退出检查|^- 生命周期结论：/m);
+  }
 });
 
 test('Apply 使用完成即落盘的单任务循环', async () => {

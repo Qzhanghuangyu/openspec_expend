@@ -209,11 +209,11 @@ test('v2 comate 将结构化完成证据下沉为机器门禁', () => {
   - 注释审计：已检查变更符号
   - 人工验证反馈：reviewer 于 2026-09-22 验证通过
   - 验证证据：npm test 通过
-  - 生命周期结论：无泄漏和销毁后更新
   - 安全与敏感信息结论：无敏感信息输出
   - 遗留风险与恢复条件：无
 `;
   assert.deepEqual(validateComateRecord(parseComate(complete), { pendingTasks: 0 }), []);
+  assert.doesNotMatch(complete, /生命周期结论/);
 
   const noHumanTasks = complete
     .replace('human-review): passed', 'human-review): not-required')
