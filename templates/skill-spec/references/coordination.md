@@ -32,18 +32,33 @@
 
 - task 必须能在一次独立实施上下文内完成；跨度过大时返回 propose 继续拆分。
 - Apply 一次只推进一个 ready task，完成并验证后立即勾选并更新 handoff。
+- 计划中的集成验证失败时先保持集成任务未完成；只有失败证据同时推翻某个实施任务自身的完成条件，
+  才恢复那个已勾选的实施任务，避免把尚未执行的最终构建误认为前序任务失败。
+- 已勾选任务被新的构建或运行证据推翻时，将受影响任务恢复未完成，更新 handoff 中的失败证据和
+  恢复条件；修复并重新满足完成条件后才可再次勾选，不保留失效的“已通过”结论。
+- 若受影响 change 已是 `done`，先确认未归档并暂停下游执行。parallel 中先通知各 owner，按逆依赖
+  顺序把已启动的下游子 change 设为 `blocked`，记录失效证据与待复验项；父 owner 将父 `done` 同步恢复
+  `in-progress`。仅各自 owner 修改自己的子 comate，不覆盖他人 owner。然后由原 owner 将受影响
+  change 设为 `in-progress`、恢复失效 task 的 checkbox 和 handoff；受影响的人工验证退回 `pending`。
+  `done` 有未完成 task、父 `done` 有未完成子 change、或运行中的子 change 依赖未完成上游时，
+  协调校验均不通过，不得只撤销 checkbox。已归档 change 不原地重开，返回 Propose 规划新 change。
+- 修复上游后按依赖顺序由各 owner 手动解除 `blocked` 并复验受影响任务；`blocked`/`done` 不可通过
+  重复 claim 自动重启。恢复前后运行 `coordination validate`，确认依赖、checkbox 与 comate 一致。
 - handoff 只保存当前任务、关键决策、修改文件、验证结果、下一步和风险，不追加流水账。
 - 恢复时依次读取官方 status/instructions、tasks、design、comate、`git status --short` 和相关 diff。
 - parallel 执行者只更新自己的子 comate；父 comate 只保存整体决策和跨节点问题。
 
 ## 验证模式
 
-- 默认 `hybrid`：Agent 按完成条件验证，不默认新增单测；签名、资源、XML 或构建配置变化做受影响
-  模块编译；页面退出静态核对清理与 NPE，需证明释放时做运行时退出检查。
+- 默认 `hybrid`：Agent 按完成条件验证，不默认新增单测；受影响代码/资源在规划的集成节点按
+  `android-quality.md` 执行构建，平时只做当前 task 的轻量检查；页面退出静态核对清理与 NPE，
+  需证明释放时做运行时退出检查。
   不机械运行全量 formatter、lint、测试或构建；人工核对确需真机、真实服务端或视觉环境的部分。
 - `human`：Agent 只整理包含上述风险触发项的具体验证清单，实际结果由人工提供；`agent`：执行
   工具能够完成的验证。
 - `[人工]` task 只能根据人工明确反馈勾选。
+- Figma UI 的视觉验收只接受人工对实际页面的文字反馈：页面/状态、设备配置、区域、预期与实际、
+  通过或待改；缺少明确结论时保持 pending，不索取图片，也不把运行时文本核对当作视觉通过。
 - `hybrid` 且 tasks 没有 `[人工]` 项时可设 `human-review: not-required`；有人工项时不得使用
   `not-required`，等待期间保持 `in-progress` 和 `pending`，失败为 `failed`，全部通过后为 `passed`。
   `human` 模式即使没有显式 `[人工]` task，也必须有人工确认及反馈。

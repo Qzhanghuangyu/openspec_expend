@@ -92,6 +92,23 @@ test('done 状态拒绝未完成任务且报告不泄露 owner 或 handoff', asy
   assert.doesNotMatch(JSON.stringify(report), /SECRET_OWNER|SENSITIVE_HANDOFF_BODY/);
 });
 
+test('上游回退为 in-progress 后，下游 blocked 可保持依赖校验通过', async () => {
+  const root = await createGraph([
+    {
+      name: 'view-model', status: 'in-progress', dependsOn: [], blocks: [], pending: true,
+    },
+    {
+      name: 'list-card', status: 'blocked', dependsOn: ['medal/view-model'], blocks: [],
+      handoff: '等待上游恢复并复验',
+    },
+  ]);
+
+  const report = await validateCoordination(root, { change: 'medal' });
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.errors, []);
+  assert.deepEqual(report.blocked, ['medal/list-card']);
+});
+
 test('DAG 校验拒绝通过 comate 符号链接读取项目外内容', async () => {
   const root = await createGraph([
     { name: 'list-card', status: 'todo', dependsOn: [], blocks: [] },

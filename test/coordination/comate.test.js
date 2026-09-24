@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -132,6 +133,18 @@ test('存在人工任务的 hybrid 与 human 模式必须由人工确认后才�
     () => parseComate(human.replace('validation-mode): human', 'validation-mode): agent')),
     /not-required/
   );
+});
+
+test('视觉反馈占位不算人工验收证据', async () => {
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const template = await readFile(`templates/openspec/schemas/${schema}/templates/comate.md`, 'utf8');
+    const record = parseComate(template
+      .replace('owner): unassigned', 'owner): alice')
+      .replace('status): todo', 'status): done')
+      .replace('human-review): pending', 'human-review): passed'));
+    const issues = validateComateRecord(record, { pendingTasks: 0, humanTasks: 1 });
+    assert.ok(issues.some(({ kind }) => kind === 'human-review-evidence-required'));
+  }
 });
 
 test('hybrid 无人工任务可标记 not-required，有人工任务不能跳过人工验收', () => {

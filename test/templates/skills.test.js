@@ -258,6 +258,75 @@ test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授�
   assert.match(childSchema, /复用本地资源前核对文件/);
 });
 
+test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且不传截图', async () => {
+  const designRules = await read('skill-spec/references/design-tools.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const quality = await read('skill-spec/references/android-quality.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const readme = await readFile('README.md', 'utf8');
+
+  assert.match(designRules, /excludeScreenshot=true/);
+  assert.match(designRules, /禁止调用 `get_screenshot`/);
+  assert.match(designRules, /未经核实不把 Figma\s*数值直接当成 Android dp/);
+  assert.match(design, /### 关键节点文本规格/);
+  assert.match(design, /Android 目标节点/);
+  assert.match(design, /未取得 \/ 待人工校准/);
+  assert.match(propose, /提炼关键节点文本规格/);
+  assert.match(quality, /## UI 文本核对与视觉边界/);
+  assert.match(quality, /View 层级或 Compose 语义树/);
+  assert.match(quality, /不能把设备物理 px 与 dp 直接相减/);
+  assert.match(quality, /不把完整层级、真实业务数据或截图写进 handoff/);
+  assert.match(quality, /不要求向模型上传图片/);
+  assert.match(apply, /需要视觉复现验收时保持独立 `\[人工\]`/);
+  assert.match(apply, /不索要或\s*读取截图/);
+  assert.match(readme, /反馈文字差异与验收结论，不向模型上传图片/);
+
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const instructions = await read(`openspec/schemas/${schema}/schema.yaml`);
+    const tasks = await read(`openspec/schemas/${schema}/templates/tasks.md`);
+    const comate = await read(`openspec/schemas/${schema}/templates/comate.md`);
+    assert.match(instructions, /运行时节点核对/);
+    assert.match(instructions, /独立 `\[人工\]` 视觉\s*验收任务/);
+    assert.match(tasks, /无法运行时将必要核对移至 4\.1/);
+    assert.match(tasks, /4\.2 \[人工\] <Figma UI 复现的视觉验收/);
+    assert.match(tasks, /反馈只记录区域、预期\/实际差异及通过\/待改/);
+    assert.match(tasks, /不向模型传截图/);
+    assert.match(comate, /UI 视觉（适用时填人工确认的页面\/状态、设备配置、区域、预期与实际、通过或待改；不传截图）/);
+  }
+});
+
+test('按宽 AutoSizeConfig 与 1× 同宽设计稿可映射 dp，高度配置不是内容区上限', async () => {
+  const designRules = await read('skill-spec/references/design-tools.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const quality = await read('skill-spec/references/android-quality.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const readme = await readFile('README.md', 'utf8');
+
+  assert.match(designRules, /已证实当前页面使用 AutoSizeConfig 按宽适配/);
+  assert.match(designRules, /该页没有取消适配或改用按高\/自定义基准/);
+  assert.match(designRules, /双方宽度均为 375 时，设计间距 16 对应 16dp/);
+  assert.match(designRules, /不自动涵盖文字的 sp、字体缩放或位图资源/);
+  assert.match(designRules, /设计稿高度（如 812）是参考画布，不用它修改 `design_height_in_dp`（如 667）/);
+  assert.match(design, /画布宽高、单位与 1× 逻辑尺寸证据/);
+  assert.match(design, /`design_width_in_dp`、`design_height_in_dp`/);
+  assert.match(design, /`design_height_in_dp` 不是实际内容区高度/);
+  assert.match(propose, /不用高度配置推断运行时\s*内容区高度/);
+  assert.match(quality, /不能把设备物理 px 与 dp 直接相减/);
+  assert.match(quality, /运行时复核页面实际适配与内容宽度/);
+  assert.match(quality, /不按 667\/812 等比例压缩整页/);
+  assert.match(apply, /不把 `design_height_in_dp` 或设计画布高度当成实际高度/);
+  assert.match(readme, /设计稿高度和 `design_height_in_dp` 都不\s*代表运行时内容高度/);
+
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const instructions = await read(`openspec/schemas/${schema}/schema.yaml`);
+    const tasks = await read(`openspec/schemas/${schema}/templates/tasks.md`);
+    assert.match(instructions, /实际内容\s*高度与 Insets/);
+    assert.match(tasks, /核对当前页按宽适配、实际内容高度\/Insets/);
+  }
+});
+
 test('注释豁免须逐符号审计，不能把短方法当简单方法跳过', async () => {
   const quality = await read('skill-spec/references/android-quality.md');
   const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
@@ -288,6 +357,55 @@ test('Apply 使用完成即落盘的单任务循环', async () => {
   assert.match(apply, /不为后续 task 提前改动/);
   assert.match(apply, /不得提前勾选或最后批量补勾/);
   assert.match(apply, /状态落盘后重新读取 instructions\/tasks/);
+});
+
+test('日常任务轻量检查，集成时构建 APK 并保留失败证据', async () => {
+  const quality = await read('skill-spec/references/android-quality.md');
+  const coordination = await read('skill-spec/references/coordination.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const instructions = await read(`openspec/schemas/${schema}/schema.yaml`);
+    const tasks = await read(`openspec/schemas/${schema}/templates/tasks.md`);
+    assert.match(instructions, /轻量检查/);
+    assert.match(instructions, /实际应用 APK/);
+    assert.match(instructions, /恢复未完成/);
+    assert.match(instructions, /归档后不原地重开/);
+    assert.match(tasks, /待集成结果指向后续集成任务/);
+    assert.match(tasks, /有构建影响时保留独立任务/);
+    assert.doesNotMatch(tasks, /仅需独立任务时保留/);
+  }
+  assert.match(quality, /package<Variant>Resources/);
+  assert.match(quality, /assemble<Variant>/);
+  assert.match(quality, /不能单独证明\s*AAPT 通过/);
+  assert.match(quality, /库模块 AAR 不能替代 APK/);
+  assert.match(quality, /不要求每次修改 XML\/资源或 Kotlin\/Java 后都运行 Gradle/);
+  assert.match(quality, /成功已覆盖依赖模块的资源打包和代码编译/);
+  assert.match(propose, /实际应用 APK 构建/);
+  assert.match(apply, /有构建影响时，后续集成验证任务必须已在 tasks 中安排/);
+  assert.match(apply, /不直接 claim `done`/);
+  assert.match(apply, /整包成功无需重复运行资源与模块任务/);
+  assert.match(apply, /恢复该任务未完成并纠正 handoff/);
+  assert.match(coordination, /恢复未完成/);
+  assert.match(coordination, /先通知各 owner，按逆依赖/);
+  assert.match(coordination, /父 owner 将父 `done` 同步恢复/);
+  assert.match(coordination, /已归档 change 不原地重开/);
+  assert.match(apply, /若 change 已是 `done`，先按 `references\/coordination\.md`/);
+});
+
+test('UI Knowledge 先筛硬条件，仅多方案时可选评分', async () => {
+  const knowledge = await read('skill-spec/references/ui-knowledge.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const schema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  assert.match(knowledge, /通过校验的 draft 仅 `reference-only`/);
+  assert.match(knowledge, /证据过期（`stale-evidence`）按校验结果 `rejected`/);
+  assert.match(knowledge, /默认不对每个控件打分/);
+  assert.match(knowledge, /分数辅助讨论，硬条件优先/);
+  assert.match(propose, /多个可行候选且取舍影响较大时才使用轻量评分/);
+  assert.match(design, /UI Knowledge 选型/);
+  assert.match(design, /交付验证边界/);
+  assert.match(schema, /不对每个控件强制打分/);
 });
 
 test('OpenSpec 1.12 特殊语义仍保留', async () => {
