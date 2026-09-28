@@ -38,6 +38,8 @@ description: Use when implementing or continuing an existing Android Falla paren
 4. 设计相关 task 先读取父 `design.md` 的“设计源证据”，核对所需本地资源存在且哈希吻合；已有事实
    可复用。资源/元数据缺失、用户告知设计变化或要求以最新设计为准时只重读已授权节点，不要求重复提供同一链接；新节点
    或范围扩大要重新确认，设计结论变更回 Propose 修正。
+   当前 task 若有 UI Knowledge 选定组件，按 design 的 required 绑定实施并核对实际接入；不能静默替代。
+   类/API 或生命周期条件失效时暂停并回 Propose 修订，不为此重复读取未变化的 Figma 节点。
 5. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：
 
    ```bash

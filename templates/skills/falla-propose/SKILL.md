@@ -32,6 +32,8 @@ description: Use when an existing Android Falla preflight change needs proposal 
    新节点若早于 design 可写，先把最小授权记录追加到 preflight；可写后归并到 `design.md` 的
    “设计源证据”，后续会话以它为准，不另建资源台账。纯重构、工具或文档变更使用官方
    `skip_specs: true` 语义。
+   UI Knowledge 选定复用或用户明确指定且条件满足的组件，须写入 design 的 required 实现约束，
+   并落实到相关 task/子 change 的完成条件；不把仅召回的候选强制复用。
 4. `comate.md` 是执行模式和验证模式的唯一记录：默认 `execution-mode: single`、
    `validation-mode: hybrid`。无 `[人工]` task 时 human-review 为 `not-required`，否则为 `pending`；
    `tasks.md` 不重复保存这些字段。

@@ -498,6 +498,29 @@ test('UI Knowledge 先筛硬条件，仅多方案时可选评分', async () => {
   assert.match(schema, /不对每个控件强制打分/);
 });
 
+test('唯一合格复用候选和用户指定组件写入 required 并由 Apply 核对落地', async () => {
+  const knowledge = await read('skill-spec/references/ui-knowledge.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const proposeSkill = await read('skills/falla-propose/SKILL.md');
+  const applySkill = await read('skills/falla-apply-change/SKILL.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const childSchema = await read('openspec/schemas/falla-task-driven/schema.yaml');
+
+  assert.match(knowledge, /唯一.*必须.*复用/s);
+  assert.match(knowledge, /用户明确指定.*必须.*使用/s);
+  assert.match(knowledge, /draft.*reference-only/s);
+  assert.match(knowledge, /不默认请求人工裁决/);
+  assert.match(propose, /复用.*required.*task/s);
+  assert.match(proposeSkill, /选定复用.*required/);
+  assert.match(design, /复用.*required.*选定类.*API/s);
+  assert.match(parentSchema, /复用.*required.*task/s);
+  assert.match(childSchema, /复用.*required.*子任务/s);
+  assert.match(apply, /required.*实际代码.*不得静默替代/s);
+  assert.match(applySkill, /选定组件.*不能静默替代/s);
+});
+
 test('OpenSpec 1.12 特殊语义仍保留', async () => {
   const propose = await read('skills/falla-propose/SKILL.md');
   const apply = await read('skill-spec/[模块选读]apply.md');

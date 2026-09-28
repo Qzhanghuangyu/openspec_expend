@@ -1,5 +1,7 @@
 # 子任务
 
+> 父 design 选定复用的 required 组件若属于本子 change，相关任务写明具体类/API 的接入与
+> 生命周期完成条件；无法接入则返回父 Propose 修订，不静默替代。
 > execution-mode 只存在于父 `comate.md`，validation-mode 只存在于当前 `comate.md`。
 > 本文件只保存当前子 change 的具体任务；不得复制父任务清单或其他子 change 的进度。
 > 按本子 change 的能力及依赖拆任务，不接管其他子 change；删除不适用项并重编号。
