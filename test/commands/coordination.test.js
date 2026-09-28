@@ -7,6 +7,7 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 
 import { coordinationCommand } from '../../src/commands/coordination.js';
+import { main } from '../../src/cli.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,6 +32,16 @@ async function createProject() {
     { recursive: true }
   );
   await execFileAsync('openspec', ['new', 'change', 'medal', '--json'], { cwd: root });
+  const parentDir = path.join(root, 'openspec', 'changes', 'medal');
+  await writeFile(path.join(parentDir, 'tasks.md'), '- [ ] 1.1 integrate\n');
+  await writeFile(path.join(parentDir, 'comate.md'), `# comate
+
+- 执行模式 (execution-mode): parallel
+- 负责人 (owner): alice
+- 状态 (status): in-progress
+- 依赖 (depends-on): []
+- 交接 (handoff): 准备集成
+`);
   return root;
 }
 
@@ -204,6 +215,7 @@ test('comate 已 done 但官方 artifacts 未完成时校验失败', async () =>
     validation.errors.some(({ kind }) => kind === 'artifacts-incomplete'),
     true
   );
+  assert.equal(await main(['coordination', 'validate', '--change', 'medal', '--json'], memoryIo(root)), 1);
 });
 
 test('父 DAG 同时包含 archived 和 active 子 change 时仍可校验', async () => {

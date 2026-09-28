@@ -19,6 +19,20 @@ function issue(kind, change, related = undefined, count = undefined) {
   };
 }
 
+// 两个入口共用父子约束；缺失或无效的子记录不能作为父完成的证据。
+export function validateParentRecord(reference, comate, children) {
+  const errors = [];
+  if (children.length > 0 && comate.executionMode !== 'parallel') {
+    errors.push(issue('execution-mode-conflict', reference));
+  }
+  if (comate.status === 'done') {
+    for (const [logical, status] of children) {
+      if (status !== 'done') errors.push(issue('child-not-done', reference, logical));
+    }
+  }
+  return errors;
+}
+
 function isInside(root, candidate) {
   return candidate === root || candidate.startsWith(`${root}${path.sep}`);
 }
@@ -157,16 +171,8 @@ export async function validateChangeRecords(root, statuses) {
 
     const parentRecord = records.get(parent);
     if (!parentRecord) continue;
-    if (parentRecord.comate.executionMode === 'single') {
-      errors.push(issue('execution-mode-conflict', parent));
-    }
-    if (parentRecord.comate.status === 'done') {
-      for (const logical of children.sort()) {
-        if (records.get(logical)?.comate.status !== 'done') {
-          errors.push(issue('child-not-done', parent, logical));
-        }
-      }
-    }
+    errors.push(...validateParentRecord(parent, parentRecord.comate,
+      children.sort().map((logical) => [logical, records.get(logical)?.comate.status])));
   }
 
   for (const [reference, record] of records) {

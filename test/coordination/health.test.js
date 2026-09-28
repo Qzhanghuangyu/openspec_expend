@@ -129,6 +129,19 @@ test('报告 single 父状态与官方规划、子映射的模式矛盾', async 
   );
 });
 
+test('父存在子映射但缺少执行模式时健康校验不误判为合法 parallel', async () => {
+  const root = await createProject();
+  await writeRecord(root, 'medal', comate({ status: 'todo' }));
+  const mapping = await registerMapping(root, 'medal/card');
+  await writeRecord(root, mapping.physical, comate({ status: 'todo' }));
+  const report = await validateChangeRecords(root, [
+    officialStatus('medal', 'falla-spec-driven'),
+    officialStatus(mapping.physical, 'falla-task-driven'),
+  ]);
+  assert.ok(report.errors.some(({ kind, change }) =>
+    kind === 'execution-mode-conflict' && change === 'medal'));
+});
+
 test('父记录 done 时所有 parallel 子记录也必须 done', async () => {
   const root = await createProject();
   await writeRecord(root, 'medal', comate({
@@ -147,6 +160,23 @@ test('父记录 done 时所有 parallel 子记录也必须 done', async () => {
     kind: 'child-not-done', change: 'medal', related: 'medal/card',
   }]);
   assert.doesNotMatch(JSON.stringify(report), /alice|handoff|\/untrusted/);
+});
+
+test('doctor 工作流对 agent 人工任务和 hybrid 多行人工任务使用同一门禁', async () => {
+  const root = await createProject();
+  for (const [name, validationMode] of [['agent', 'agent'], ['hybrid', 'hybrid']]) {
+    const record = comate({ mode: 'single', status: 'done', handoff: '  - 已完成：验证' })
+      .replace('- 依赖 (depends-on):', `- 验证模式 (validation-mode): ${validationMode}\n- 人工验证状态 (human-review): not-required\n- 依赖 (depends-on):`);
+    await writeRecord(root, name, record, '- [x] 完成\n  [人工] 真机反馈\n');
+  }
+  const report = await validateChangeRecords(root, [
+    officialStatus('agent', 'falla-spec-driven'),
+    officialStatus('hybrid', 'falla-spec-driven'),
+  ]);
+  assert.deepEqual(report.errors.map(({ kind, change }) => ({ kind, change })), [
+    { kind: 'validation-mode-conflict', change: 'agent' },
+    { kind: 'human-review-required', change: 'hybrid' },
+  ]);
 });
 
 test('健康校验拒绝读取符号链接记录', async () => {

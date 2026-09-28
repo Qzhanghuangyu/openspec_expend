@@ -1,7 +1,7 @@
 import { FallaError } from '../errors.js';
 import { assertChangeSegment } from './naming.js';
 import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
-import { readChangeRecordFile } from './health.js';
+import { readChangeRecordFile, validateParentRecord } from './health.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
 
@@ -71,6 +71,36 @@ export async function validateCoordination(root, options) {
   const warnings = [];
   const nodes = new Map();
 
+  let parentNode = null;
+  try {
+    parentNode = await readNode(root, parent, { physical: parent }, options.statusProvider);
+    for (const localIssue of validateComateRecord(parentNode.comate, {
+      pendingTasks: parentNode.tasks.pending,
+      humanTasks: parentNode.tasks.humanTasks,
+    })) {
+      const { kind, ...details } = localIssue;
+      errors.push(issue(kind, parent, undefined,
+        Object.keys(details).length > 0 ? details : undefined));
+    }
+    if (parentNode.comate.status === 'done' && parentNode.officialStatus?.isPlanningComplete === false) {
+      errors.push(issue('artifacts-incomplete', parent));
+    }
+    if (parentNode.officialStatus?.schemaName === 'falla-spec-driven'
+      && parentNode.comate.executionMode === 'parallel' && mappings.length === 0) {
+      errors.push(issue('execution-mode-conflict', parent));
+    }
+    if (parentNode.officialStatus?.schemaName === 'falla-task-driven') {
+      errors.push(issue('schema-mode-conflict', parent));
+    }
+    if (parentNode.resolved.lifecycle === 'archived' && parentNode.comate.status !== 'done') {
+      warnings.push(issue('archived-not-done', parent));
+    }
+  } catch (error) {
+    // 不回传异常正文：其中可能包含路径、文件内容或外部命令输出。
+    errors.push(issue(error?.message?.startsWith('找不到物理 change：')
+      ? 'missing-parent' : 'invalid-parent', parent));
+  }
+
   for (const [logical, mapping] of mappings) {
     try {
       const node = await readNode(root, logical, mapping, options.statusProvider);
@@ -86,12 +116,22 @@ export async function validateCoordination(root, options) {
       if (node.comate.status === 'done' && node.officialStatus?.isPlanningComplete === false) {
         errors.push(issue('artifacts-incomplete', logical));
       }
+      if (node.officialStatus?.schemaName === 'falla-spec-driven'
+        || (node.officialStatus?.schemaName === 'falla-task-driven'
+          && node.comate.executionMode !== undefined)) {
+        errors.push(issue('schema-mode-conflict', logical));
+      }
       if (node.resolved.lifecycle === 'archived' && node.comate.status !== 'done') {
         warnings.push(issue('archived-not-done', logical));
       }
-    } catch (error) {
-      errors.push(issue('invalid-node', logical, undefined, { message: error.message }));
+    } catch {
+      errors.push(issue('invalid-node', logical));
     }
+  }
+
+  if (parentNode) {
+    errors.push(...validateParentRecord(parent, parentNode.comate,
+      mappings.map(([logical]) => [logical, nodes.get(logical)?.status])));
   }
 
   for (const [logical, record] of nodes) {

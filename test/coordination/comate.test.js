@@ -188,6 +188,36 @@ test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbo
   assert.equal(parseTaskProgress('- [x] 1.1 implement\n- [x] 2.1 [人工] verify\n').humanTasks, 1);
 });
 
+test('人工任务识别任务续行，重复标记只计一次，隔离相邻段落', () => {
+  const progress = parseTaskProgress(`- [x] 1.1 完成实现
+  需要 [人工] 验证，记录 [人工] 反馈
+- [x] 1.2 完成联调
+[人工] 独立续行说明
+- [x] 1.3 自动检查
+- 普通列表 [人工] 不属于任务
+- [x] 1.4 自动检查
+
+[人工] 独立段落不属于任务
+- [x] 1.5 自动检查
+## [人工] 下一章节不属于任务
+`);
+  assert.deepEqual(progress, { total: 5, complete: 5, pending: 0, humanTasks: 2 });
+});
+
+test('agent 模式含人工任务立即冲突，hybrid 续行人工任务不得跳过验收', () => {
+  const progress = parseTaskProgress('- [x] 1.1 校验\n  [人工] 设备反馈\n');
+  const agent = { ...parseComate(valid), validationMode: 'agent', humanReview: 'not-required' };
+  assert.deepEqual(
+    validateComateRecord(agent, { pendingTasks: progress.pending, humanTasks: progress.humanTasks })
+      .map(({ kind }) => kind),
+    ['validation-mode-conflict']
+  );
+  const hybrid = { ...agent, status: 'done', validationMode: 'hybrid' };
+  assert.ok(validateComateRecord(hybrid, {
+    pendingTasks: progress.pending, humanTasks: progress.humanTasks,
+  }).some(({ kind }) => kind === 'human-review-required'));
+});
+
 test('新 comate 可省略 blocks，旧 blocks 仅作为兼容字段读取', () => {
   const withoutBlocks = valid.replace('- 被依赖 (blocks): [medal/page-integration]\n', '');
   assert.equal(parseComate(withoutBlocks).blocks, undefined);

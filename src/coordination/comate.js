@@ -174,18 +174,40 @@ export function parseTaskProgress(markdown) {
   let total = 0;
   let complete = 0;
   let humanTasks = 0;
+  let task = null;
+  const finishTask = () => {
+    if (task?.human) humanTasks += 1;
+    task = null;
+  };
   for (const line of String(markdown).split('\n')) {
     const match = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/);
-    if (!match) continue;
-    total += 1;
-    if (match[1].toLowerCase() === 'x') complete += 1;
-    if (match[2].includes('[人工]')) humanTasks += 1;
+    if (match) {
+      finishTask();
+      total += 1;
+      if (match[1].toLowerCase() === 'x') complete += 1;
+      task = { indent: line.match(/^\s*/)[0].length, human: match[2].includes('[人工]') };
+      continue;
+    }
+    if (!task) continue;
+    const indent = line.match(/^\s*/)[0].length;
+    if (!line.trim() || /^\s*#{1,6}\s/u.test(line)
+      || /^\s*(?:`{3,}|~{3,})/u.test(line)
+      || (/^\s*(?:[-*+]\s+|\d+[.)]\s+)/u.test(line) && indent <= task.indent)) {
+      finishTask();
+      continue;
+    }
+    // 无缩进的紧邻文本也可以是任务续行；空行、同级列表和标题截断归属。
+    if (line.includes('[人工]')) task.human = true;
   }
+  finishTask();
   return { total, complete, pending: total - complete, humanTasks };
 }
 
 export function validateComateRecord(record, { pendingTasks, humanTasks }) {
   const issues = [];
+  if (record.validationMode === 'agent' && humanTasks > 0) {
+    issues.push({ kind: 'validation-mode-conflict' });
+  }
   if (record.status !== 'todo' && record.owner === 'unassigned') {
     issues.push({ kind: 'owner-required' });
   }
