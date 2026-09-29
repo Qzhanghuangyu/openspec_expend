@@ -1,5 +1,6 @@
 import { FallaError } from '../errors.js';
 import { assertChangeSegment, parseLogicalReference } from './naming.js';
+import { validateTaskDependencies } from './tasks.js';
 
 const MAX_COMATE_BYTES = 256 * 1024;
 const STATUSES = new Set(['todo', 'in-progress', 'blocked', 'done']);
@@ -201,11 +202,14 @@ export function parseTaskProgress(markdown) {
     if (parents.length && line.includes('[人工]')) parents.at(-1).human = true;
     separated = false;
   }
-  return { total, complete, pending: total - complete, humanTasks: tasks.filter(task => task.human).length };
+  return {
+    total, complete, pending: total - complete, humanTasks: tasks.filter(task => task.human).length,
+    issues: validateTaskDependencies(markdown),
+  };
 }
 
-export function validateComateRecord(record, { pendingTasks, humanTasks }) {
-  const issues = [];
+export function validateComateRecord(record, { pendingTasks, humanTasks, taskIssues = [] }) {
+  const issues = [...taskIssues];
   if (record.validationMode === 'agent' && humanTasks > 0) {
     issues.push({ kind: 'validation-mode-conflict' });
   }

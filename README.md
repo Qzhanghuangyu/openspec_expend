@@ -110,7 +110,8 @@ falla-openspec coordination unregister "medal/achievement-detail" --json
 
 映射只保存在 `.falla/coordination.yaml`。负责人、状态、正向依赖和交接以各 change 的
 `comate.md` 为唯一事实来源；反向 blocks 由正向依赖推导。`coordination validate` 检查缺失节点、环、
-前置状态、tasks 完成度、结构化 handoff 和 OpenSpec artifact 状态。
+前置状态、tasks 完成度、本地任务编号与依赖图、结构化 handoff 和 OpenSpec artifact 状态。
+任务格式与已有 change 的兼容规则见 Propose“任务拆解”；doctor 与 claim 使用同一任务校验结果。
 
 ## OpenSpec 1.12 兼容
 

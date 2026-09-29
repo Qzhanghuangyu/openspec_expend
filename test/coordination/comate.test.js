@@ -184,6 +184,7 @@ test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbo
     complete: 3,
     pending: 2,
     humanTasks: 0,
+    issues: [],
   });
   assert.equal(parseTaskProgress('- [x] 1.1 implement\n- [x] 2.1 [人工] verify\n').humanTasks, 1);
 });
@@ -201,7 +202,7 @@ test('人工任务识别任务续行，重复标记只计一次，隔离相邻�
 - [x] 1.5 自动检查
 ## [人工] 下一章节不属于任务
 `);
-  assert.deepEqual(progress, { total: 5, complete: 5, pending: 0, humanTasks: 2 });
+  assert.deepEqual(progress, { total: 5, complete: 5, pending: 0, humanTasks: 2, issues: [] });
 });
 
 test('agent 模式含人工任务立即冲突，hybrid 续行人工任务不得跳过验收', () => {
@@ -230,7 +231,7 @@ test('人工任务归属恢复外层任务，内部块不截断，独立块不�
 [人工] 独立示例
 \`\`\`
 ## [人工] 独立章节
-`), { total: 3, complete: 3, pending: 0, humanTasks: 1 });
+`), { total: 3, complete: 3, pending: 0, humanTasks: 1, issues: [] });
 });
 
 test('新 comate 可省略 blocks，旧 blocks 仅作为兼容字段读取', () => {

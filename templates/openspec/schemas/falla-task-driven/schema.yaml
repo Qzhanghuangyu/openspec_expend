@@ -9,6 +9,8 @@ artifacts:
     instruction: |
       执行前必须读取 .falla/skill-spec/[架构必读]propose.md 及其触发的参考规则。
       使用 checkbox 记录当前子 change的任务，每项包含输入、交付物、允许编辑范围、完成条件和前置编号。
+      任务和前置依赖均使用章节.序号编号，依赖须引用现存任务的精确编号；格式见 Propose 任务拆解规则。
+      保留 tasks 模板中的 falla-tasks-format 格式标记，按 Propose 规则填写机器可校验的依赖字段。
       按 Propose 的任务拆解规则生成，design 的适用 required 约束关联到负责的任务。
       引用父 design，不复制父任务或其他子 change 的进度。
       验证安排遵循 android-quality，模式与协作状态遵循 coordination；本 artifact 不保存模式。

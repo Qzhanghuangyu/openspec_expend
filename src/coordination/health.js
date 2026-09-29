@@ -114,6 +114,7 @@ async function readRecord(root, reference, officialStatus, errors) {
   for (const localIssue of validateComateRecord(comate, {
     pendingTasks: tasks.pending,
     humanTasks: tasks.humanTasks,
+    taskIssues: tasks.issues,
   })) {
     const { kind, count, ...details } = localIssue;
     errors.push({

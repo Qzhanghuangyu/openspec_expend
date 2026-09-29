@@ -74,6 +74,23 @@ ${mode ? `- 执行模式 (execution-mode): ${mode}\n` : ''}- 负责人 (owner): 
 
 const has = (result, kind) => result.errors.some(error => error.kind === kind);
 
+test('真实 CLI 拒绝无效本地任务依赖，修正后才能认领', async t => {
+  const p = await project(t);
+  await p.create('page', {
+    tasks: '<!-- falla-tasks-format: 1 -->\n## 1. 实施\n- [ ] 1.1 实施（依赖：9.9）\n',
+  });
+  const before = await p.record('page');
+  assert.equal(has(await p.validate(), 'task-dependency-missing'), true);
+  assert.equal(has(await p.health(), 'task-dependency-missing'), true);
+  await assert.rejects(() => p.claim('page'), /验证/);
+  assert.equal(await p.record('page'), before);
+  await p.set('page', {
+    mode: 'single', tasks: '<!-- falla-tasks-format: 1 -->\n## 1. 实施\n- [ ] 1.1 实施（依赖：无）\n- [ ] 1.2 验证（依赖：1.1）\n',
+  });
+  assert.equal((await p.validate()).ok, true);
+  assert.equal((await p.claim('page')).claimed, true);
+});
+
 test('官方规划 → 认领 → 协调与健康校验一致；跨父依赖不产生虚假 missing', async t => {
   const p = await project(t);
   await p.create('foundation', { status: 'done' });

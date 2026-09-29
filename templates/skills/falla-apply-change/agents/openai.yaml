@@ -1,6 +1,6 @@
 interface:
   display_name: "Falla Apply Change"
   short_description: "按执行模式实施父 change 或已有并行子 change"
-  default_prompt: "Use $falla-apply-change to implement this existing Falla change safely."
+  default_prompt: "Use $falla-apply-change to start Apply, implement one task, report and pause; resume only on the user’s explicit “continue” without another Skill invocation."
 policy:
   allow_implicit_invocation: false

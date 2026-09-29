@@ -7,7 +7,8 @@ disable-model-invocation: true
 # Falla Apply Change
 
 只实施 propose 已建立的父 change 或逻辑子 change。
-仅在用户本轮手动调用本 Skill 时开始；不得因 Propose 完成或 task ready 自动 Apply。
+首次进入本阶段由用户手动调用本 Skill；同一会话回复“继续”可恢复下一轮，无需重新调用 Skill。
+不得因 Propose 完成或 task ready 自动 Apply。
 
 ## 权威规则
 
@@ -46,8 +47,13 @@ disable-model-invocation: true
 
    claim 会在项目锁内重新检查官方状态和依赖；不得绕过该复核。
 6. 按阶段规则执行当前任务、验证并落盘检查点。
-7. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
-8. 完成前运行 `falla-openspec coordination validate --change "<parent>" --json`。
+7. 当前 task 检查点落盘后运行 `falla-openspec coordination validate --change "<parent>" --json`。
+   若要将 change 设为 done，先核齐任务、handoff 和人工验收证据并落盘最终状态，再校验；
+   失败时按 coordination 恢复有效状态，不得报告 task 完成或 change done。
+8. 当前 task 状态落盘后，重新读取 instructions/tasks，
+   只核对本次状态与下一个候选并报告，然后停止本轮；用户回复“继续”才恢复下一轮，
+   同一 Apply 会话无需重新调用 Apply，也不得自动认领或实施下一项。恢复时从第 3–5 步复核
+   最新官方状态、依赖与认领门禁，不直接执行上轮报告的候选。
 
 ## 边界
 

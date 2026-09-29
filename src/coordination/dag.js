@@ -87,6 +87,7 @@ export async function validateCoordination(root, options) {
     for (const localIssue of validateComateRecord(parentNode.comate, {
       pendingTasks: parentNode.tasks.pending,
       humanTasks: parentNode.tasks.humanTasks,
+      taskIssues: parentNode.tasks.issues,
     })) {
       const { kind, ...details } = localIssue;
       errors.push(issue(kind, parent, undefined,
@@ -118,6 +119,7 @@ export async function validateCoordination(root, options) {
       for (const localIssue of validateComateRecord(node.comate, {
         pendingTasks: node.tasks.pending,
         humanTasks: node.tasks.humanTasks,
+        taskIssues: node.tasks.issues,
       })) {
         const { kind, ...details } = localIssue;
         errors.push(issue(kind, logical, undefined,
@@ -155,6 +157,7 @@ export async function validateCoordination(root, options) {
         dependencies.set(dependency, normalize(node.comate));
         for (const localIssue of validateComateRecord(node.comate, {
           pendingTasks: node.tasks.pending, humanTasks: node.tasks.humanTasks,
+          taskIssues: node.tasks.issues,
         })) {
           const { kind, ...details } = localIssue;
           errors.push(issue(kind, dependency, undefined, details));

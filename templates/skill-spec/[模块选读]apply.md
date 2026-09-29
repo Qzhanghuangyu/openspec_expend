@@ -2,12 +2,14 @@
 
 ## 目标
 
-一次实施、验证并落盘一个 ready task；本阶段不重新分析需求、不重新拆分 change。
+一次执行回合只实施、验证并落盘一个 ready task；完成后停下汇报，等待用户确认下一项。
+同一 Apply 会话由用户回复“继续”进入下一轮；本阶段不重新分析需求、不重新拆分 change。
 
 ## 输入
 
-- 用户在规划完成并可审阅/修改后于本轮手动调用 Apply；官方 `status` 和 `instructions apply`，
-  当前 change 的 `tasks.md`、`comate.md`。Propose 完成或任务 ready 不构成自动实施授权。
+- 用户在规划完成并可审阅/修改后首次手动调用 Apply；同一会话后续明确回复“继续”只恢复下一轮。
+  官方 `status` 和 `instructions apply`、当前 change 的 `tasks.md`、`comate.md` 为事实依据；
+  Propose 完成或任务 ready 不构成自动实施授权。
 - 父 change 的 design、项目规则审计和用户已确认决定。
 
 ## 必须执行
@@ -29,8 +31,11 @@
    - 定位或理解源码时，必须读取 `references/code-search.md`。
 6. 按 coordination 的“任务和检查点”执行当前 task 并落盘；按“验证模式”处理人工验收。
    必要验证缺口尚未规划时返回 Propose，不自行替换完成条件。
-7. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
-8. 后续证据推翻已完成任务时，按 coordination 的回退顺序恢复状态与 checkbox，复验后继续。
+7. 后续调用发现证据推翻已完成任务时，按 coordination 的回退顺序恢复状态与 checkbox，
+   当前 task 复验完成前不推进别的任务。
+8. 当前 task 状态落盘后，重新读取 instructions/tasks，
+   只核对本次状态与下一个候选并报告，然后停止本轮；用户回复“继续”才恢复下一轮，
+   同一 Apply 会话无需重新调用 Apply，也不得自动认领或实施下一项。
 
 ## 何时暂停
 

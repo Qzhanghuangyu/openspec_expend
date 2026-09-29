@@ -118,6 +118,7 @@ test('Preflight 澄清后停在当前阶段，Propose 和 Apply 必须分别手�
   const readme = await readFile('README.md', 'utf8');
   assert.match(soul, /preflight.*就绪.*不自动.*Propose/s);
   assert.match(soul, /Propose.*Apply.*用户.*分别.*手动调用/s);
+  assert.match(soul, /同一 Apply 会话.*继续.*不.*重新调用 Skill/s);
   assert.match(preflight, /答复.*阻塞.*只更新.*preflight.*不.*Propose/s);
   assert.match(preflightSkill, /澄清.*停止.*Propose/s);
   assert.match(propose, /用户.*手动.*Propose/);
@@ -195,7 +196,7 @@ test('按需参考保留安全、生命周期和工具约束', async () => {
   assert.match(quality, /KDoc\/JavaDoc/);
   assert.match(quality, /页面销毁后 UI 更新/);
   assert.match(quality, /敏感日志/);
-  assert.match(coordination, /一次只推进一个 ready task/);
+  assert.match(coordination, /每轮.*只推进一个 ready task/s);
   assert.match(coordination, /跨机器或不同工作树/);
   assert.match(projectRules, /Propose 和 Apply 必读/);
   assert.match(projectRules, /不得只读取索引/);
@@ -310,16 +311,23 @@ test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且�
 
 test('Figma 用图仅复用成品或原生导出，透明新 PNG 验收后才可交付', async () => {
   const rules = await read('skill-spec/references/design-tools.md');
+  const ledger = await read('openspec/schemas/falla-spec-driven/templates/design-source.md');
 
   assert.match(rules, /看图（理解设计）与用图（交付资源）是两条管线/);
   assert.match(rules, /`rawImages` 是原始图片，`export` 是节点渲染结果/);
   assert.match(rules, /原生 Export/);
-  assert.match(rules, /`png` 或 `svg`/);
+  assert.match(rules, /显式指定 `png` 和 `scale=3`/);
+  assert.match(rules, /需要 `svg` 时另核对 Android 交付方式/);
   assert.match(rules, /`scale=3` 对应 xxhdpi/);
-  assert.match(rules, /`sips -g hasAlpha <file>`.*`hasAlpha: yes`/);
-  assert.match(rules, /已有正式资源\/成品原图不强制新增 Alpha/);
+  assert.match(rules, /`sips -g hasAlpha <file>`.*`hasAlpha: yes`/s);
+  assert.match(rules, /已在项目中正式交付的资源.*不强制新增 Alpha/s);
   assert.match(rules, /MCP 无原生导出能力时，须先取得用户.*REST 降级授权/);
   assert.match(rules, /临时资源 URL 仅可通过批准的二进制下载方式/);
+  assert.match(rules, /`rawImages`.*不得下载/s);
+  assert.doesNotMatch(rules, /scale=2|2x.*临时核对/);
+  assert.match(rules, /授权.*原生 Export.*`scale=3`/s);
+  assert.match(rules, /设计逻辑尺寸.*实际像素.*3x/s);
+  assert.match(ledger, /来源类型.*请求倍率.*设计逻辑尺寸.*实际像素.*本地普通文件哈希/);
 });
 
 test('按宽 AutoSizeConfig 与 1× 同宽设计稿可映射 dp，高度配置不是内容区上限', async () => {
@@ -353,6 +361,27 @@ test('Propose 按能力与依赖拆任务，不强制固定 MVVM 或控件切法
   assert.match(propose, /契约 → 独立逻辑\/组件 → 组装联调/);
   assert.match(propose, /不强制 View\/ViewModel 两项或每控件一项/);
   assert.match(propose, /输入、交付物、允许编辑范围、可测试完成条件和前置编号/);
+});
+
+test('父子 tasks 使用章节.序号且前置只引用精确编号', async () => {
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const parent = await read('openspec/schemas/falla-spec-driven/templates/tasks.md');
+  const child = await read('openspec/schemas/falla-task-driven/templates/tasks.md');
+  const parentSchema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const childSchema = await read('openspec/schemas/falla-task-driven/schema.yaml');
+  assert.match(propose, /章节\.序号.*1\.1.*1\.2.*2\.1/s);
+  assert.match(propose, /不得使用 `T1`\/`T2`/);
+  assert.match(propose, /前置依赖.*现存.*精确编号/s);
+  assert.match(propose, /跨子 change.*`depends-on`/s);
+  assert.match(propose, /`tasks\[\]\.id` 是顺序 ID.*不代替 tasks\.md 的人读编号/s);
+  for (const template of [parent, child]) {
+    assert.match(template, /编号格式.*章节\.序号/s);
+    assert.match(template, /- \[ \] 1\.1 /);
+    assert.match(template, /- \[ \] 2\.1 /);
+    assert.doesNotMatch(template, /- \[ \] T\d+/);
+  }
+  assert.match(parentSchema, /任务和前置依赖.*章节\.序号/s);
+  assert.match(childSchema, /任务和前置依赖.*章节\.序号/s);
 });
 
 test('生命周期与资源释放只在代码完成后集中检查，必要缺口交人工', async () => {
@@ -412,15 +441,30 @@ test('唯一合格复用候选和用户指定组件写入 required 并由 Apply 
   assert.match(knowledge, /不默认请求人工裁决/);
 });
 
-test('任务循环与完成门禁由 coordination 定义，Apply 负责阶段循环', async () => {
+test('Apply 每轮只执行一个 task，下一项等待用户明确确认', async () => {
+  const soul = await read('skill-spec/[Must Read]soul.md');
   const coordination = await read('skill-spec/references/coordination.md');
   const apply = await read('skill-spec/[模块选读]apply.md');
-  assert.match(coordination, /一次只推进一个 ready task/);
-  assert.match(coordination, /验证后立即勾选并更新 handoff/);
+  const skill = await read('skills/falla-apply-change/SKILL.md');
+  const metadata = await read('skills/falla-apply-change/agents/openai.yaml');
+  assert.match(soul, /一次只完成一个 task.*停下汇报.*用户明确确认/s);
+  assert.match(coordination, /每轮.*只推进一个 ready task/s);
+  assert.match(coordination, /验证后立即勾选并更新\s+handoff/s);
   assert.match(coordination, /不得提前勾选或批量补勾/);
   assert.match(coordination, /agent 不得含人工任务/);
   assert.match(coordination, /done 要求全部 tasks 完成/);
-  assert.match(apply, /状态落盘后重新读取 instructions\/tasks/);
+  assert.match(apply, /状态落盘后，重新读取 instructions\/tasks/);
+  assert.match(coordination, /强耦合任务.*返回 Propose.*合并/s);
+  assert.doesNotMatch([soul, coordination, apply, skill, metadata].join('\n'), /不可分双 task|不可分的两项|不可分的两个|inseparable pair|合并的不可分/);
+  assert.match(coordination, /用户.*回复“继续”.*无需重新调用 Apply/s);
+  assert.match(apply, /下一个候选.*停止.*回复“继续”.*无需重新调用 Apply/s);
+  assert.match(skill, /下一个候选.*停止.*回复“继续”.*无需重新调用 Apply/s);
+  assert.match(metadata, /implement one task, report and pause/);
+  assert.match(skill, /恢复时.*第 3–5 步复核.*不直接执行上轮.*候选/s);
+  assert.doesNotMatch(apply, /须由用户再次手动调用 Apply/);
+  assert.doesNotMatch(skill, /须由用户再次手动调用 Apply/);
+  assert.doesNotMatch(apply, /再选择下一个 ready task/);
+  assert.doesNotMatch(skill, /再选择下一个 ready task/);
 });
 
 test('OpenSpec 特殊语义仍保留在对应权威入口', async () => {
