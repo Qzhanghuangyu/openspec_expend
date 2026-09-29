@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -12,7 +13,7 @@ import {
   getHookRegistrationHash,
   isHookRegistrationPath,
 } from '../install/hooks.js';
-import { loadInstallManifest } from '../install/manifest.js';
+import { getFallaVersion, loadInstallManifest } from '../install/manifest.js';
 import { validateChangeRecords } from '../coordination/health.js';
 import { validateKnowledge } from '../knowledge/validate.js';
 import { inspectCodeGraph } from '../ui/codegraph.js';
@@ -30,6 +31,34 @@ async function exists(candidate, kind) {
     if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return false;
     throw error;
   }
+}
+
+function inspectFallaCli(root, expectedVersion, env) {
+  return new Promise((resolve) => {
+    execFile('falla-openspec', ['--version'], {
+      cwd: root,
+      env: env ?? process.env,
+      encoding: 'utf8',
+      timeout: 5_000,
+      killSignal: 'SIGKILL',
+      maxBuffer: 256,
+    }, (error, stdout) => {
+      if (error) {
+        resolve({ id: 'falla-cli', ok: false,
+          state: error.code === 'ENOENT' ? 'missing' : 'execution-failed' });
+        return;
+      }
+      // Only return a bounded, normalized version. Never expose subprocess output or paths.
+      const version = stdout.trim();
+      if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) {
+        resolve({ id: 'falla-cli', ok: false, state: 'invalid-version' });
+      } else if (version !== expectedVersion) {
+        resolve({ id: 'falla-cli', ok: false, state: 'version-mismatch', expectedVersion, version });
+      } else {
+        resolve({ id: 'falla-cli', ok: true, state: 'available', version });
+      }
+    });
+  });
 }
 
 export async function doctorProject(options) {
@@ -140,6 +169,14 @@ export async function doctorProject(options) {
     ok: manifest !== null && driftedPaths.length === 0,
     paths: driftedPaths,
   });
+  const expectedVersion = await getFallaVersion();
+  const cli = await inspectFallaCli(root, expectedVersion, options.env);
+  if (cli.ok && manifest && manifest.fallaVersion !== expectedVersion) {
+    checks.push({ id: 'falla-cli', ok: false, state: 'manifest-version-mismatch',
+      expectedVersion, version: cli.version });
+  } else {
+    checks.push(cli);
+  }
   const installationOk = checks.every(check => check.ok);
   for (const check of checks) check.group = 'installation';
 

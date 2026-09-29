@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { FallaError } from './errors.js';
+import { getFallaVersion } from './install/manifest.js';
 import { coordinationCommand } from './commands/coordination.js';
 import { doctorProject } from './commands/doctor.js';
 import { installProject } from './commands/install.js';
@@ -12,6 +13,7 @@ export function usage() {
     'Usage: falla-openspec <command> [options] [--debug]',
     '',
     'Commands:',
+    '  --version                         输出 Falla CLI 版本',
     '  install <project>                 安装 Falla 工作流扩展',
     '  doctor [project]                  检查 OpenSpec 与 Falla 契约',
     '  coordination register <change>    注册逻辑父子 change 映射',
@@ -109,6 +111,10 @@ async function doctor(argv, io) {
 }
 
 export async function main(argv, io) {
+  if (argv.length === 1 && argv[0] === '--version') {
+    io.stdout.write(`${await getFallaVersion()}\n`);
+    return 0;
+  }
   if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
     io.stdout.write(`${usage()}\n`);
     return 0;

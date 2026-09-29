@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.resolve('bin/falla-openspec.js');
+const packageVersion = JSON.parse(await (await import('node:fs/promises')).readFile('package.json', 'utf8')).version;
 
 async function runCli(args) {
   try {
@@ -35,6 +36,13 @@ test('--help 只暴露 Falla 扩展命令', async () => {
   assert.doesNotMatch(result.stdout, /new change/);
   assert.doesNotMatch(result.stdout, /instructions/);
   assert.doesNotMatch(result.stdout, /archive/);
+});
+
+test('--version 输出当前包版本且不依赖项目', async () => {
+  const result = await runCli(['--version']);
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout.trim(), packageVersion);
+  assert.equal(result.stderr, '');
 });
 
 test('未知命令返回稳定错误且不输出调用栈', async () => {

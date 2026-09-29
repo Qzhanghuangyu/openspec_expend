@@ -15,16 +15,22 @@ export TARGET_PROJECT="/path/to/project"
 npm install -g @fission-ai/openspec@1.12.0
 cd "$FALLA_HOME"
 npm install
+npm install -g "$FALLA_HOME"  # 建立 Skill 使用的 falla-openspec 命令入口
+command -v falla-openspec
+falla-openspec --version
 
 # 项目已有 openspec/ 就跳过这一行
 openspec init --tools none "$TARGET_PROJECT"
 
-node bin/falla-openspec.js install "$TARGET_PROJECT" \
+falla-openspec install "$TARGET_PROJECT" \
   --tools claude,codex --with-figma --with-codegraph --with-lark --non-interactive
-node bin/falla-openspec.js doctor "$TARGET_PROJECT" --json
+falla-openspec doctor "$TARGET_PROJECT" --json
 ```
 
-看 `doctor` 输出里的 `groups.installation.ok` 是否为 `true`。装好后重开 Claude Code 或 Codex 会话，旧会话不会加载新规则。
+看 `doctor` 输出里的 `checks` 是否包含通过的 `falla-cli`，以及 `groups.installation.ok` 是否为 `true`。
+若 `command -v` 失败，先让 npm 的全局可执行目录进入启动 Agent 的同一 `PATH`；
+只用 `node bin/falla-openspec.js` 能安装文件，但不会建立 Skill 所需的命令入口。
+装好后重开 Claude Code 或 Codex 会话，旧会话不会加载新规则。
 
 ## 以后更新
 
@@ -36,9 +42,12 @@ export TARGET_PROJECT="/path/to/project"
 cd "$FALLA_HOME"
 cat "$TARGET_PROJECT/.falla/install-manifest.json"
 
-# 这里以 manifest 里的 tools 为 claude,codex 举例；不是这两个就改成实际值
-node bin/falla-openspec.js install "$TARGET_PROJECT" --tools claude,codex --non-interactive
-node bin/falla-openspec.js doctor "$TARGET_PROJECT" --json
+# 更新 CLI 入口后再更新受管文件；这里以 manifest 的 tools 为 claude,codex 举例
+npm install -g "$FALLA_HOME"
+command -v falla-openspec
+falla-openspec --version
+falla-openspec install "$TARGET_PROJECT" --tools claude,codex --non-interactive
+falla-openspec doctor "$TARGET_PROJECT" --json
 ```
 
 少传一个工具，安装器会移除它的受管 Skill 和 Hook。普通更新不用重复加 `--with-*`，省略它们不会卸载已有集成。更新完也要重开 Agent 会话。
@@ -66,6 +75,8 @@ Preflight 先把节点引用记入 `preflight.md`；Propose 归并到 `design.md
 ## 出问题了
 
 - `doctor` 的 `installation` 失败：先处理受管文件冲突。没有 `--force`；备份并合并自己的修改，不要删 `.falla/install-manifest.json` 或伪造哈希。
+- `doctor` 的 `falla-cli` 检查失败：确认启动 Agent 的 `PATH` 能找到 `falla-openspec`，从本仓库重新运行 `npm install -g "$FALLA_HOME"`，核对 `falla-openspec --version` 后重跑 doctor；不要只用 `node bin/falla-openspec.js` 绕过命令入口。
+  如果移动或删除了本仓库，也要从新位置重新安装全局命令；部分 npm 环境会将本地安装链接到源码目录。
 - 其他分组失败：`workflow` 检查 change，`knowledge` 检查知识条目，`integrations` 检查集成。`install` 成功只表示安装文件完整，不代表 Figma、Lark 已登录或 MCP 能连通。
 - 安装中断：确认原进程已经退出，保留现状，用同一版本和相同 `--tools` 重跑，再执行 `doctor`。多文件更新不是事务。
 - 更新后还是旧规则：核对项目路径，关闭并重新创建 Agent 会话。

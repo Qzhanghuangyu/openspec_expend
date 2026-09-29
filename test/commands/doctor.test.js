@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -30,6 +30,55 @@ test('doctor 只读报告官方版本、项目和未安装扩展', async () => {
   assert.equal(report.coordination.present, false);
   assert.equal(report.ok, false);
   assert.equal(report.checks.some((check) => check.id === 'openspec-list' && check.ok), true);
+});
+
+test('doctor 与 install 在隔离 PATH 下发现缺失和错误版本的 Skill CLI', async () => {
+  const root = await createOpenSpecProject();
+  const bin = await mkdtemp(path.join(os.tmpdir(), 'falla-doctor-cli-'));
+  await symlink(process.execPath, path.join(bin, 'node'));
+  const env = { ...process.env, PATH: `${bin}:/usr/bin:/bin` };
+  const executable = path.resolve('node_modules/.bin/openspec');
+  const expectedVersion = JSON.parse(await readFile('package.json', 'utf8')).version;
+  await installProject({ root, tools: ['codex'], interactive: false });
+
+  const missing = await doctorProject({ root, executable, env });
+  assert.equal(missing.ok, false);
+  assert.deepEqual(missing.checks.find(({ id }) => id === 'falla-cli'), {
+    id: 'falla-cli', ok: false, state: 'missing', group: 'installation',
+  });
+  assert.equal(missing.groups.installation.ok, false);
+  const installedWithoutCli = await installProject({ root, tools: ['codex'], interactive: false,
+    executable, env });
+  assert.equal(installedWithoutCli.ok, false);
+  assert.equal(installedWithoutCli.doctor.checks.find(({ id }) => id === 'falla-cli').state, 'missing');
+
+  const cli = path.join(bin, 'falla-openspec');
+  await writeFile(cli, '#!/bin/sh\necho 0.0.0\n', { mode: 0o755 });
+  const mismatched = await doctorProject({ root, executable, env });
+  assert.deepEqual(mismatched.checks.find(({ id }) => id === 'falla-cli'), {
+    id: 'falla-cli', ok: false, state: 'version-mismatch', expectedVersion,
+    version: '0.0.0', group: 'installation',
+  });
+  assert.equal(mismatched.groups.installation.ok, false);
+
+  await writeFile(cli, '#!/bin/sh\necho PRIVATE_STDOUT; echo PRIVATE_STDERR >&2\n');
+  const malformed = await doctorProject({ root, executable, env });
+  assert.equal(malformed.checks.find(({ id }) => id === 'falla-cli').state, 'invalid-version');
+  assert.doesNotMatch(JSON.stringify(malformed), /PRIVATE_STDOUT|PRIVATE_STDERR/);
+
+  await writeFile(cli, `#!/bin/sh\necho ${expectedVersion}\n`);
+  const available = await doctorProject({ root, executable, env });
+  assert.equal(available.checks.find(({ id }) => id === 'falla-cli').ok, true);
+  assert.equal(available.groups.installation.ok, true);
+
+  const manifestPath = path.join(root, '.falla', 'install-manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.fallaVersion = '0.0.0';
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const staleManifest = await doctorProject({ root, executable, env });
+  assert.equal(staleManifest.checks.find(({ id }) => id === 'falla-cli').state,
+    'manifest-version-mismatch');
+  assert.equal(staleManifest.groups.installation.ok, false);
 });
 
 test('doctor 报告不包含环境变量、规格正文或项目绝对路径', async () => {
