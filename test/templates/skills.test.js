@@ -139,7 +139,7 @@ test('Preflight 澄清后停在当前阶段，Propose 和 Apply 必须分别手�
 test('Propose 对关键可见区域做层级及 spec/task 的有界覆盖核对', async () => {
   const propose = await read('skill-spec/[架构必读]propose.md');
   const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
-  assert.match(propose, /功能或验收意义.*区域.*父层/s);
+  assert.match(propose, /功能或视觉上显著.*区域.*父层/s);
   assert.match(propose, /design.*spec.*task/s);
   assert.match(propose, /范围外.*未取得/s);
   assert.match(propose, /任务生成后.*回填/s);
@@ -147,7 +147,7 @@ test('Propose 对关键可见区域做层级及 spec/task 的有界覆盖核对'
   assert.match(propose, /不逐.*叶节点.*不.*重复读取 Figma/s);
   assert.match(propose, /planningComplete.*不.*语义覆盖/s);
   assert.match(design, /对应 spec \/ task \/ 子 change \/ 范围外/);
-  assert.match(design, /不列装饰性叶节点/);
+  assert.match(design, /不列.*装饰性叶节点/);
 });
 
 test('执行和验证模式只由 comate 保存', async () => {
@@ -301,12 +301,40 @@ test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且�
   assert.match(designRules, /未经核实不把 Figma\s*数值直接当成 Android dp/);
   assert.match(design, /### 关键节点文本规格/);
   assert.match(design, /Android 目标节点/);
-  assert.match(design, /未取得 \/ 待人工校准/);
+  assert.match(design, /待澄清 \/ 人工视觉校准/);
   assert.match(quality, /## UI 文本核对与视觉边界/);
   assert.match(quality, /View 层级或 Compose 语义树/);
   assert.match(quality, /不能把设备物理 px 与 dp 直接相减/);
   assert.match(quality, /不把完整层级、真实业务数据或截图写进 handoff/);
   assert.match(quality, /不要求向模型上传图片/);
+});
+
+test('UI 设计条目从授权节点映射到页面状态和 task，不在实施文档泄露节点标识', async () => {
+  const source = await read('openspec/schemas/falla-spec-driven/templates/design-source.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const parentTasks = await read('openspec/schemas/falla-spec-driven/templates/tasks.md');
+  const childTasks = await read('openspec/schemas/falla-task-driven/templates/tasks.md');
+
+  assert.match(source, /设计条目 ID.*file key.*精确 node id/);
+  assert.match(design, /条目 ID.*页面 \/ 状态.*可见区域与父层.*Android 目标节点.*对应 spec \/ task/);
+  assert.doesNotMatch(design, /file key|node id/);
+  assert.match(propose, /视觉上显著.*区域.*设计条目 ID.*task/s);
+  for (const tasks of [parentTasks, childTasks]) {
+    assert.match(tasks, /Figma UI task.*设计条目 ID.*页面 \/ 状态.*完成条件/);
+  }
+});
+
+test('UI 缺口分类且 Apply 按设计条目回查，不以人工校准代替必需事实', async () => {
+  const designRules = await read('skill-spec/references/design-tools.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const quality = await read('skill-spec/references/android-quality.md');
+
+  assert.match(designRules, /实施必需事实.*待澄清.*人工视觉校准/s);
+  assert.match(design, /待澄清 \/ 人工视觉校准/);
+  assert.match(apply, /Figma UI task.*设计条目 ID.*逐条回查/s);
+  assert.match(quality, /设计条目.*逐条.*差异.*人工视觉校准/s);
 });
 
 test('Figma 用图仅复用成品或原生导出，透明新 PNG 验收后才可交付', async () => {

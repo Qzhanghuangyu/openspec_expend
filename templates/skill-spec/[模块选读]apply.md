@@ -21,6 +21,7 @@
 3. 读取 `operationGuidance`；只采纳不与官方状态、范围锁、Soul 和用户决定冲突的建议，
    不把 guidance 原文复制到代码、日志或 handoff。
 4. 重读 tasks/comate，选择一个依赖已满足的最小未完成 task，将编号、完成条件和编辑范围写入 handoff。
+   Figma UI task 按设计条目 ID、页面/状态读取父 design；缺少绑定或实施必需事实时返回 Propose，不猜测。
 5. 按当前任务加载权威细则（已加载且未变化的不重复读取）：
    - 修改 Android 代码、资源或配置时，必须读取 `references/android-quality.md`，执行当前 task
      的实现、注释审计和适用验证；集成及收尾检查按规划节点执行。
@@ -29,7 +30,8 @@
    - 涉及组件选型或 required 复用实现时，必须读取 `references/ui-knowledge.md`，核对父 design
      的选定对象与接入条件；条件失效返回 Propose。
    - 定位或理解源码时，必须读取 `references/code-search.md`。
-6. 按 coordination 的“任务和检查点”执行当前 task 并落盘；按“验证模式”处理人工验收。
+6. Figma UI task 完成前按设计条目 ID 逐条回查实现与可核对事实，记录差异、验证证据及人工视觉校准项；
+   再按 coordination 的“任务和检查点”落盘，按“验证模式”处理人工验收。
    必要验证缺口尚未规划时返回 Propose，不自行替换完成条件。
 7. 后续调用发现证据推翻已完成任务时，按 coordination 的回退顺序恢复状态与 checkbox，
    当前 task 复验完成前不推进别的任务。
