@@ -20,7 +20,9 @@ description: Use when analyzing an Android client PRD or product request before 
 ## 编排
 
 1. 完整读取 PRD；飞书文档/Wiki 还须按阶段规则读取评论及回复（含已解决评论与分页），
-   核对正文和明确确认的评论结论；权限不足或评论不完整时暂停，不把讨论当成已确认需求。
+   核对正文和明确确认的评论结论；长评论 ID、revision 与回复定位只写父 change 的
+   `prd-source.md`，`preflight.md` 仅保留可读结论和覆盖范围。权限不足或评论不完整时暂停，
+   不把讨论当成已确认需求。
 2. 执行 `openspec list --json`，优先复用同名或范围重叠的 change。
 3. 无可复用 change 时执行：
 
@@ -34,8 +36,9 @@ description: Use when analyzing an Android client PRD or product request before 
    openspec instructions preflight --change "<name>" --json
    ```
 
-5. 按阶段规则核实现状、记录问题。用户明确提供当前 change 的 Figma 节点时，先把授权范围和
-   file key / node id 写入 `preflight.md` 的“设计节点交接”；只写入返回的 `resolvedOutputPath`。
+5. 按阶段规则核实现状、记录问题。用户明确提供当前 change 的 Figma 节点时，在父 change 目录
+   按 Schema 模板创建 `design-source.md`，写入授权范围与精确引用；若已读取，记必要事实和缺口。
+   `preflight.md` 只写人工可读的授权概要与分析缺口；只向官方 `resolvedOutputPath` 写入该 artifact。
 6. 执行 `openspec status --change "<name>" --json`，确认 `preflight` 为 `done`。
 
 ## 边界

@@ -2,13 +2,14 @@
 
 ## 目标
 
-核对当前实现、需求缺口和设计阻断项；只产出 `preflight.md`。
+核对当前实现、需求缺口和设计阻断项；正式 artifact 只产出 `preflight.md`，必要取证引用留在父 change 的 Agent 工作文件。
 
 ## 输入
 
 - 用户提供的 PRD 或需求说明。
 - 当前项目代码、接口、模型、测试和已有规格。
-- 可选：用户在当时对话明确提供的设计节点，或本 change 已记录的“设计节点交接”。
+- 已有父 change 的 `prd-source.md`（若有在线 PRD 取证）及设计源引用。
+- 可选：用户在当时对话明确提供的设计节点，或本 change 的 `design-source.md`。
 
 ## 必须执行
 
@@ -23,7 +24,7 @@
 
    `reference_map.comments` 只辅助定位；沿 `--page-token` 读取全部评论和回复，区分解决状态、
    正文锚点、澄清与决策。
-   记录正文版本和评论核对时间；读取期间版本变化或用户指出评论更新时重新核对。
+   记录正文版本和评论核对时间到父 change 的 `prd-source.md`；读取期间版本变化或用户指出评论更新时重新核对。
    评论接口无权限、失败或分页/截断未补齐时暂停，报告恢复条件，不声称没有评论。
    仅访问当前 PRD，不扩大到同一知识空间里的其他文档。
 2. 执行 `openspec list --json`，优先复用同名或范围重叠的父 change。
@@ -45,12 +46,18 @@
    只有 PRD 明确要求或源码已证实的问题才记录。不按 Stateful Interactions 或 Boundary and Exception Cases 枚举场景。
 7. 将已确认的评论澄清并入对应需求项；“已解决”不等于已确认。未决、矛盾或无决策依据的建议不覆盖正文，
    按 `Decision Required` 或 `Conflict` 记录。
-   在 preflight 记评论 ID/位置、解决状态和精简结论，不复制整段评论或个人信息。
+   将长评论 ID、位置、解决状态、回复完整性和精简取证结论只记入父 change 的 `prd-source.md`；
+   `preflight.md` 仅用章节/问题主题描述已确认结论与未决事项，不复制机器 ID；
+   不复制整段评论或个人信息。
+   按 Schema 模板创建取证文件，只接受项目内普通文件，不跟随符号链接；无在线 PRD 时不创建。
    每个问题标记 `Missing Definition / Conflict / Implementation Risk / Decision Required`，以及
    `Blocker / Major / Minor`，并说明具体阻断的 artifact 或实施决策。
-8. 如果用户在当前对话明确提供用于此 change 的 Figma 节点，把授权范围、日期、file key 和精确
-   node id 写入 `preflight.md` 的“设计节点交接”。只保存稳定引用和必要的分析状态，不保留原始链接或
-   凭据；读取失败也要记录脱敏原因与恢复条件。不得从 PRD 链接推断授权。
+8. 用户在当前对话明确提供用于此 change 的 Figma 节点时，在父 change 目录按 Schema 模板创建
+   `design-source.md`，把授权范围、日期、file key、精确 node id 和必要的读取状态写入同一文件；
+   只接受项目内普通文件，不跟随符号链接。若当场已读取，记录已取得的必要事实、未取得字段和脱敏
+   失败原因，供 Propose 复用；不把少量分析事实冒充完整设计或资源清单。
+   `preflight.md` 的“设计节点交接”只写人工可读的授权概要与分析缺口，不重复技术标识；不保存原始
+   链接或凭据，也不得从 PRD 链接推断授权。没有授权节点时不创建取证文件。
 9. 写入官方 `resolvedOutputPath`，运行 status 确认 preflight 为 `done`。
 
 ## 何时暂停
@@ -66,7 +73,8 @@
 - `preflight.md` 有明确结论，包括无问题时。
 - 每个实现状态都有证据，每个问题都有类型、级别、影响和建议确认项；飞书 PRD 记录评论
   读取范围、已解决/未解决状态、对正文的影响和未决争议。
-- 未创建其他 artifact、子 change，也未修改业务代码、构建配置或测试。
+- 未创建其他正式 artifact 或子 change；取证文件仅含最小定位信息，不写凭据或评论全文。
+- 未修改业务代码、构建配置或测试。
 
 ## 按需参考
 

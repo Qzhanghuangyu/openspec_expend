@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { cp, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -120,4 +120,15 @@ test('Falla Schema 遵循 OpenSpec 1.12 的 skip_specs 语义', async () => {
   const status = assertStatusContract(JSON.parse(stdout));
   assert.equal(status.isPlanningComplete, true);
   assert.equal(status.artifacts.find(({ id }) => id === 'specs').status, 'skipped');
+  // 取证文件属于父 change 目录，归档时应随整个 change 一起保留。
+  await writeFile(path.join(changeDir, 'design-source.md'), '# agent-only reference\n');
+  await writeFile(path.join(changeDir, 'prd-source.md'), '# comment references\n');
+  await execFileAsync('openspec', ['archive', 'refactor-only', '--yes', '--json'], { cwd: root });
+  const archiveRoot = path.join(root, 'openspec', 'changes', 'archive');
+  const archiveName = (await readdir(archiveRoot)).find((entry) => entry.endsWith('-refactor-only'));
+  assert.ok(archiveName);
+  assert.equal(await readFile(path.join(archiveRoot, archiveName, 'design-source.md'), 'utf8'),
+    '# agent-only reference\n');
+  assert.equal(await readFile(path.join(archiveRoot, archiveName, 'prd-source.md'), 'utf8'),
+    '# comment references\n');
 });

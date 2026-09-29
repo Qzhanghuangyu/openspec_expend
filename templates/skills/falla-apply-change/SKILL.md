@@ -35,9 +35,11 @@ description: Use when implementing or continuing an existing Android Falla paren
    openspec instructions apply --change "<physical>" --json
    ```
 
-4. 设计相关 task 先读取父 `design.md` 的“设计源证据”，核对所需本地资源存在且哈希吻合；已有事实
-   可复用。资源/元数据缺失、用户告知设计变化或要求以最新设计为准时只重读已授权节点，不要求重复提供同一链接；新节点
-   或范围扩大要重新确认，设计结论变更回 Propose 修正。
+4. 设计相关 task 先读父 `design.md` 的实施事实；涉及 Figma 节点或资源时再读父 change 的
+   `design-source.md` 取精确引用与资源台账，并核对本地普通文件和哈希。已有事实可复用；
+   资源/元数据缺失、已知设计变化或要求最新设计时才重读已授权节点。旧 change 无取证文件时
+   先从原记录迁入，不要求重复提供同一链接或重读 Figma；新节点或范围扩大要重新确认。
+   设计结论变更回 Propose 修正。开始新的 UI task 本身不触发 Figma 重读。
    当前 task 若有 UI Knowledge 选定组件，按 design 的 required 绑定实施并核对实际接入；不能静默替代。
    类/API 或生命周期条件失效时暂停并回 Propose 修订，不为此重复读取未变化的 Figma 节点。
 5. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：

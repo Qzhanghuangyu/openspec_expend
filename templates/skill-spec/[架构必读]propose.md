@@ -22,12 +22,18 @@
 3. 必读 `references/project-rules.md`。项目规则目录存在时读取全部顶层 `.md`，在 design 中
    审计每条 required：明确“适用/不适用/冲突/已批准例外”；未分类完整前不得继续生成 tasks/comate。
 4. 复用有效的 preflight 证据；不得重新执行一次完整 preflight，仅证据缺失、源码变化或设计决策需要时补查。
-   先读 `preflight.md` 的“设计节点交接”；已授权节点无需用户重贴链接。
-   如果用户在 Propose 新提供节点、但 design 尚未可写，先把最小授权记录追加到 preflight 的该节；
-   design 可写后归并，以 design 为唯一设计事实源；草稿不算完成。
-   需要 Figma 时只分析用户明确授权的节点，并在 `design.md` 的“设计源证据”章节保存用户授权记录、
-   file key、精确 node id、核对日期、实施事实、完整资源清单/目标路径、下载状态/文件哈希、未决项和重新
-   核对条件。UI 复现按 `references/design-tools.md` 提炼关键节点文本规格并标记未取得信息；
+   `preflight.md` 保留人工可读的 PRD 结论；需定位评论或核对正文 revision 时，按需读取父 change 的
+   `prd-source.md`，不把长 ID 再复制到 proposal、design 或 tasks。
+   先读父 change 的 `design-source.md`（仅授权 Figma 时存在）；`preflight.md` 只提供人工可读的交接概要。
+   旧 change 若只有 preflight/design 中的精确引用，先从原记录迁入同目录的 `design-source.md`，
+   不要求用户重贴链接，也不因迁移重读节点；不要扩大原授权范围。
+   已核对事实足够形成当前 design 和资源清单时不重复读取 Figma；缺失实施必需的结构、状态或
+   资源信息时先列出缺口，只补读已授权的精确节点，不因进入 Propose 就重新抓取整个节点或文件。
+   新收到的授权节点只追加到 `design-source.md`，design 尚不可写时不把技术引用塞回 preflight。
+   design 可写后，只将实施事实、关键节点文本规格、资源是否齐备及未决项写入 `design.md`；
+   节点标识、核对日期、完整资源路径与哈希仅保留在 `design-source.md`，不重复保存到人工文档。
+   design 是实施结论的事实源，`design-source.md` 是节点引用与工程资源台账的事实源；草稿不算完成。
+   UI 复现按 `references/design-tools.md` 提炼关键节点文本规格并标记未取得信息。
    资源取得与透明验收按 `references/design-tools.md` 在资源任务执行；
    design 不预记导出方式、倍率或验收过程。缺少必需素材或授权时保留待确认项，不安排截图加工。
    核对当前页面 AutoSizeConfig 是否按宽及其基准与设计画布宽度，不用高度配置推断运行时

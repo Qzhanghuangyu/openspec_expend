@@ -222,10 +222,30 @@ test('飞书 PRD 的 Preflight 合并正文与完整评论线程，未决意见�
   assert.doesNotMatch(phase, /docs \+(?:get|export)/);
 });
 
+test('PRD 长评论 ID 和版本只写取证文件，Preflight 留可读结论', async () => {
+  const phase = await read('skill-spec/[分析必读]preflight.md');
+  const skill = await read('skills/falla-preflight/SKILL.md');
+  const schema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  const preflight = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  const source = await read('openspec/schemas/falla-spec-driven/templates/prd-source.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+
+  assert.match(source, /revision/);
+  assert.match(source, /comment ID/);
+  assert.match(source, /preflight 中的人可读主题/);
+  assert.doesNotMatch(preflight, /评论 ID|comment.id|revision/);
+  assert.match(preflight, /章节或问题主题.*精简结论/);
+  assert.match(phase, /长评论 ID.*只记入父 change 的 `prd-source\.md`/s);
+  assert.match(skill, /长评论 ID、revision 与回复定位只写父 change/);
+  assert.match(schema, /prd-source\.md.*长评论 ID/s);
+  assert.match(propose, /按需读取父 change 的.*`prd-source\.md`/s);
+});
+
 test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授权范围', async () => {
   const preflight = await read('skill-spec/[分析必读]preflight.md');
   const preflightSkill = await read('skills/falla-preflight/SKILL.md');
   const preflightTemplate = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  const sourceTemplate = await read('openspec/schemas/falla-spec-driven/templates/design-source.md');
   const propose = await read('skill-spec/[架构必读]propose.md');
   const proposeSkill = await read('skills/falla-propose/SKILL.md');
   const designTemplate = await read('openspec/schemas/falla-spec-driven/templates/design.md');
@@ -236,18 +256,18 @@ test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授�
   const childSchema = await read('openspec/schemas/falla-task-driven/schema.yaml');
 
   assert.match(preflightTemplate, /## 设计节点交接/);
-  assert.match(preflightTemplate, /file key、精确 node id/);
-  assert.match(preflightTemplate, /不保存原始链接、查询参数/);
-  assert.match(preflight, /写入 `preflight\.md` 的“设计节点交接”/);
-  assert.match(preflightSkill, /写入 `preflight\.md` 的“设计节点交接”/);
-  assert.match(parentSchema, /在 preflight 中持久记录确认范围/);
-  assert.match(propose, /先读 `preflight\.md` 的“设计节点交接”/);
-  assert.match(propose, /先把最小授权记录追加到 preflight/);
-  assert.match(proposeSkill, /可写后归并到 `design\.md`/);
+  assert.doesNotMatch(preflightTemplate, /file key|node id|原始链接|本地普通文件哈希/);
+  assert.doesNotMatch(designTemplate, /file key|node id|本地普通文件哈希/);
+  assert.match(sourceTemplate, /file key.*精确 node id/);
+  assert.match(sourceTemplate, /项目内相对目标路径.*本地普通文件哈希/);
+  assert.match(sourceTemplate, /不写原始 Figma URL.*token.*临时资源 URL/s);
+  assert.match(preflight, /父 change.*`design-source\.md`/s);
+  assert.match(preflightSkill, /`design-source\.md`/);
+  assert.match(parentSchema, /design-source\.md/);
+  assert.match(propose, /先读父 change 的 `design-source\.md`/);
+  assert.match(proposeSkill, /`design-source\.md`/);
   assert.match(designTemplate, /## 设计源证据/);
-  assert.match(designTemplate, /项目内相对路径、下载状态及本地普通文件哈希/);
-  assert.match(designTemplate, /不记录导出方式、倍率或逐项验收过程/);
-  assert.match(designTemplate, /状态（未核对 \/ 已核对 \/ 失败）/);
+  assert.match(designTemplate, /授权概要.*实施所需事实/s);
   assert.match(designRules, /不要求用户重复粘贴同一链接/);
   assert.match(designRules, /已记录的授权仅覆盖原 change 和精确节点/);
   assert.match(designRules, /哈希吻合时可直接复用/);
@@ -255,8 +275,30 @@ test('Figma 节点跨会话从 preflight 交接到 design，Apply 只复用授�
   assert.match(designRules, /超出已确认范围，先请用户确认/);
   assert.match(designRules, /Apply 暂停当前任务并返回 Propose/);
   assert.match(apply, /复用本地资源前核对文件存在且哈希吻合/);
-  assert.match(applySkill, /核对所需本地资源存在且哈希吻合/);
+  assert.match(applySkill, /核对本地普通文件和哈希/);
   assert.match(childSchema, /复用本地资源前核对文件/);
+});
+
+test('Figma 已核对事实跨阶段复用，只有缺口或变化才定向补读', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const sourceTemplate = await read('openspec/schemas/falla-spec-driven/templates/design-source.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const designRules = await read('skill-spec/references/design-tools.md');
+  const designTemplate = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const proposeSkill = await read('skills/falla-propose/SKILL.md');
+  const applySkill = await read('skills/falla-apply-change/SKILL.md');
+  const schema = await read('openspec/schemas/falla-spec-driven/schema.yaml');
+  assert.match(preflight, /已读取.*必要事实.*未取得/s);
+  assert.match(sourceTemplate, /已取得.*必要事实.*未取得/s);
+  assert.match(propose, /事实足够.*不重复读取.*缺失.*精确节点/s);
+  assert.match(proposeSkill, /已核对事实.*不重复读取/);
+  assert.match(designRules, /阶段切换.*不构成重读条件/);
+  assert.match(designRules, /缺少.*必要.*只补读.*精确节点/s);
+  assert.match(designTemplate, /已核对事实.*不重新读取/);
+  assert.match(schema, /已有事实足够.*不重复读取.*缺失.*补读/s);
+  assert.match(apply, /不因.*task.*重读.*Figma/s);
+  assert.match(applySkill, /不为此重复读取未变化的 Figma 节点/);
 });
 
 test('纯文本 UI 规格、运行时差异和人工视觉反馈形成闭环且不传截图', async () => {
@@ -314,7 +356,7 @@ test('Figma 用图仅复用成品或原生导出，透明新 PNG 验收后才可
   assert.match(rules, /已有正式资源\/成品原图不强制新增 Alpha/);
   assert.match(rules, /MCP 无原生导出能力时，须先取得用户.*REST 降级授权/);
   assert.match(rules, /临时资源 URL 仅可通过批准的二进制下载方式/);
-  assert.match(design, /不记录导出方式、倍率或逐项验收过程/);
+  assert.match(await read('openspec/schemas/falla-spec-driven/templates/design-source.md'), /不记录导出方式、倍率或逐项验收过程/);
   assert.match(propose, /design 不预记导出方式、倍率或验收过程/);
   assert.match(apply, /新导出透明 PNG 入库前核验 Alpha/);
   assert.match(apply, /项目内路径与哈希/);

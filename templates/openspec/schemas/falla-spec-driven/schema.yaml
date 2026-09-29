@@ -12,11 +12,13 @@ artifacts:
       不枚举交互状态或推测性异常边界；PRD 明确要求的其他行为仍需照实记录。
       对实际问题标明 Missing Definition、Conflict、Implementation Risk 或 Decision Required，以及
       Blocker、Major 或 Minor 及其实际阻断范围。飞书文档/Wiki PRD 须核对正文和可见评论
-      完整线程（含已解决评论及回复），在 preflight 留下评论位置/ID、状态、精简结论及冲突；
-      未取得完整评论不得把正文视为完整需求，未决讨论不自动成为已确认需求。
+      完整线程（含已解决评论及回复）。按 Schema 模板在父 change 创建 prd-source.md，保存长评论 ID、
+      文档 revision、位置和回复完整性；preflight.md 只保留章节/问题主题、精简结论、评论覆盖和冲突，
+      不复制机器 ID。未取得完整评论不得把正文视为完整需求，未决讨论不自动成为已确认需求。
       本 artifact 不包含方案设计或代码修改。
-      用户在当前对话明确提供用于本 change 的 Figma 节点时，在 preflight 中持久记录确认范围、日期、
-      file key 和精确 node id，供后续会话交接；不自动跟随 PRD 链接，不保存原始 URL 或凭据。
+      用户在当前对话明确提供用于本 change 的 Figma 节点时，按 Schema 模板在父 change 创建
+      design-source.md，持久记录确认范围、日期、file key、精确 node id 和取证缺口；preflight.md
+      只保留人工可读的授权概要与分析问题，不自动跟随 PRD 链接或保存原始 URL、凭据。
     requires: []
 
   - id: proposal
@@ -55,10 +57,11 @@ artifacts:
       唯一核对后合格的直接复用候选必须复用；用户明确指定组件且满足硬条件时必须使用。不合格列出
       具体阻断条件，不默认请求人工裁决。选定复用须在“已确认实现基线”写 required、具体类/API、
       接入及生命周期条件，并在 tasks 生成后补关联 task/子 change；仅召回不产生使用义务。
-      使用 Figma 时，把 preflight 的设计节点交接归并到 design 的“设计源证据”章节，记录用户授权、
-      file key、精确 node id、核对日期、实施所需设计事实、完整资源清单/项目内目标路径、
-      下载状态/文件哈希、未决项和重新核对条件，供后续会话复用；不复制完整设计正文、截图、
-      认证信息或临时资源 URL。UI 复现另提炼少量关键节点的文本规格：已证实的结构、尺寸与单位、
+      使用 Figma 时，已有事实足够形成实施结论和资源清单就不重复读取；缺失必需字段先列缺口，
+      仅对已授权的精确节点定向补读。父 change 的 design-source.md 保存精确引用、核对日期、
+      未取得字段、资源路径和本地哈希；design.md 只记人工可读的授权概要、实施结论、资源齐备状态
+      和未决项，不复制技术标识、完整设计正文、截图、认证信息或临时资源 URL。
+      UI 复现另提炼少量关键节点的文本规格：已证实的结构、尺寸与单位、
       约束、文案、字体/颜色变量、状态、资源引用和 Android 目标节点；未取得与待人工校准分开记，
       不凭文本推断图标外观。核对当前页面 AutoSizeConfig 的适配模式、宽高配置与例外；只有已确认
       按宽适配且设计 1× 逻辑画布宽等于项目 `design_width_in_dp` 时，尺寸/间距才按同数值 dp
@@ -124,8 +127,10 @@ apply:
   instruction: |
     只执行 tasks 中的当前任务，并遵守已加载的 Soul 与 Apply 阶段规则。执行模式、验证模式和协作状态
     只从 comate 读取。single 实施父 change；parallel 只实施 propose 已创建的逻辑子 change。
-    修改前复核当前任务引用的 design 基线、设计源证据和项目规则审计；已记录事实可跨会话复用，
-    缺少资源时只补读 design 中已授权的精确节点；新透明 PNG 先验收 Alpha 再入库，禁止截图替代。
+    修改前复核当前任务引用的父 design 实施事实和项目规则审计；已记录事实可跨会话复用。
+    使用 Figma 节点或工程资源时读父 change 的 design-source.md 取精确引用和资源路径/哈希；
+    缺少必需资源时只补读该文件中已授权的精确节点；阶段切换或开始 UI task 不触发 Figma 重读。
+    新透明 PNG 先验收 Alpha 再入库，禁止截图替代。
     当前 task 选定复用的 required 组件须按 design 的类/API 实施，完成前核对实际接入和生命周期条件；
     无法接入时暂停并返回 Propose 修订，不静默替代，也不重复读取无变化的 Figma 节点。
     遗漏、适用性变化或 required 偏离时返回 propose。
