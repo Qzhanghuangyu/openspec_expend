@@ -35,13 +35,7 @@ description: Use when implementing or continuing an existing Android Falla paren
    openspec instructions apply --change "<physical>" --json
    ```
 
-4. 设计相关 task 先读父 `design.md` 的实施事实；涉及 Figma 节点或资源时再读父 change 的
-   `design-source.md` 取精确引用与资源台账，并核对本地普通文件和哈希。已有事实可复用；
-   资源/元数据缺失、已知设计变化或要求最新设计时才重读已授权节点。旧 change 无取证文件时
-   先从原记录迁入，不要求重复提供同一链接或重读 Figma；新节点或范围扩大要重新确认。
-   设计结论变更回 Propose 修正。开始新的 UI task 本身不触发 Figma 重读。
-   当前 task 若有 UI Knowledge 选定组件，按 design 的 required 绑定实施并核对实际接入；不能静默替代。
-   类/API 或生命周期条件失效时暂停并回 Propose 修订，不为此重复读取未变化的 Figma 节点。
+4. 按阶段规则加载当前 task 的 context 与必需参考，复核设计和规则门禁。
 5. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：
 
    ```bash
@@ -49,15 +43,9 @@ description: Use when implementing or continuing an existing Android Falla paren
    ```
 
    claim 会在项目锁内重新检查官方状态和依赖；不得绕过该复核。
-6. 按阶段规则执行“单任务原子循环”：一次只处理一个 ready task；按改动风险完成定向验证后立即
-   勾选该 checkbox 并更新 `comate.md` handoff，禁止累计多个 task 后批量勾选。验证模式只从当前
-   `comate.md` 读取。
-7. task 未完成、验证失败或所需退出实测未执行时不得勾选对应验证项；把静态核对与运行时结果分开
-   写入 handoff，缺少 `[人工]` 验证项时返回 Propose 补齐，再暂停或继续修复。
-8. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
-9. 勾选前逐项核对本 task 新增/实质修改的符号及注释，豁免要写出具体符号和原因；
-   不因代码短或编译通过而跳过。
-10. 完成前运行阶段规则要求的定向门禁；parallel 再运行 coordination validate。
+6. 按阶段规则执行当前任务、验证并落盘检查点。
+7. 每个 task 状态落盘后重新读取 instructions/tasks，再选择下一个 ready task。
+8. 完成前运行 `falla-openspec coordination validate --change "<parent>" --json`。
 
 ## 边界
 

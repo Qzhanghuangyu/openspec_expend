@@ -6,108 +6,53 @@
 
 ## 输入
 
-- 已完成的父 change 和 `preflight.md`。
-- 当前主规格与 preflight 已记录的源码证据。
-- `.falla/project-rules/` 的全部顶层规则、有效 UI Knowledge，以及用户明确提供的设计节点。
+- 已完成的父 change 和 `preflight.md`、当前主规格及已有源码证据。
+- 项目规则、有效 UI Knowledge 和用户已确认决定。
 
 ## 必须执行
 
-1. 用 `openspec status --change "<parent>" --json` 确认 preflight 已完成。
-2. 按官方状态逐个调用：
-
-   ```bash
-   openspec instructions <proposal|specs|design|tasks|comate> --change "<parent>" --json
-   ```
-
-3. 必读 `references/project-rules.md`。项目规则目录存在时读取全部顶层 `.md`，在 design 中
-   审计每条 required：明确“适用/不适用/冲突/已批准例外”；未分类完整前不得继续生成 tasks/comate。
-4. 复用有效的 preflight 证据；不得重新执行一次完整 preflight，仅证据缺失、源码变化或设计决策需要时补查。
-   `preflight.md` 保留人工可读的 PRD 结论；需定位评论或核对正文 revision 时，按需读取父 change 的
-   `prd-source.md`，不把长 ID 再复制到 proposal、design 或 tasks。
-   先读父 change 的 `design-source.md`（仅授权 Figma 时存在）；`preflight.md` 只提供人工可读的交接概要。
-   旧 change 若只有 preflight/design 中的精确引用，先从原记录迁入同目录的 `design-source.md`，
-   不要求用户重贴链接，也不因迁移重读节点；不要扩大原授权范围。
-   已核对事实足够形成当前 design 和资源清单时不重复读取 Figma；缺失实施必需的结构、状态或
-   资源信息时先列出缺口，只补读已授权的精确节点，不因进入 Propose 就重新抓取整个节点或文件。
-   新收到的授权节点只追加到 `design-source.md`，design 尚不可写时不把技术引用塞回 preflight。
-   design 可写后，只将实施事实、关键节点文本规格、资源是否齐备及未决项写入 `design.md`；
-   节点标识、核对日期、完整资源路径与哈希仅保留在 `design-source.md`，不重复保存到人工文档。
-   design 是实施结论的事实源，`design-source.md` 是节点引用与工程资源台账的事实源；草稿不算完成。
-   UI 复现按 `references/design-tools.md` 提炼关键节点文本规格并标记未取得信息。
-   资源取得与透明验收按 `references/design-tools.md` 在资源任务执行；
-   design 不预记导出方式、倍率或验收过程。缺少必需素材或授权时保留待确认项，不安排截图加工。
-   核对当前页面 AutoSizeConfig 是否按宽及其基准与设计画布宽度，不用高度配置推断运行时
-   内容区高度。
-5. 明确各 artifact 的职责：
-   - proposal：为什么改、改什么、影响什么。
-   - specs：已确认的可测试行为，以主干为先；其他明确要求照实记录，不扩写推测场景或实现模块。
-   - design：技术决策、页面结构、实现基线、规则绑定、生命周期、安全、风险和人工校准。
-     使用 XML 的页面在 `design.md` 列出布局文件与关键节点层级（根、主要内容、滚动/状态容器）；
-     已有节点须有源码依据，拟新增节点明确标注，不展开完整 XML 属性。
-     纯 Compose 或非页面变更注明不适用。
-   - tasks：实际任务、编辑范围、完成条件和依赖；每项任务须可验证，不默认新增单测。
-     标明模块与交付 variant；日常轻量检查，实施后安排一次集成验证。可运行入口安排实际应用 APK 构建，
-     成功即覆盖资源打包与编译；不逐任务重复 Gradle。纯状态逻辑有现成测试时安排定向用例，
-     不预排完整状态矩阵。
-     有代码改动时，在全部实施任务之后安排一次独立的生命周期与资源释放收尾检查；parallel 由负责代码
-     的子 change 安排，按最终所有权检查实际资源。无须释放记“不适用”，不为检查添加回收代码。
-     风险路径选静态或运行时验证；预知无法由 Agent 检查时设 `[人工]` 任务并写步骤，执行时发现缺口
-     则返回 Propose。无代码改动不安排此项。
-     Figma UI 复现按 `references/android-quality.md` 安排关键节点文本核对及独立 `[人工]` 视觉验收；
-     人工反馈文字差异和结论，不上传截图。
-   - comate：执行/验证模式、owner、协作状态、change 依赖和 handoff。
-   核对现有接口、状态来源和页面链路；新方案须有能力缺口证据，不按未核实的 API 行为拆任务。
-6. 页面先确定状态/事件与 View 契约，再拆逻辑和独立控件，最后组装联调。
-   对当前页面需要的组件和页面模式，按 `references/ui-knowledge.md` 先筛候选并记录复用结论；
-   唯一合格的可直接复用候选必须选用，用户明确指定的组件在硬条件满足时必须使用；不合格要列出
-   具体阻断条件，不以“召回过”代替适配核对。多个可行候选由 Agent 选择；
-   多个可行候选且取舍影响较大时才使用轻量评分，不默认等待人工裁决。
-   选定复用须在 design 绑定具体实现对象、类/API 与 required 约束，
-   并在对应 task/子 change 的完成条件中落实实际接入与验证；不能仅把候选列在知识选型表。
-   注释逐符号判断，不能以“方法短”统一豁免。
-7. 每个 task 在一次实施上下文内完成；通用质量门禁不复制成固定任务。
-8. 默认在父 comate 写入 `execution-mode: single` 和 `validation-mode: hybrid`。当前 tasks 无 `[人工]`
-   项时 `human-review: not-required`；有 `[人工]` 项时为 `pending`，完成后只依据人工反馈改为 `passed`。
-9. 纯重构、工具或文档变更且没有规格级行为变化时设置 `skip_specs: true`。
+1. 用官方 status 确认 preflight 已完成，按 instructions 的依赖顺序逐个生成 artifact。
+2. 必读 `references/project-rules.md`，执行 Propose 项目规则审计门禁。
+3. 复用有效的 preflight 证据；不得重新执行一次完整 preflight。需要核对评论或正文版本时，
+   按需读取父 change 的 `prd-source.md`；取证和结论分离规则见 `[分析必读]preflight.md`。
+4. 依赖设计事实、Figma 或工程资源时，必须读取 `references/design-tools.md`，按其规则复用
+   父 `design-source.md` 与 design，处理缺口、迁移和授权。不要在阶段入口重新定义取证政策。
+5. 明确各 artifact 职责；字段与格式由官方 instructions 返回的 Schema/模板定义：
+   - proposal：动机、范围与可观察的业务能力。
+   - specs：已确认且可测试的行为，不扩写推测场景或实现模块。
+   - design：技术决策、页面结构、规则和实现基线、风险及验证安排。
+     使用 XML 的页面在 `design.md` 列出布局文件与关键节点层级；现有节点核对源码，拟新增节点
+     标注，未知项留待确认；不展开完整 XML 属性。纯 Compose 或非页面变更注明不适用。
+   - tasks：按下节拆解实际任务。
+   - comate：协作字段与滚动交接，具体规则见 coordination。
+6. 涉及组件或页面模式时，必须读取 `references/ui-knowledge.md`，执行候选验证、选型与 required
+   绑定；规划及实施均以该文档的复用决策为准。
+7. 规划 Android 代码、资源或配置时，必须读取 `references/android-quality.md`，安排其要求的定向验证、
+   集成、注释审计、代码收尾与必要人工任务；不在此复制检查清单。
+8. 必读 `references/coordination.md`，确定执行/验证模式、初始化 comate，并按其规则建立并行映射。
+9. 无规格级行为变化的纯重构、工具或文档变更设置 `skip_specs: true`。
 
 ## 任务拆解
 
-- 从已确认行为与 design 拆能力和契约；页面按需排成“契约 → 独立逻辑/组件 → 组装联调”，
-  非页面按实际能力拆。不强制 View/ViewModel 两项或每控件一项，验证任务不代替能力拆解。
-- 只拆能独立交付、验证且编辑范围清晰的工作；共用文件指定唯一责任方，强耦合的合并。
-  每项写输入、交付物、允许编辑范围、可测试完成条件和前置编号，按依赖拓扑排列。
-  single 仍一次一个 task；跨子 change 的机器依赖只写在子 comate 的 `depends-on`。
-
-## Parallel 模式
-
-只有用户明确要求多人/多 Agent 并行、创建子 change 或独立分派时才启用：
-
-1. 使用恰好两段的逻辑名 `<parent>/<child>`。
-2. 通过 `coordination register` 获取物理名，再用官方 CLI 创建 `falla-task-driven` change。
-3. 子 change 只保存自己的 tasks/comate；父 tasks 只记录协调里程碑和子 change 引用。
-4. 子 comate 只维护 `depends-on`；反向 blocks 由协调器推导。
-5. 根页面/XML 只能有一个责任方。
-6. 完成后运行 `coordination validate`。
+- 核对现有接口、状态来源与页面链路，新方案须有能力缺口证据；定位源码必须读取 `references/code-search.md`。
+- 从已确认行为与 design 按能力和依赖拆解。页面按需采用“契约 → 独立逻辑/组件 → 组装联调”，
+  非页面按实际能力拆；不强制 View/ViewModel 两项或每控件一项，验证任务不代替能力拆解。
+- 每项写输入、交付物、允许编辑范围、可测试完成条件和前置编号，按依赖拓扑排列。
+  只拆可独立交付、验证且边界清晰的工作；强耦合的合并，共用文件指定唯一责任方。
+- parallel 父 tasks 只记协调里程碑与子 change 引用，子 change 只保存自己的任务；根页面/XML
+  只能有一个责任方。子 change 命名、创建和依赖字段遵循 coordination。
 
 ## 何时暂停
 
-- preflight 未完成。
-- 页面结构、核心契约或 required 实现基线无法确定。
-- 任一 required 尚未完成适用性分类，或项目规则与需求、官方状态、安全约束冲突。
-- 需要 parallel，但用户尚未明确同意。
+- preflight 未完成，或页面结构、核心契约及 required 基线无法确定。
+- 项目规则审计或 coordination 的模式、依赖门禁未满足。
 
 ## 完成标准
 
-- 父 artifacts 均由官方 status 判定为 done 或合法 skipped。
-- tasks 足够小，依赖、范围和完成条件明确。
-- single 不存在子映射；parallel 的子 change 和 DAG 均合法。
+- 父 artifacts 由官方 status 判定为 done 或合法 skipped，已创建子 change 的规划也完成。
+- tasks 的范围、依赖和完成条件明确；`coordination validate` 通过。
 - 没有修改业务代码。
 
 ## 按需参考
 
-- 设计源：`references/design-tools.md`
-- 源码定位：`references/code-search.md`
-- UI Knowledge：`references/ui-knowledge.md`
-- 项目规则门禁（必读）：`references/project-rules.md`
-- Android 实现约束：`references/android-quality.md`
-- 并行拆解与协作：`references/coordination.md`
+本阶段第 2、8 步为必读；其他参考按对应步骤触发强制加载。命令编排见 `falla-propose` Skill。

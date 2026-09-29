@@ -218,6 +218,21 @@ test('agent 模式含人工任务立即冲突，hybrid 续行人工任务不得�
   }).some(({ kind }) => kind === 'human-review-required'));
 });
 
+test('人工任务归属恢复外层任务，内部块不截断，独立块不污染任务', () => {
+  assert.deepEqual(parseTaskProgress(`- [x] 1 外层
+  - [x] 1.1 内层
+
+  ### 外层的验收
+  [人工] 外层仍需反馈
+- [x] 2 自动验证
+
+\`\`\`text
+[人工] 独立示例
+\`\`\`
+## [人工] 独立章节
+`), { total: 3, complete: 3, pending: 0, humanTasks: 1 });
+});
+
 test('新 comate 可省略 blocks，旧 blocks 仅作为兼容字段读取', () => {
   const withoutBlocks = valid.replace('- 被依赖 (blocks): [medal/page-integration]\n', '');
   assert.equal(parseComate(withoutBlocks).blocks, undefined);

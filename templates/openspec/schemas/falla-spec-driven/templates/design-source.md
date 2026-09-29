@@ -1,11 +1,6 @@
 # 设计源引用（Agent 工作文件）
 
-> 保存于当前父 change 目录；Preflight、Propose、Apply 读取同一文件，子 change 引用父文件。
-> 本文件不是权限隔离或凭据仓库，不写原始 Figma URL、查询参数、token、cookie、临时资源 URL、
-> 截图或完整设计正文；只记录用户明确授权的精确节点，不能据此访问整个文件或相邻节点。
-> 不记录导出方式、倍率或逐项验收过程；这些不属于跨阶段取证事实。
-> design.md 生成后，实施结论与关键节点文本规格以 design.md 为准；这里仅保存稳定引用、
-> 取证状态、未取得字段及工程资源的最小台账。没有授权节点时不创建本文件。
+> 填写前必须读取 `.falla/skill-spec/references/design-tools.md` 的取证规则；本文件仅提供台账结构。
 
 ## 当前 change 的授权
 

@@ -28,17 +28,9 @@ description: Use when an existing Android Falla preflight change needs proposal 
    ```
 
    只使用返回的模板、依赖和 `resolvedOutputPath`。
-3. 授权 Figma 时先读父 change 的 `design-source.md`；旧 change 仅有 preflight/design 技术引用时，
-   从原记录迁入该文件，不要求用户重贴链接或因此重读 Figma。已核对事实足够时不重复读取 Figma；
-   缺少设计所需字段才补读已授权的精确节点，再按阶段规则生成 proposal、specs、design、tasks 和 comate。
-   新节点只追加到 `design-source.md`；`design.md` 只保存可实施的设计结论，不复制精确引用和资源哈希。
-   纯重构、工具或文档变更使用官方 `skip_specs: true` 语义。
-   UI Knowledge 选定复用或用户明确指定且条件满足的组件，须写入 design 的 required 实现约束，
-   并落实到相关 task/子 change 的完成条件；不把仅召回的候选强制复用。
-4. `comate.md` 是执行模式和验证模式的唯一记录：默认 `execution-mode: single`、
-   `validation-mode: hybrid`。无 `[人工]` task 时 human-review 为 `not-required`，否则为 `pending`；
-   `tasks.md` 不重复保存这些字段。
-5. 只有用户明确要求并行分派时才创建子 change：
+3. 按阶段规则生成各 artifact，执行对应权威参考的规划门禁。
+4. 从当前 comate 读取执行模式，按阶段规则初始化协作记录。
+5. 阶段规则确定采用 parallel 后，执行子 change 编排：
 
    ```bash
    falla-openspec coordination register "<parent>/<child>" --json

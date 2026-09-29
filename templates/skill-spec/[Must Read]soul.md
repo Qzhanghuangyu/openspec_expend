@@ -45,7 +45,13 @@ Falla 补充 Android 决策、任务、认领、依赖和交接。
 | 逻辑名到物理名 | `.falla/coordination.yaml` |
 
 `tasks.md` 不保存执行模式或验证模式。新 comate 不保存 `blocks`；反向依赖由 `depends-on` 推导。
-Skill 编排命令；Schema instruction 约束 artifact；模板提供结构。
+### 规则权威位置
+
+阶段文档只定义阶段决策；跨阶段细则以上述 `references/` 对应主题为唯一权威。
+PRD 评论取证规则由 `[分析必读]preflight.md` 定义，任务拆解规则由 `[架构必读]propose.md` 定义。
+Skill 编排命令；Schema instruction 定义 artifact 字段与依赖；模板仅提供结构和可删减示例。
+README 和流程图仅作导航，不另定政策。引用某项规则时必须加载其权威文件，缺失时停止对应工作。
+修改政策只改权威位置及行为测试，不要求在其他入口复制同一段文字。
 
 ## 4. 五条原则
 
@@ -63,4 +69,4 @@ Skill 编排命令；Schema instruction 约束 artifact；模板提供结构。
 - 不在日志、artifact、handoff 或回复中输出 token、密码、API Key、签名、完整 PRD、完整设计正文或
   临时资源 URL。
 - 不自动 commit、push、merge、rebase、归档或代替人工验收。
-- 规则冲突时优先级为：系统安全与用户明确决定 > Soul > 阶段规则 > Schema instruction > 模板。
+- 规则冲突时优先级为：系统安全与用户明确决定 > Soul > 阶段决策与对应参考细则 > Schema instruction > 模板。

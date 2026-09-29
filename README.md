@@ -16,29 +16,20 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 
 ## 职责与事实源
 
-| 内容 | 唯一事实源 |
-| --- | --- |
-| artifact 规划和生命周期 | 官方 OpenSpec status / instructions |
-| 实施任务及完成进度 | `tasks.md` checkbox |
-| 父 change 执行模式 | 父 `comate.md` 的 `execution-mode` |
-| 验证模式、人工验收、owner、阻塞与交接 | 当前 change 的 `comate.md` |
-| 子 change 正向依赖 | 子 `comate.md` 的 `depends-on` |
-| 逻辑名到物理名 | `.falla/coordination.yaml` |
+规则归属和读取入口统一见 [Soul](templates/skill-spec/[Must%20Read]soul.md)。阶段文档负责决策，
+跨阶段细则由 references 定义；Skill 编排命令，Schema 定义产物契约，模板提供结构。
+改规则时只修改权威文档和对应测试，其他入口保持引用。
 
-新 `comate.md` 使用 `format-version: 2`。`tasks.md` 不重复保存执行模式或验证模式；`blocks` 由 `depends-on` 反向推导，不再写入新 comate。
-Propose 按能力和依赖拆任务，不强制固定 MVVM/控件切法；parallel 须用户明确要求。Apply 一次只推进
-一个 ready task，完成并通过最小验证后立即勾选 checkbox、更新 handoff，不批量补勾。
-Soul 定义跨阶段规则，阶段文档定义阶段决策，
-Skill 只编排命令，Schema instruction 只约束对应 artifact，模板只提供结构。Figma、源码检索、
-UI Knowledge、Android 质量和协作细则位于 `.falla/skill-spec/references/`。其中 `project-rules.md` 在
-Propose/Apply 强制读取；其他参考仅在当前任务命中时读取。
+```mermaid
+flowchart LR
+  P[Preflight] --> D[Propose]
+  D --> A[Apply]
+  A --> R[Archive]
+  A -->|规划缺口| D
+```
 
-`hybrid` 且 tasks 没有 `[人工]` 项时，`human-review` 可设为 `not-required`；有人工项时须按人工
-反馈达到 `passed`，`human` 模式始终需要人工确认。每项任务必须可验证，但不默认新增单测。
-`agent` 模式不得包含 `[人工]` 任务；任务续行中的人工标记同样计入验收，不能通过换行或切换模式跳过。
-有构建影响时普通 task 先做轻量检查，相关实施完成后对交付变体做一次集成构建；可运行入口构建
-实际应用 APK，不用库模块编译代替。有代码改动时由 Propose 安排代码完成后的一次生命周期与资源
-释放收尾检查；无须主动释放的页面不添加多余回收逻辑，无法检查的必要项交接给人工。
+图仅显示阶段导航。触发条件与回退顺序分别见阶段文档和
+[协作规则](templates/skill-spec/references/coordination.md)，不在图中复制门禁。
 
 ## 初始化与更新
 
@@ -49,19 +40,10 @@ Propose/Apply 强制读取；其他参考仅在当前任务命中时读取。
 安装手册的首次安装示例带了 Figma、CodeGraph 和 Lark；用不到就删掉对应的 `--with-*` 参数。受管文件有冲突时，安装器会停止，不会用 `--force` 覆盖你的修改。
 UI 知识库的具体用法见 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md) 或目标项目的 `.falla/ui-knowledge/README.md`。
 
-Falla 不会自动打开 PRD 正文中的设计链接。首次授权时，请在对话中提供带 node id、用于当前 change 的 Figma 链接。
-Preflight 收到链接会先在 `preflight.md` 留下节点交接；Propose 把它归并到 `design.md`。后续窗口读取记录，
-同一节点无需重贴链接。设计变化时重新核对，新节点或范围扩大仍需确认。
-设计节点默认只通过 Figma MCP 读取，不用浏览器或截图代替；仅 MCP 无原生导出能力且另获授权时才有
-受限 REST 降级。`get_design_context` 使用 `excludeScreenshot=true`；没有权限就停止依赖该设计的工作。
-UI 复现只从已授权节点提取少量关键文本规格；运行时核对可观察的层级、文案与边界，无法通过文本
-判断的图标、字体渲染和动效由人工对照设计与 App，反馈文字差异与验收结论，不向模型上传图片。
-工程资源另走“用图”管线：已有正式资源或符合设计的成品原图直接复用；需要节点效果时对已授权
-节点原生导出 PNG/SVG，透明新 PNG 入库前验收 Alpha。截图或预览不可代替切图；design 只保留
-必需资源的项目内路径与哈希，不预记导出和验收细节，具体规则见 `templates/skill-spec/references/design-tools.md`。
-项目确认使用 AutoSizeConfig 按宽适配，且 1× 设计画布宽等于 `design_width_in_dp` 时，可将设计
-尺寸/间距的数值按同数值 dp 实现；这不等于物理像素。设计稿高度和 `design_height_in_dp` 都不
-代表运行时内容高度，后者须结合实际窗口与 Insets 核对，不按两种高度的比例压缩整页。
+设计授权、跨阶段复用、`design-source.md` 取证和资源取得遵循
+[设计源规则](templates/skill-spec/references/design-tools.md)；UI 验证与生命周期要求见
+[Android 质量规则](templates/skill-spec/references/android-quality.md)。PRD 评论取证及 `prd-source.md`
+规则见 [Preflight](templates/skill-spec/[分析必读]preflight.md)。
 
 ## Android 项目校验与认领
 

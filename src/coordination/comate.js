@@ -173,34 +173,35 @@ export function parseComate(markdown, source = 'comate.md') {
 export function parseTaskProgress(markdown) {
   let total = 0;
   let complete = 0;
-  let humanTasks = 0;
-  let task = null;
-  const finishTask = () => {
-    if (task?.human) humanTasks += 1;
-    task = null;
-  };
+  const tasks = [];
+  const parents = [];
+  let separated = false;
   for (const line of String(markdown).split('\n')) {
+    const indent = line.match(/^\s*/)[0].length;
     const match = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/);
     if (match) {
-      finishTask();
+      while (parents.length && parents.at(-1).indent >= indent) parents.pop();
       total += 1;
       if (match[1].toLowerCase() === 'x') complete += 1;
-      task = { indent: line.match(/^\s*/)[0].length, human: match[2].includes('[人工]') };
+      const task = { indent, human: match[2].includes('[人工]') };
+      tasks.push(task);
+      parents.push(task);
+      separated = false;
       continue;
     }
-    if (!task) continue;
-    const indent = line.match(/^\s*/)[0].length;
-    if (!line.trim() || /^\s*#{1,6}\s/u.test(line)
-      || /^\s*(?:`{3,}|~{3,})/u.test(line)
-      || (/^\s*(?:[-*+]\s+|\d+[.)]\s+)/u.test(line) && indent <= task.indent)) {
-      finishTask();
+    if (!line.trim()) {
+      separated = true;
       continue;
     }
-    // 无缩进的紧邻文本也可以是任务续行；空行、同级列表和标题截断归属。
-    if (line.includes('[人工]')) task.human = true;
+    // 嵌套任务结束后恢复外层归属；任务内的空行、标题和代码块不终止任务。
+    // checkbox 仍逐行计数，与官方 OpenSpec 一致（包括围栏中的 checkbox）。
+    while (parents.length > 1 && parents.at(-1).indent >= indent) parents.pop();
+    const block = /^\s*(?:#{1,6}\s|`{3,}|~{3,}|[-*+]\s+|\d+[.)]\s+)/u.test(line);
+    if (parents.length && indent <= parents.at(-1).indent && (separated || block)) parents.length = 0;
+    if (parents.length && line.includes('[人工]')) parents.at(-1).human = true;
+    separated = false;
   }
-  finishTask();
-  return { total, complete, pending: total - complete, humanTasks };
+  return { total, complete, pending: total - complete, humanTasks: tasks.filter(task => task.human).length };
 }
 
 export function validateComateRecord(record, { pendingTasks, humanTasks }) {

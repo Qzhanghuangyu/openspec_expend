@@ -49,15 +49,12 @@
    将长评论 ID、位置、解决状态、回复完整性和精简取证结论只记入父 change 的 `prd-source.md`；
    `preflight.md` 仅用章节/问题主题描述已确认结论与未决事项，不复制机器 ID；
    不复制整段评论或个人信息。
+   取证文件不是凭据仓库：不保存原始 URL、cookie、认证 token、回复全文或临时链接。
    按 Schema 模板创建取证文件，只接受项目内普通文件，不跟随符号链接；无在线 PRD 时不创建。
    每个问题标记 `Missing Definition / Conflict / Implementation Risk / Decision Required`，以及
    `Blocker / Major / Minor`，并说明具体阻断的 artifact 或实施决策。
-8. 用户在当前对话明确提供用于此 change 的 Figma 节点时，在父 change 目录按 Schema 模板创建
-   `design-source.md`，把授权范围、日期、file key、精确 node id 和必要的读取状态写入同一文件；
-   只接受项目内普通文件，不跟随符号链接。若当场已读取，记录已取得的必要事实、未取得字段和脱敏
-   失败原因，供 Propose 复用；不把少量分析事实冒充完整设计或资源清单。
-   `preflight.md` 的“设计节点交接”只写人工可读的授权概要与分析缺口，不重复技术标识；不保存原始
-   链接或凭据，也不得从 PRD 链接推断授权。没有授权节点时不创建取证文件。
+8. 涉及授权设计节点时，必须读取 `references/design-tools.md`，按其中取证交接规则创建或更新父
+   `design-source.md`；本阶段仅填必要的分析事实和缺口，不冒充完整设计。
 9. 写入官方 `resolvedOutputPath`，运行 status 确认 preflight 为 `done`。
 
 ## 何时暂停

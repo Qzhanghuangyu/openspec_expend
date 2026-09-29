@@ -37,8 +37,7 @@ test('父模板把模式放在 comate，tasks 只保留实际任务', async () =
   assert.doesNotMatch(tasks, /## 执行模式|## 验证模式|^- 模式：/m);
   assert.match(tasks, /允许编辑/);
   assert.match(tasks, /集成验证（有构建影响时保留独立任务/);
-  assert.match(tasks, /一次只推进一个 ready task/);
-  assert.match(tasks, /完成并验证后立即勾选/);
+  assert.match(tasks, /必须读取 `\.falla\/skill-spec\/references\/coordination.md`/);
   assert.match(tasks, /\[人工\]/);
   assert.match(comate, /format-version\): 2/);
   assert.match(comate, /execution-mode\): single/);
@@ -57,8 +56,7 @@ test('子模板不复制父模式、父任务或反向依赖', async () => {
   assert.match(tasks, /不得复制父任务清单或其他子 change/);
   assert.match(tasks, /父 design/);
   assert.match(tasks, /集成验证（有构建影响时保留独立任务/);
-  assert.match(tasks, /一次只推进一个 ready task/);
-  assert.match(tasks, /未完成时不得提前或批量补勾/);
+  assert.match(tasks, /必须读取 `\.falla\/skill-spec\/references\/coordination.md`/);
   assert.match(tasks, /\[人工\]/);
   assert.match(comate, /format-version\): 2/);
   assert.doesNotMatch(comate, /execution-mode|\(blocks\)/);

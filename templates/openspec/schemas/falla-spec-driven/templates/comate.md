@@ -1,7 +1,6 @@
 # comate
 
-> `hybrid` 无 `[人工]` task 时将 human-review 设为 `not-required`；有人工 task 保持 `pending`，
-> 仅依据人工反馈改为 `passed`。`human` 模式始终需要人工确认。
+> 填写前必须读取 `.falla/skill-spec/references/coordination.md` 的记录契约与验证模式。
 
 - 格式版本 (format-version): 2
 - 执行模式 (execution-mode): single

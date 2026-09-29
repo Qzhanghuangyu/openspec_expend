@@ -64,6 +64,16 @@ async function readNode(root, logical, mapping, statusProvider) {
 export async function validateCoordination(root, options) {
   const parent = assertChangeSegment(options.change, 'parent change');
   const document = await loadCoordination(root);
+  const logicalByPhysical = new Map(Object.entries(document.mappings)
+    .map(([logical, mapping]) => [mapping.physical, logical]));
+  const childrenByParent = new Map();
+  for (const [logical, mapping] of Object.entries(document.mappings)) {
+    const children = childrenByParent.get(mapping.parent) ?? [];
+    children.push(logical);
+    childrenByParent.set(mapping.parent, children);
+  }
+  const canonical = reference => logicalByPhysical.get(reference) ?? reference;
+  const normalize = record => ({ ...record, dependsOn: record.dependsOn.map(canonical) });
   const mappings = Object.entries(document.mappings)
     .filter(([, mapping]) => mapping.parent === parent)
     .sort(([left], [right]) => left.localeCompare(right));
@@ -104,7 +114,7 @@ export async function validateCoordination(root, options) {
   for (const [logical, mapping] of mappings) {
     try {
       const node = await readNode(root, logical, mapping, options.statusProvider);
-      nodes.set(logical, node.comate);
+      nodes.set(logical, normalize(node.comate));
       for (const localIssue of validateComateRecord(node.comate, {
         pendingTasks: node.tasks.pending,
         humanTasks: node.tasks.humanTasks,
@@ -129,14 +139,48 @@ export async function validateCoordination(root, options) {
     }
   }
 
-  if (parentNode) {
-    errors.push(...validateParentRecord(parent, parentNode.comate,
-      mappings.map(([logical]) => [logical, nodes.get(logical)?.status])));
+  // claim 接受逻辑或物理的跨父依赖；校验也从真实 change 读取，不能只查本父映射。
+  // 外部依赖只参与门禁，不加入当前父的 children、ready 或 blocked 集合。
+  const dependencies = new Map(nodes);
+  if (parentNode) dependencies.set(parent, normalize(parentNode.comate));
+  // Map 迭代会访问新加入的节点；每个规范引用只加载一次，跨父依赖环也会终止遍历。
+  for (const [reference, record] of dependencies) {
+    if (!record) continue;
+    // 被依赖的父记录也必须连同其子记录校验，不能用父 done 掩盖未完成子任务。
+    for (const dependency of [...record.dependsOn, ...(childrenByParent.get(reference) ?? [])]) {
+      if (dependencies.has(dependency)) continue;
+      try {
+        const resolved = await resolveChange(root, dependency);
+        const node = await readNode(root, dependency, { physical: resolved.physical }, options.statusProvider);
+        dependencies.set(dependency, normalize(node.comate));
+        for (const localIssue of validateComateRecord(node.comate, {
+          pendingTasks: node.tasks.pending, humanTasks: node.tasks.humanTasks,
+        })) {
+          const { kind, ...details } = localIssue;
+          errors.push(issue(kind, dependency, undefined, details));
+        }
+        if (node.comate.status === 'done' && node.officialStatus?.isPlanningComplete === false) {
+          errors.push(issue('artifacts-incomplete', dependency));
+        }
+        if (document.mappings[dependency] && (node.comate.executionMode !== undefined
+          || node.officialStatus?.schemaName === 'falla-spec-driven')) {
+          errors.push(issue('schema-mode-conflict', dependency));
+        }
+        if (!document.mappings[dependency] && node.officialStatus?.schemaName === 'falla-spec-driven'
+          && node.comate.executionMode === 'parallel' && !childrenByParent.has(dependency)) {
+          errors.push(issue('execution-mode-conflict', dependency));
+        }
+      } catch {
+        dependencies.set(dependency, null);
+      }
+    }
   }
-
-  for (const [logical, record] of nodes) {
+  for (const [logical, record] of dependencies) {
+    if (!record) continue;
+    errors.push(...validateParentRecord(logical, record,
+      (childrenByParent.get(logical) ?? []).map(child => [child, dependencies.get(child)?.status])));
     for (const dependency of record.dependsOn) {
-      const upstream = nodes.get(dependency);
+      const upstream = dependencies.get(dependency);
       if (!upstream) {
         errors.push(issue('missing-dependency', logical, dependency));
         continue;
@@ -147,14 +191,21 @@ export async function validateCoordination(root, options) {
     }
   }
 
-  const cycle = findCycle(nodes);
+  // 父完成隐含依赖子完成；只在查环图加入该边，避免把父 in-progress 误当作执行依赖失败。
+  const completionGraph = new Map([...dependencies]
+    .filter(([, record]) => record !== null)
+    .map(([reference, record]) => [reference, {
+      ...record,
+      dependsOn: [...record.dependsOn, ...(childrenByParent.get(reference) ?? [])],
+    }]));
+  const cycle = findCycle(completionGraph);
   if (cycle) errors.push(issue('cycle', cycle[0], undefined, { path: cycle }));
 
   const ready = [];
   const blocked = [];
   for (const [logical, record] of nodes) {
     const dependenciesDone = record.dependsOn.every(
-      (dependency) => nodes.get(dependency)?.status === 'done'
+      (dependency) => dependencies.get(dependency)?.status === 'done'
     );
     if (record.status === 'todo' && dependenciesDone) ready.push(logical);
     if (record.status === 'blocked' || (record.status === 'todo' && !dependenciesDone)) {

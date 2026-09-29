@@ -5,6 +5,7 @@ import { FallaError } from '../errors.js';
 import { sha256, writeAtomicFile } from '../install/files.js';
 import { withProjectLock } from '../locks.js';
 import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
+import { validateCoordination } from './dag.js';
 import { readChangeRecordFile } from './health.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
@@ -77,10 +78,16 @@ export async function claimChange(rootInput, reference, options) {
 
   return withProjectLock(rootInput, 'coordination', async () => {
     const root = await realpath(path.resolve(rootInput));
+    // 一次锁内认领共用官方状态快照，避免同一节点重复启动 CLI；下一次认领重新读取。
+    const statuses = new Map();
+    const statusProvider = async physical => {
+      if (!statuses.has(physical)) statuses.set(physical, options.statusProvider(physical));
+      return statuses.get(physical);
+    };
     const resolved = await resolveChange(root, reference);
     if (resolved.lifecycle !== 'active') throw new FallaError(1, '已归档 change 不可认领');
 
-    const official = await options.statusProvider(resolved.physical);
+    const official = await statusProvider(resolved.physical);
     if (official?.changeName !== resolved.physical) {
       throw new FallaError(1, '官方 status 与目标 change 不一致');
     }
@@ -106,7 +113,7 @@ export async function claimChange(rootInput, reference, options) {
     }
     if (logicalChild) {
       const parent = await resolveChange(root, resolved.parent);
-      const parentOfficial = await options.statusProvider(parent.physical);
+      const parentOfficial = await statusProvider(parent.physical);
       if (parent.lifecycle !== 'active' || parentOfficial?.changeName !== parent.physical
         || parentOfficial.schemaName !== 'falla-spec-driven' || parentOfficial.isPlanningComplete !== true) {
         throw new FallaError(1, '父 change 规划未完成或已归档，不能认领子 change');
@@ -117,24 +124,33 @@ export async function claimChange(rootInput, reference, options) {
       if (parentRecord.executionMode === 'single' || ['blocked', 'done'].includes(parentRecord.status)) {
         throw new FallaError(1, '父 change 模式或状态不允许认领子 change');
       }
-      await assertDependenciesDone(root, parentRecord.dependsOn, options.statusProvider);
+      await assertDependenciesDone(root, parentRecord.dependsOn, statusProvider);
     }
 
     if (record.status === 'blocked') throw new FallaError(1, 'blocked change 不会自动重启');
     if (record.status === 'done') throw new FallaError(1, 'done change 不会自动重启');
-    if (record.status === 'in-progress') {
-      if (record.owner === owner) {
-        await assertDependenciesDone(root, record.dependsOn, options.statusProvider);
-        return claimResult(resolved.logical, false, true);
-      }
-      throw new FallaError(1, 'change 已由其他 owner 认领，不可抢占');
+    const tasks = await readChangeRecordFile(root, resolved.path, 'tasks.md', true);
+    const progress = tasks === null ? null : parseTaskProgress(tasks);
+    // 新认领和幂等重试共用完成校验器，拒绝已知冲突且不落盘任何部分状态。
+    if (progress === null || validateComateRecord(record, {
+      pendingTasks: progress.pending, humanTasks: progress.humanTasks,
+    }).length > 0) {
+      throw new FallaError(1, '当前 change 验证未通过，不能认领');
     }
-    if (record.status !== 'todo') throw new FallaError(1, 'change 状态不可认领');
+    if (record.status === 'in-progress') {
+      if (record.owner !== owner) throw new FallaError(1, 'change 已由其他 owner 认领，不可抢占');
+    }
+    if (!['todo', 'in-progress'].includes(record.status)) throw new FallaError(1, 'change 状态不可认领');
     if (record.owner !== 'unassigned' && record.owner !== owner) {
       throw new FallaError(1, 'change 已由其他 owner 认领，不可抢占');
     }
 
-    await assertDependenciesDone(root, record.dependsOn, options.statusProvider);
+    await assertDependenciesDone(root, record.dependsOn, statusProvider);
+    const validation = await validateCoordination(root, {
+      change: logicalChild ? resolved.parent : resolved.physical, statusProvider,
+    });
+    if (!validation.ok) throw new FallaError(1, '协作验证未通过，不能认领');
+    if (record.status === 'in-progress') return claimResult(resolved.logical, false, true);
     const updated = updateClaimFields(markdown, owner);
     const relativePath = path.relative(root, path.join(resolved.path, 'comate.md'))
       .split(path.sep).join('/');

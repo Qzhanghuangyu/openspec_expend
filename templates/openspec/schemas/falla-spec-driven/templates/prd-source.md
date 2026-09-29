@@ -1,9 +1,6 @@
 # PRD 取证索引（Agent 工作文件）
 
-> 与父 change 同目录；Preflight 写入，Propose/Apply 需要追溯时按需读取，归档随 change 保留。
-> 这不是访问控制或凭据仓库。只保存当前需求必要的稳定定位信息，不保存原始 URL、认证 token、
-> cookie、评论全文、回复全文、个人信息或临时链接。人工阅读的结论写在 preflight.md，不复制长 ID。
-> 未使用带评论的在线 PRD 时无需创建本文件。
+> 填写前必须读取 `.falla/skill-spec/[分析必读]preflight.md` 的取证规则；本文件仅提供台账结构。
 
 ## 文档版本与读取范围
 
