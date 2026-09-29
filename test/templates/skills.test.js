@@ -107,6 +107,48 @@ test('阶段职责保持单向推进', async () => {
   assert.match(archive, /不得在本阶段重新实施需求/);
 });
 
+test('Preflight 澄清后停在当前阶段，Propose 和 Apply 必须分别手动发起', async () => {
+  const soul = await read('skill-spec/[Must Read]soul.md');
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const apply = await read('skill-spec/[模块选读]apply.md');
+  const preflightSkill = await read('skills/falla-preflight/SKILL.md');
+  const proposeSkill = await read('skills/falla-propose/SKILL.md');
+  const applySkill = await read('skills/falla-apply-change/SKILL.md');
+  const readme = await readFile('README.md', 'utf8');
+  assert.match(soul, /preflight.*就绪.*不自动.*Propose/s);
+  assert.match(soul, /Propose.*Apply.*用户.*分别.*手动调用/s);
+  assert.match(preflight, /答复.*阻塞.*只更新.*preflight.*不.*Propose/s);
+  assert.match(preflightSkill, /澄清.*停止.*Propose/s);
+  assert.match(propose, /用户.*手动.*Propose/);
+  assert.match(propose, /完成.*等待.*Apply/s);
+  assert.match(apply, /用户.*手动.*Apply/);
+  assert.match(proposeSkill, /不得自动.*Apply/);
+  assert.match(applySkill, /不得.*自动.*Apply/);
+  assert.match(readme, /P\[Preflight\].*用户手动发起.*D\[Propose\]/);
+  assert.match(readme, /箭头不表示自动执行/);
+  for (const name of ['falla-propose', 'falla-apply-change']) {
+    const content = await read(`skills/${name}/SKILL.md`);
+    assert.equal(parseFrontmatter(content, name)['disable-model-invocation'], true);
+    const metadata = YAML.parse(await read(`skills/${name}/agents/openai.yaml`));
+    assert.equal(metadata.policy.allow_implicit_invocation, false);
+  }
+});
+
+test('Propose 对关键可见区域做层级及 spec/task 的有界覆盖核对', async () => {
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
+  assert.match(propose, /功能或验收意义.*区域.*父层/s);
+  assert.match(propose, /design.*spec.*task/s);
+  assert.match(propose, /范围外.*未取得/s);
+  assert.match(propose, /任务生成后.*回填/s);
+  assert.match(propose, /静态设计.*不得推断点击行为/s);
+  assert.match(propose, /不逐.*叶节点.*不.*重复读取 Figma/s);
+  assert.match(propose, /planningComplete.*不.*语义覆盖/s);
+  assert.match(design, /对应 spec \/ task \/ 子 change \/ 范围外/);
+  assert.match(design, /不列装饰性叶节点/);
+});
+
 test('执行和验证模式只由 comate 保存', async () => {
   const parentTasks = await read('openspec/schemas/falla-spec-driven/templates/tasks.md');
   const childTasks = await read('openspec/schemas/falla-task-driven/templates/tasks.md');
@@ -353,8 +395,8 @@ test('UI Knowledge 先筛硬条件，仅多方案时可选评分', async () => {
   const knowledge = await read('skill-spec/references/ui-knowledge.md');
   const design = await read('openspec/schemas/falla-spec-driven/templates/design.md');
 
-  assert.match(knowledge, /通过校验的 draft 仅 `reference-only`/);
-  assert.match(knowledge, /证据过期（`stale-evidence`）按校验结果 `rejected`/);
+  assert.match(knowledge, /通过校验的 draft\s*\| 仅 `reference-only`/);
+  assert.match(knowledge, /证据过期（`stale-evidence`）\s*\| `rejected`，修复指纹并重新验证前不得引用/);
   assert.match(knowledge, /默认不对每个控件打分/);
   assert.match(knowledge, /分数辅助讨论，硬条件优先/);
   assert.match(design, /UI Knowledge 选型/);

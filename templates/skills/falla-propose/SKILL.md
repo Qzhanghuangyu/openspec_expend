@@ -1,11 +1,13 @@
 ---
 name: falla-propose
 description: Use when an existing Android Falla preflight change needs proposal artifacts, architecture planning, or explicitly requested parallel child-change decomposition.
+disable-model-invocation: true
 ---
 
 # Falla Propose
 
 把已完成 preflight 的父 change 转成可实施的官方 OpenSpec 规划。
+仅在用户本轮手动调用本 Skill 时开始；preflight done/Blocker 澄清不自动触发。
 
 ## 权威规则
 
@@ -46,3 +48,4 @@ description: Use when an existing Android Falla preflight change needs proposal 
 ## 边界
 
 本阶段只规划，不修改业务代码。apply 不得创建子 change，也不得切换执行模式。
+完成后交付 design/tasks 供用户审阅或修改并停止，不得自动调用 Apply。

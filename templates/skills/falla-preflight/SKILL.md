@@ -35,7 +35,9 @@ description: Use when analyzing an Android client PRD or product request before 
 
 5. 按阶段规则生成 preflight 与必要取证文件；artifact 只写入官方 `resolvedOutputPath`。
 6. 执行 `openspec status --change "<name>" --json`，确认 `preflight` 为 `done`。
+7. 用户答复澄清或解除阻塞后，只修订本阶段记录并复核 status；反馈结果后停止，等待用户手动调用 Propose。
 
 ## 边界
 
 不得创建 proposal、specs、design、tasks、comate 或子 change；不得修改业务代码、构建配置或测试。
+澄清解决不代表启动授权；本 Skill 不调用 Propose 或 Apply。

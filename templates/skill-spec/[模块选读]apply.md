@@ -6,7 +6,8 @@
 
 ## 输入
 
-- 官方 `status` 和 `instructions apply`，当前 change 的 `tasks.md`、`comate.md`。
+- 用户在规划完成并可审阅/修改后于本轮手动调用 Apply；官方 `status` 和 `instructions apply`，
+  当前 change 的 `tasks.md`、`comate.md`。Propose 完成或任务 ready 不构成自动实施授权。
 - 父 change 的 design、项目规则审计和用户已确认决定。
 
 ## 必须执行

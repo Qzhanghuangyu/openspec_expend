@@ -6,7 +6,8 @@
 
 ## 输入
 
-- 已完成的父 change 和 `preflight.md`、当前主规格及已有源码证据。
+- 用户在本轮手动调用 Propose；已完成的父 change 和 `preflight.md`、当前主规格及已有源码证据。
+  preflight done/ready 或仅答复澄清不构成本阶段调用。
 - 项目规则、有效 UI Knowledge 和用户已确认决定。
 
 ## 必须执行
@@ -42,6 +43,15 @@
 - parallel 父 tasks 只记协调里程碑与子 change 引用，子 change 只保存自己的任务；根页面/XML
   只能有一个责任方。子 change 命名、创建和依赖字段遵循 coordination。
 
+## UI 结构覆盖核对（涉及设计页面时）
+
+对当前范围的已授权页面/状态，按有功能或验收意义的可见区域核对其父层和设计证据；在 design
+现有关键节点表中对应 spec（合法 `skip_specs` 则注明）与负责的 task/子 change，或写明范围外、
+未取得及原因。任务生成后回填 task 引用再核对；图层重叠时也要按实际父层归属。
+只核对功能区域，不逐个装饰性叶节点，也不为这项核对重复读取 Figma；必要结构事实缺失才依
+`references/design-tools.md` 定向补读。静态设计可证明存在及层级，不得推断点击行为或动态参数；
+未知交互保留待确认，不能以猜测补齐规格。
+
 ## 何时暂停
 
 - preflight 未完成，或页面结构、核心契约及 required 基线无法确定。
@@ -51,7 +61,9 @@
 
 - 父 artifacts 由官方 status 判定为 done 或合法 skipped，已创建子 change 的规划也完成。
 - tasks 的范围、依赖和完成条件明确；`coordination validate` 通过。
+- 适用 UI 的结构覆盖核对已完成；OpenSpec 的 `planningComplete` 不证明设计事实到 spec/task 的语义覆盖。
 - 没有修改业务代码。
+- 完成规划后停止并等待用户审阅或修改 design/tasks；不得自动进入 Apply。
 
 ## 按需参考
 

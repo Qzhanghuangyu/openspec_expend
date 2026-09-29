@@ -22,14 +22,14 @@ Schema 解析、校验和归档内核；本项目只保留 Falla 特有的规则
 
 ```mermaid
 flowchart LR
-  P[Preflight] --> D[Propose]
-  D --> A[Apply]
-  A --> R[Archive]
-  A -->|规划缺口| D
+  P[Preflight] -->|用户手动发起| D[Propose]
+  D -->|用户审阅或修改后手动发起| A[Apply]
+  A -->|用户明确要求| R[Archive]
+  A -->|规划缺口，返回修订| D
 ```
 
-图仅显示阶段导航。触发条件与回退顺序分别见阶段文档和
-[协作规则](templates/skill-spec/references/coordination.md)，不在图中复制门禁。
+图仅显示阶段导航，箭头不表示自动执行。阶段发起权限见 [Soul](templates/skill-spec/[Must%20Read]soul.md)，
+回退顺序见[协作规则](templates/skill-spec/references/coordination.md)。
 
 ## 初始化与更新
 

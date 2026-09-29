@@ -13,6 +13,10 @@ Falla 补充 Android 决策、任务、认领、依赖和交接。
 
 `preflight → proposal → specs → design → tasks → comate → apply → archive`
 
+阶段依赖只表示 artifact 就绪，不是跨阶段执行授权：preflight done、Blocker 获答复或官方 status 为 ready
+均不自动启动 Propose；Propose 与 Apply 必须由用户分别手动调用对应 Skill。前一阶段结束后停下并
+交付结果，等待用户检查或修改；笼统的“继续”不继承下一阶段授权。
+
 ## 2. 当前阶段读什么
 
 | 阶段 | 必读文件 |

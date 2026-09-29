@@ -56,6 +56,8 @@
 8. 涉及授权设计节点时，必须读取 `references/design-tools.md`，按其中取证交接规则创建或更新父
    `design-source.md`；本阶段仅填必要的分析事实和缺口，不冒充完整设计。
 9. 写入官方 `resolvedOutputPath`，运行 status 确认 preflight 为 `done`。
+   用户答复阻塞问题后只更新当前 `preflight.md` 的结论与取证文件，复核 status 后结束本阶段；
+   不以 Blocker 已解决或 proposal 就绪为由自动运行 Propose/Apply。
 
 ## 何时暂停
 
@@ -72,6 +74,7 @@
   读取范围、已解决/未解决状态、对正文的影响和未决争议。
 - 未创建其他正式 artifact 或子 change；取证文件仅含最小定位信息，不写凭据或评论全文。
 - 未修改业务代码、构建配置或测试。
+- 已反馈剩余阻塞项和下一阶段可否进入；停在 Preflight，等待用户手动发起 Propose。
 
 ## 按需参考
 

@@ -1,11 +1,13 @@
 ---
 name: falla-apply-change
 description: Use when implementing or continuing an existing Android Falla parent or logical parent/child OpenSpec change.
+disable-model-invocation: true
 ---
 
 # Falla Apply Change
 
 只实施 propose 已建立的父 change 或逻辑子 change。
+仅在用户本轮手动调用本 Skill 时开始；不得因 Propose 完成或 task ready 自动 Apply。
 
 ## 权威规则
 
