@@ -508,3 +508,31 @@ test('OpenSpec 特殊语义仍保留在对应权威入口', async () => {
   assert.match(archive, /--skip-specs/);
   assert.match(archive, /不得使用 `--force`、`--skip-validate`/);
 });
+
+test('归档门禁在 single、parallel 父和逻辑/物理子 change 中统一强制加载并执行', async () => {
+  const phase = await read('skill-spec/[任务选读]archive.md');
+  const skill = await read('skills/falla-archive-change/SKILL.md');
+  const coordination = await read('skill-spec/references/coordination.md');
+  assert.match(phase, /所有模式.*必须.*references\/coordination\.md/su);
+  assert.match(skill, /references\/coordination\.md.*强制/u);
+  for (const text of [phase, skill]) {
+    assert.match(text, /single、parallel 父和逻辑\/物理子 change/u);
+    assert.match(text, /coordination preflight "<change>" --json/u);
+    assert.match(text, /parent.*(?:返回|结果)|(?:返回|结果).*parent/u);
+    assert.match(text, /falla-openspec coordination validate --change "<parent>" --json/u);
+    assert.match(text, /ok.*true.*(?:退出码|exit)|(?:退出码|exit).*ok.*true/su);
+    assert.doesNotMatch(text, /parallel 父 change 归档前(?:运行|执行).*coordination validate/u);
+  }
+  assert.match(coordination, /所有模式.*归档/u);
+});
+
+test('归档官方豁免不覆盖 Falla 错误，接受未完成告警也不能伪造 done 或人工 passed', async () => {
+  const phase = await read('skill-spec/[任务选读]archive.md');
+  const skill = await read('skills/falla-archive-change/SKILL.md');
+  for (const text of [phase, skill]) {
+    assert.match(text, /--no-validate.*(?:不|不能).*Falla/su);
+    assert.match(text, /未完成告警/u);
+    assert.match(text, /(?:不|不得).*done.*passed/su);
+    assert.match(text, /(?:确认|等待|修改).*重新.*coordination validate/su);
+  }
+});
