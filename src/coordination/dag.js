@@ -4,6 +4,7 @@ import { parseComate, parseTaskProgress, validateComateRecord } from './comate.j
 import { checkPreflight, readChangeRecordFile, validateParentRecord } from './health.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
+import { inspectBaseline } from './baseline-files.js';
 
 function issue(kind, change, related = undefined, details = undefined) {
   return {
@@ -149,7 +150,9 @@ export async function validateCoordination(root, options) {
   for (const [reference, record] of dependencies) {
     if (!record) continue;
     // 被依赖的父记录也必须连同其子记录校验，不能用父 done 掩盖未完成子任务。
-    for (const dependency of [...record.dependsOn, ...(childrenByParent.get(reference) ?? [])]) {
+    const contextParent = document.mappings[reference]?.parent;
+    for (const dependency of [...record.dependsOn, ...(childrenByParent.get(reference) ?? []),
+      ...(contextParent ? [contextParent] : [])]) {
       if (dependencies.has(dependency)) continue;
       try {
         const resolved = await resolveChange(root, dependency);
@@ -180,9 +183,13 @@ export async function validateCoordination(root, options) {
   }
   for (const [logical, record] of dependencies) {
     if (!record) continue;
+    const contextParent = document.mappings[logical]?.parent;
+    if (contextParent && dependencies.get(contextParent)?.status === 'blocked'
+      && ['in-progress', 'done'].includes(record.status)) errors.push(issue('parent-blocked', logical, contextParent));
     errors.push(...validateParentRecord(logical, record,
       (childrenByParent.get(logical) ?? []).map(child => [child, dependencies.get(child)?.status])));
-    for (const dependency of record.dependsOn) {
+    const inherited = contextParent ? dependencies.get(contextParent)?.dependsOn ?? [] : [];
+    for (const dependency of new Set([...record.dependsOn, ...inherited])) {
       const upstream = dependencies.get(dependency);
       if (!upstream) {
         errors.push(issue('missing-dependency', logical, dependency));
@@ -199,7 +206,8 @@ export async function validateCoordination(root, options) {
     .filter(([, record]) => record !== null)
     .map(([reference, record]) => [reference, {
       ...record,
-      dependsOn: [...record.dependsOn, ...(childrenByParent.get(reference) ?? [])],
+      dependsOn: [...record.dependsOn, ...(childrenByParent.get(reference) ?? []),
+        ...(dependencies.get(document.mappings[reference]?.parent)?.dependsOn ?? [])],
     }]));
   const cycle = findCycle(completionGraph);
   if (cycle) errors.push(issue('cycle', cycle[0], undefined, { path: cycle }));
@@ -214,16 +222,22 @@ export async function validateCoordination(root, options) {
       errors.push(issue('preflight-unreadable', reference));
     }
   }
-  const preflightBlocked = errors.some(error => error.kind.startsWith('preflight-'));
+  if (!options.ignoreBaseline) {
+    for (const [reference, record] of dependencies) {
+      if (record !== null) errors.push(...(await inspectBaseline(root, reference)).errors);
+    }
+  }
+  const admissionBlocked = errors.some(error => error.kind.startsWith('preflight-') || error.kind.startsWith('baseline-'));
 
   const ready = [];
   const blocked = [];
   for (const [logical, record] of nodes) {
-    const dependenciesDone = record.dependsOn.every(
+    const inherited = dependencies.get(document.mappings[logical]?.parent)?.dependsOn ?? [];
+    const dependenciesDone = [...record.dependsOn, ...inherited].every(
       (dependency) => dependencies.get(dependency)?.status === 'done'
     );
-    if (record.status === 'todo' && dependenciesDone && !preflightBlocked) ready.push(logical);
-    if (record.status === 'blocked' || (record.status === 'todo' && (!dependenciesDone || preflightBlocked))) {
+    if (record.status === 'todo' && dependenciesDone && !admissionBlocked) ready.push(logical);
+    if (record.status === 'blocked' || (record.status === 'todo' && (!dependenciesDone || admissionBlocked))) {
       blocked.push(logical);
     }
   }

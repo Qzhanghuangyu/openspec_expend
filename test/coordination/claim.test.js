@@ -1,3 +1,4 @@
+import { writeTestBaseline } from '../helpers/baseline.js';
 import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
@@ -93,12 +94,14 @@ test('同 owner 的 in-progress 重试幂等，其他 owner 不可抢占', async
   const root = await createProject();
   const initial = comate({ owner: 'alice', status: 'in-progress' });
   const directory = await writeRecord(root, 'solo', initial);
+  await writeTestBaseline(root, 'solo');
+  const verifiedInitial = await readFile(path.join(directory, 'comate.md'), 'utf8');
   const options = { owner: 'alice', statusProvider: async () => officialStatus('solo') };
 
   assert.deepEqual(await claimChange(root, 'solo', options), {
     change: 'solo', status: 'in-progress', claimed: false, idempotent: true,
   });
-  assert.equal(await readFile(path.join(directory, 'comate.md'), 'utf8'), initial);
+  assert.equal(await readFile(path.join(directory, 'comate.md'), 'utf8'), verifiedInitial);
   await assert.rejects(
     () => claimChange(root, 'solo', { ...options, owner: 'bob' }),
     (error) => error.code === 1 && error.message.includes('不可抢占')
@@ -155,6 +158,7 @@ test('parallel 逻辑子 change 在依赖完成后可认领', async () => {
   const mapping = await registerMapping(root, 'medal/card');
   await writeRecord(root, mapping.physical, comate({ mode: null, dependsOn: ['foundation'] }));
 
+  await writeTestBaseline(root, 'foundation');
   const result = await claimChange(root, 'medal/card', {
     owner: 'bob',
     statusProvider: async (physical) => officialStatus(physical, physical === mapping.physical ? 'falla-task-driven' : 'falla-spec-driven'),

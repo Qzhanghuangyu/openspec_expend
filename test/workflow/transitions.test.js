@@ -1,3 +1,4 @@
+import { writeTestBaseline } from '../helpers/baseline.js';
 import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -9,6 +10,7 @@ import { promisify } from 'node:util';
 import { coordinationCommand } from '../../src/commands/coordination.js';
 import { doctorProject } from '../../src/commands/doctor.js';
 import { validateChangeRecords } from '../../src/coordination/health.js';
+import { validateTaskDependencies } from '../../src/coordination/tasks.js';
 
 const exec = promisify(execFile);
 
@@ -64,14 +66,19 @@ ${mode ? `- 执行模式 (execution-mode): ${mode}\n` : ''}- 负责人 (owner): 
   - 安全与敏感信息结论：未输出敏感信息
   - 遗留风险与恢复条件：根据失败证据复验
 `);
+    if (validateTaskDependencies(tasks).length === 0) await writeTestBaseline(root, reference);
   }
   const validate = () => command('validate', '--change', 'page');
   const health = async () => validateChangeRecords(root, (await official('status', '--all')).changes);
   const claim = reference => command('claim', reference, '--owner', 'alice');
+  const refreshFixtureEvidence = async reference => {
+    // 此测试只复核既有图门禁；改变上游版本后给该已核验夹具显式刷新，不影响专门的旧记录迁移回归。
+    await writeTestBaseline(root, reference);
+  };
   const record = reference => readFile(path.join(files.get(reference), 'comate.md'), 'utf8');
   // 只核对 workflow 分组：这个最小夹具没有安装工具/Hook，不声称 installation 通过。
   const doctor = async () => (await doctorProject({ root })).groups.workflow;
-  return { create, set, validate, health, claim, record, doctor };
+  return { create, set, validate, health, claim, record, doctor, refreshFixtureEvidence };
 }
 
 const has = (result, kind) => result.errors.some(error => error.kind === kind);
@@ -145,6 +152,8 @@ test('跨父依赖环不能通过校验或解锁认领，物理名别名也不�
   assert.equal(has(await p.validate(), 'cycle'), true);
   await assert.rejects(() => p.claim('consumer'), /验证/);
   await p.set('foundation/core', { status: 'done' });
+  await p.refreshFixtureEvidence('page/view');
+  await p.refreshFixtureEvidence('consumer');
   assert.equal((await p.validate()).ok, true);
   assert.equal((await p.claim('consumer')).claimed, true);
 });
@@ -221,6 +230,7 @@ test('任务内部块后的人工标记贯穿完成校验、健康检查和下�
     status: 'done', tasks: '- [x] 1.1 [人工] 页面验收\n', review: 'passed',
     feedback: '人工确认页面默认态，测试设备配置下目标区域符合预期，通过。',
   });
+  await p.refreshFixtureEvidence('page/release');
   assert.equal((await p.claim('page/release')).claimed, true);
   assert.equal((await p.validate()).ok, true);
   assert.equal((await p.health()).ok, true);

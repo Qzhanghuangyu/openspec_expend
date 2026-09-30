@@ -95,6 +95,13 @@ blockers:
   表示仍有待确认项；`preflight-decision-evidence-required` 表示决定或依据缺失；`preflight-unreadable` 表示安全读取失败。
   任何一种错误都不得按准入通过处理；仅反馈问题编号和恢复条件，不回显敏感正文。
 
+## 已实施后的需求修订
+
+未归档 change 的已确认决定、PRD 范围或验收条件改变时，更新台账不得保留旧需求的默认批准。
+先核实冲突和用户决定；已有完成/人工证据时加载 coordination 的“实施基线与完成证据失效”，列受影响范围，
+交回 Propose 修订及各 owner 回退。不自动清空任务、不重建 comate，不把修订后的 preflight done 当作旧证据仍有效。
+归档内容使用新 change，不原地改写。
+
 ## 何时暂停
 
 - PRD 不完整或不可访问；飞书 PRD 的评论/回复因权限、截断或分页失败而无法核对。

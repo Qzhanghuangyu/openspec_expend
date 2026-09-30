@@ -3,6 +3,8 @@
 > 填写前必须读取 `.falla/skill-spec/references/coordination.md` 的记录契约与验证模式。
 
 - 格式版本 (format-version): 2
+- 实施基线 (baseline): unrecorded
+- 基线复核 (baseline-review): none
 - 负责人 (owner): unassigned
 - 状态 (status): todo
 - 验证模式 (validation-mode): hybrid

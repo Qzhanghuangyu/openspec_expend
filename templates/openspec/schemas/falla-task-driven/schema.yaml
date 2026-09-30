@@ -23,6 +23,7 @@ artifacts:
       执行前必须读取 .falla/skill-spec/references/coordination.md。
       保存 format-version: 2、validation-mode、human-review、owner、status、depends-on 和 handoff。
       子 change 不保存 execution-mode。
+      保留 baseline: unrecorded / baseline-review: none；按 coordination 的基线协议记录快照，旧进度不得直接刷新。
       使用模板的结构化 handoff；字段取值、人工验收、完成及回退门禁以 coordination 为准。
     requires:
       - tasks
@@ -33,4 +34,5 @@ apply:
   instruction: |
     执行前必须读取 .falla/skill-spec/[Must Read]soul.md、.falla/skill-spec/[模块选读]apply.md，
     并加载阶段规则触发的参考文件。只执行当前子 change的 tasks，引用父 design，
+    官方 all_done 不证明完成证据仍适用；先检查当前实施基线，变化返回复核，不自动清空任务。
     模式和协作状态从当前 comate 读取；任务循环、验收、检查点和回退遵循 Apply 阶段规则。

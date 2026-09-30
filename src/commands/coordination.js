@@ -4,6 +4,8 @@ import { FallaError } from '../errors.js';
 import { claimChange } from '../coordination/claim.js';
 import { validateCoordination } from '../coordination/dag.js';
 import { checkPreflight } from '../coordination/health.js';
+import { inspectBaseline } from '../coordination/baseline-files.js';
+import { recordBaseline } from '../coordination/baseline-store.js';
 import {
   registerMapping,
   resolveChange,
@@ -16,11 +18,16 @@ import { runOpenSpecJson } from '../openspec/runner.js';
 function parseArguments(argv) {
   const [command, ...rest] = argv;
   const options = {
-    json: false, project: null, change: null, owner: null, positional: [],
+    json: false, record: false, project: null, change: null, owner: null, positional: [],
   };
 
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index];
+    if (argument === '--record') {
+      if (command !== 'baseline' || options.record) throw new FallaError(1, '仅 baseline 接受单个 --record');
+      options.record = true;
+      continue;
+    }
     if (argument === '--json') {
       options.json = true;
       continue;
@@ -73,6 +80,19 @@ function writeResult(io, result, json, summary) {
 export async function coordinationCommand(argv, io) {
   const { command, options } = parseArguments(argv);
   const root = await resolveRoot(options, io);
+
+  if (command === 'baseline') {
+    const reference = requireSingleReference(command, options);
+    if (!options.record) rejectOwner(command, options);
+    if (options.record && !options.owner) throw new FallaError(1, 'baseline --record 需要 --owner <id>');
+    const result = options.record
+      ? await recordBaseline(root, reference, { owner: options.owner })
+      : await inspectBaseline(root, reference);
+    writeResult(io, result, options.json, result.ok
+      ? `实施基线已核对：${result.change}`
+      : `实施基线需复核：${result.change}；请核对当前基线与受影响任务`);
+    return result;
+  }
 
   if (command === 'preflight') {
     rejectOwner(command, options);

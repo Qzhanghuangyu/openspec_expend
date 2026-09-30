@@ -1,3 +1,4 @@
+import { writeTestBaseline } from '../helpers/baseline.js';
 import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -44,6 +45,7 @@ async function createProject() {
 - 依赖 (depends-on): []
 - 交接 (handoff): 准备集成
 `);
+  await writeTestBaseline(root, 'medal');
   return root;
 }
 
@@ -239,6 +241,7 @@ test('父 DAG 同时包含 archived 和 active 子 change 时仍可校验', asyn
 - 被依赖 (blocks): []
 - 交接 (handoff): verified
 `, 'utf8');
+  await writeTestBaseline(root, 'medal/completed');
   await execFileAsync('openspec', ['archive', archived.physical, '--yes', '--json'], { cwd: root });
 
   const activeRegisterIo = memoryIo(root);

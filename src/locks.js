@@ -52,15 +52,41 @@ async function releaseOwnedLock(file, content) {
 }
 
 async function acquireLock(file, kind, content) {
-  let acquired = await tryAcquire(file, content);
-  if (acquired) return;
+  const recovery = `${file}.recovery`;
+  if (await tryAcquire(file, content)) {
+    // 恢复者可能在删主锁后崩溃；新创建主锁不能绕过尚在的恢复保护。
+    try {
+      await lstat(recovery);
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      await releaseOwnedLock(file, content);
+      throw error;
+    }
+    await releaseOwnedLock(file, content);
+    throw new FallaError(1, `${kind} 恢复保护存在；需先人工核对残留恢复状态`);
+  }
   const first = await readLock(file);
   if (isAlive(first.value.pid)) throw new FallaError(1, `${first.value.kind} 操作正在进行`);
-  const second = await readLock(file);
-  if (second.raw !== first.raw) throw new FallaError(1, `${kind} 锁已发生变化，拒绝清理`);
-  await unlink(file);
-  acquired = await tryAcquire(file, content);
-  if (!acquired) throw new FallaError(1, `${kind} 操作正在进行`);
+  // 自动回收必须独占：否则第二个调用会删除第一个调用刚取得的活锁，CAS 无法补救。
+  if (!await tryAcquire(recovery, content)) {
+    throw new FallaError(1, `${kind} 残留锁恢复正在进行；恢复保护残留时需人工核对`);
+  }
+  try {
+    let latest;
+    try { latest = await readLock(file); } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    if (latest) {
+      if (latest.raw !== first.raw || isAlive(latest.value.pid)) {
+        throw new FallaError(1, `${kind} 锁已发生变化，拒绝清理`);
+      }
+      await unlink(file);
+    }
+    if (!await tryAcquire(file, content)) throw new FallaError(1, `${kind} 操作正在进行`);
+  } finally {
+    // 只释放自己的保护；恢复进程崩溃后保护残留不进行递归自动回收。
+    await releaseOwnedLock(recovery, content);
+  }
 }
 
 export async function withProjectLock(rootInput, kind, operation) {

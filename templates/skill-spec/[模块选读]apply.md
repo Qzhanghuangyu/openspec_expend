@@ -15,7 +15,8 @@
 ## 必须执行
 
 1. 必读 `references/coordination.md`，按“执行模式”“协作状态”确定实施目标并认领。
-   官方 `blocked` 停止，`all_done` 只复核，`ready` 才认领；完成证据失效时按该文档的回退流程处理。
+   先执行 `coordination baseline` 核对当前与已记录版本；官方 `blocked` 停止，`all_done` 也须基线及完成证据复核，
+   `ready` 且基线有效才认领；基线变化/旧证据未核验按该文档的复核回退协议处理，不自动刷新或清空任务。
 2. 必读 `references/project-rules.md`，执行 Apply 项目规则门禁。遗漏、条件变化或偏离时不修改代码，
    返回 Propose。
 3. 读取 `operationGuidance`；只采纳不与官方状态、范围锁、Soul 和用户决定冲突的建议，
@@ -41,7 +42,8 @@
 
 ## 何时暂停
 
-- task、设计或 required 基线不明确：返回 Propose。
+- 已确认需求内的 task、设计或 required 基线修订：返回 Propose；需求/PRD 已确认决定变化、冲突或尚未明确：先回 Preflight。
+- `baseline-review-required` / `baseline-unverified` 或结构/安全读取错误：先明确影响范围并由各 owner 回退复核，不继续下一任务。
 - 验证失败、外部阻塞、等待人工或上下文不足：按 coordination 保存状态和恢复条件。
 
 ## 完成标准

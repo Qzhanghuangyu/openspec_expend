@@ -1,15 +1,14 @@
-import { lstat, readFile, realpath } from 'node:fs/promises';
-import path from 'node:path';
-
 import { FallaError } from '../errors.js';
 import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
 import { assertChangeSegment } from './naming.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
 import { validatePreflight } from './preflight.js';
+import { readChangeRecordFile } from './record-files.js';
+import { inspectBaseline } from './baseline-files.js';
+export { readChangeRecordFile } from './record-files.js';
 
 const FALLA_SCHEMAS = new Set(['falla-spec-driven', 'falla-task-driven']);
-const MAX_RECORD_BYTES = 256 * 1024;
 
 function issue(kind, change, related = undefined, count = undefined) {
   return {
@@ -32,47 +31,6 @@ export function validateParentRecord(reference, comate, children) {
     }
   }
   return errors;
-}
-
-function isInside(root, candidate) {
-  return candidate === root || candidate.startsWith(`${root}${path.sep}`);
-}
-
-async function safeLstat(candidate) {
-  try {
-    return await lstat(candidate);
-  } catch (error) {
-    if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return null;
-    throw error;
-  }
-}
-
-export async function readChangeRecordFile(rootInput, changePath, filename, optional = false) {
-  const root = await realpath(path.resolve(rootInput));
-  const directoryEntry = await safeLstat(changePath);
-  if (!directoryEntry || directoryEntry.isSymbolicLink() || !directoryEntry.isDirectory()) {
-    throw new FallaError(1, 'change 必须是项目内真实目录，不能是符号链接');
-  }
-  const directory = await realpath(changePath);
-  if (!isInside(root, directory)) {
-    throw new FallaError(1, 'change 路径越过项目边界');
-  }
-
-  const file = path.join(directory, filename);
-  const entry = await safeLstat(file);
-  if (!entry && optional) return null;
-  if (!entry) return null;
-  if (entry.isSymbolicLink() || !entry.isFile()) {
-    throw new FallaError(1, `${filename} 必须是普通文件，不能是符号链接`);
-  }
-  if (entry.size > MAX_RECORD_BYTES) {
-    throw new FallaError(1, `${filename} 超过 256 KiB 限制`);
-  }
-  const resolved = await realpath(file);
-  if (!isInside(directory, resolved)) {
-    throw new FallaError(1, `${filename} 路径越过 change 边界`);
-  }
-  return readFile(resolved, 'utf8');
 }
 
 function comateReached(status) {
@@ -203,6 +161,7 @@ export async function validateChangeRecords(root, statuses) {
   }
 
   for (const [reference, record] of records) {
+    if (record.tasks !== null) errors.push(...(await inspectBaseline(root, reference)).errors);
     if (record.officialStatus?.schemaName === 'falla-spec-driven'
       && record.comate.executionMode === 'parallel'
       && !(childrenByParent.get(reference)?.length > 0)) {

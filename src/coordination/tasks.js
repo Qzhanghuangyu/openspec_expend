@@ -46,7 +46,9 @@ function scanTasks(markdown) {
     const checkbox = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/u);
     if (inCode) {
       // 官方仍统计围栏中的 checkbox；新契约拒绝此类歧义，旧记录只保留进度统计。
-      if (checkbox) tasks.push({ line: index + 1, inCode: true });
+      if (parents.length) parents.at(-1).contentLines.push(line);
+      if (checkbox) tasks.push({ line: index + 1, inCode: true,
+        done: checkbox[1].toLowerCase() === 'x', contentLines: [line] });
       if (fenceMatch) {
         while (parents.length > 1 && parents.at(-1).indent >= indent) parents.pop();
         if (parents.length && indent <= parents.at(-1).indent) parents.length = 0;
@@ -66,7 +68,7 @@ function scanTasks(markdown) {
       while (parents.length && parents.at(-1).indent >= indent) parents.pop();
       const task = {
         line: index + 1, indent, section, id: readId(checkbox[2]),
-        done: checkbox[1].toLowerCase() === 'x', fields: dependencyFields(checkbox[2]),
+        done: checkbox[1].toLowerCase() === 'x', fields: dependencyFields(checkbox[2]), contentLines: [line],
       };
       tasks.push(task);
       parents.push(task);
@@ -74,6 +76,7 @@ function scanTasks(markdown) {
       continue;
     }
     if (!line.trim()) {
+      if (parents.length) parents.at(-1).contentLines.push(line);
       separated = true;
       continue;
     }
@@ -81,7 +84,10 @@ function scanTasks(markdown) {
     while (parents.length > 1 && parents.at(-1).indent >= indent) parents.pop();
     const block = /^\s*(?:#{1,6}\s|`{3,}|~{3,}|[-*+]\s+|\d+[.)]\s+)/u.test(line);
     if (parents.length && indent <= parents.at(-1).indent && (separated || block)) parents.length = 0;
-    if (parents.length) parents.at(-1).fields.push(...dependencyFields(line));
+    if (parents.length) {
+      parents.at(-1).fields.push(...dependencyFields(line));
+      parents.at(-1).contentLines.push(line);
+    }
     separated = false;
   }
   return { tasks, markers };
@@ -163,4 +169,14 @@ export function validateTaskDependencies(markdown) {
   const cycle = findTaskCycle(byId);
   if (cycle) issues.push(cycle);
   return issues;
+}
+
+/** 复用任务扫描器提取稳定编号及正文；旧无编号任务不推测编号，供基线复核显式补证。 */
+export function taskDefinitions(markdown) {
+  const { tasks } = scanTasks(markdown);
+  return tasks.map(task => {
+    const content = task.contentLines.join('\n');
+    return { id: task.id ?? null, done: task.done ?? false, human: content.includes('[人工]'),
+      inCode: task.inCode ?? false, content };
+  });
 }

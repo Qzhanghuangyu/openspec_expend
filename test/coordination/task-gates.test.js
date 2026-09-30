@@ -1,3 +1,4 @@
+import { writeTestBaseline } from '../helpers/baseline.js';
 import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -9,6 +10,7 @@ import { claimChange } from '../../src/coordination/claim.js';
 import { validateCoordination } from '../../src/coordination/dag.js';
 import { validateChangeRecords } from '../../src/coordination/health.js';
 import { registerMapping } from '../../src/coordination/resolver.js';
+import { validateTaskDependencies } from '../../src/coordination/tasks.js';
 
 async function project(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'falla-task-gates-'));
@@ -29,6 +31,8 @@ ${child ? '' : `- 执行模式 (execution-mode): ${mode}\n`}- 负责人 (owner):
     await writeReviewedPreflight(directory);
     await writeFile(path.join(directory, 'comate.md'), record);
     await writeFile(path.join(directory, 'tasks.md'), tasks);
+    // 无效图仍必须先被门禁拒绝；不要给重复编号夹具生成伪造快照。
+    if (validateTaskDependencies(tasks).length === 0) await writeTestBaseline(root, reference);
     records.set(reference, path.join(directory, 'comate.md'));
     statuses.set(physical, {
       changeName: physical, schemaName: child ? 'falla-task-driven' : 'falla-spec-driven',

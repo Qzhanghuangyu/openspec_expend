@@ -66,6 +66,9 @@ falla-openspec ui-knowledge index clear --json
 falla-openspec codegraph prepare --json
 # single 父 change 或 parallel 逻辑子 change 均使用排他认领
 falla-openspec coordination preflight medal --json
+# 基线检查只读；首次规划或显式影响复核后才记录
+falla-openspec coordination baseline medal --json
+falla-openspec coordination baseline medal --record --owner developer-a --json
 falla-openspec coordination claim medal --owner developer-a --json
 ```
 
@@ -76,6 +79,11 @@ falla-openspec coordination claim medal --owner developer-a --json
 知识校验只证明 Markdown 结构和引用文件指纹符合协议，`direct-reuse-candidate` 仍需由当前
 CodeGraph、依赖、资源及生命周期核对决定是否复用。旧 verified 条目缺少 `source-hashes` 时
 会报告待补证据，不自动降级或改写。外部 Figma/Lark 认证、CodeGraph MCP 连接与索引新鲜度不由 doctor 证明。
+
+基线快照保存在 comate，不保存需求/设计正文。来源或任务完成条件改变会要求复核，不自动清空 checkbox；
+已完成/实施中旧记录缺快照报告未核验，不能通过直接 --record 追认。按 coordination 的 baseline-review
+影响清单先回退受影响任务、父子状态和人工验收，再由原 owner 记录；不受影响进度保留。只读检查和验证
+不改记录，已归档内容不原地重新批准。机器不判断自然语言影响范围，也不证明人工反馈或验证证据真实。
 
 ## 标准工作流
 

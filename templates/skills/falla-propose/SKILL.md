@@ -33,7 +33,8 @@ disable-model-invocation: true
 
    只使用返回的模板、依赖和 `resolvedOutputPath`。
 3. 按阶段规则生成各 artifact，执行对应权威参考的规划门禁。
-4. 从当前 comate 读取执行模式，按阶段规则初始化协作记录。
+4. 从当前 comate 读取执行模式，按阶段规则初始化协作记录。已有实施/完成证据时遵循重规划协议，
+   保留记录与不受影响进度，不重置 owner 或套用全新模板。
 5. 阶段规则确定采用 parallel 后，执行子 change 编排：
 
    ```bash
@@ -45,7 +46,16 @@ disable-model-invocation: true
    ```
 
    逻辑名恰好两段且允许数字开头；物理名只使用 register 返回值。
-6. 再次执行官方 status；父规划及已创建子 change 的 planning artifacts 必须完成。
+6. 对父及本轮规划/复核的子 change 按 coordination 基线协议执行只读检查及显式记录：
+
+   ```bash
+   falla-openspec coordination baseline "<change>" --json
+   falla-openspec coordination baseline "<change>" --record --owner "<id>" --json
+   falla-openspec coordination validate --change "<parent>" --json
+   ```
+
+   仅无进度初始化或已有有效影响清单及回退状态时记录，不替其他 owner 更新。
+7. 再次执行官方 status；父规划及已创建子 change 的 planning artifacts 必须完成。
 
 ## 边界
 

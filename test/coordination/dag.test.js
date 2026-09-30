@@ -1,3 +1,4 @@
+import { writeTestBaseline } from '../helpers/baseline.js';
 import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rmdir, symlink, unlink, writeFile } from 'node:fs/promises';
@@ -41,6 +42,8 @@ async function createGraph(nodes) {
       'utf8'
     );
   }
+  await writeTestBaseline(root, 'medal');
+  for (const node of nodes) await writeTestBaseline(root, `medal/${node.name}`);
   return root;
 }
 
@@ -117,6 +120,7 @@ test('无子映射的 single 父正常通过；父自身验收和官方规划缺
 - 交接 (handoff): SENSITIVE_HANDOFF_BODY
 `);
   await writeFile(path.join(parent, 'tasks.md'), '- [x] 完成\n  [人工] 真机反馈\n');
+  await writeTestBaseline(root, 'medal');
   const report = await validateCoordination(root, {
     change: 'medal', statusProvider: async () => ({ isPlanningComplete: false }),
   });
@@ -132,6 +136,7 @@ test('无子映射的 single 父正常通过；父自身验收和官方规划缺
 - 依赖 (depends-on): []
 - 交接 (handoff):
 `);
+  await writeTestBaseline(root, 'medal');
   assert.equal((await validateCoordination(root, { change: 'medal' })).ok, true);
 });
 

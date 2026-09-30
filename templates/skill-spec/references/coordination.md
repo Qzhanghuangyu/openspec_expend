@@ -2,7 +2,7 @@
 
 ## 何时读取
 
-需要选择 single/parallel、创建或认领子 change、维护依赖和 handoff、处理人工验证或恢复长任务时读取。
+需要选择 single/parallel、创建或认领子 change、维护依赖和 handoff、处理人工验证、重规划基线复核或恢复长任务时读取。
 
 ## 执行模式
 
@@ -50,6 +50,51 @@
   旧记录兼容规则见 Propose“任务拆解”。报错先修复对应 tasks，失败认领不写 owner/status。
   每个 task 检查点落盘后也须校验；校验失败先按下文回退失效进度，不得报告任务完成。
 
+## 实施基线与完成证据失效
+
+- `comate.md` 是唯一基线台账，不另建重复事实源。保留 format-version: 2，新增单行 JSON 字段
+  `- 实施基线 (baseline): unrecorded`、`- 基线复核 (baseline-review): none`；快照只能由
+  `coordination baseline` 生成，不手工编造 hash。字段缺失兼容读取，但旧实施/完成证据报告未核验。
+- 快照 version: 1，仅保存 fingerprint、固定来源名称的摘要和稳定 task 编号摘要，不复制正文。
+  来源含父 preflight/已确认决定、proposal、specs、design、prd-source/design-source、schema 配置、协作契约及可达上游交付基线；
+  子 change 使用父公共来源/父任务和本地任务，不用子自己的 preflight/design 覆盖父。
+  可达上游按规范引用与已记录 fingerprint 关联，上游重新完成不自动恢复消费者旧完成证据；外部子依赖也核对其父前置，
+  不虚构父必须先 done。代码、资源和外部环境变化的证据回退仍按下文处理，指纹不证明代码、人工反馈或远端内容未变。
+- 忽略 checkbox、owner/status/human-review/handoff 更新；BOM、CRLF、非代码区普通空行和无语义行尾空白
+  不算实质变更。代码块、缩进代码、Markdown 硬换行、YAML 字面量保留空白；不确定的排版差异只触发复核，
+  不自动撤销全部进度。文件 256 KiB、specs 最多 64 个 Markdown 文件/128 个目录/2 MiB，不截断后继续。
+- 只读检查：`falla-openspec coordination baseline "<change>" --json`；返回当前/已记录指纹、固定来源名、
+  稳定 task 编号，不返回复核依据正文。`baseline-review-required` 为已记录版本变化，`baseline-unverified`
+  为旧有证据缺快照；结构/安全读取失败分别为 `baseline-invalid` / `baseline-unreadable`。错误均不能当通过。
+- 纯 todo、无勾选及无 passed 人工证据时可在 Propose 用
+  `falla-openspec coordination baseline "<change>" --record --owner "<id>" --json` 初始化。
+  首次 claim 也会在锁内随认领一起记录初始快照；不迁移已有进度，不改变其他 owner，失败不写部分状态。
+  死亡 PID 残留锁回收另有独占恢复保护；保护残留时停止，人工确认无操作使用后再处理，不自动递归清理。
+
+### 显式复核与重规划
+
+1. 需求未明确、PRD 已确认决定改变/冲突或来源缺失：回 Preflight 核实及获得明确决定；已确认需求内的
+   design/spec/task 技术修订回 Propose。仅“继续”或更新指纹不等于新需求被批准。归档内容不原地重开，使用新 change。
+2. 修改基线前后列受影响 task、后继依赖、集成/生命周期/人工验收项及不受影响证据；按下文回退协议先暂停下游，
+   各 owner 只回退自己记录，父状态同步恢复。仅受影响 checkbox 撤销，相关人工验证恢复 pending，保留不受影响进度。
+3. 在自己的 comate 顶部写单行 `baseline-review` JSON，字段固定为 `from`（旧指纹，旧记录无快照为 null）、
+   `to`（只读检查的当前指纹）、`affected`（需回退的稳定任务编号）、`preserved`（有依据保留的其余任务编号）、
+   `evidence`（精简可追溯复核依据）。例如两项任务中仅第二项改变：
+
+   ```json
+   {"from":"<旧 fingerprint；无旧快照为 null>","to":"<当前 fingerprint>","affected":["1.2"],"preserved":["1.1"],"evidence":"1.2 完成条件改变需重做；1.1 输入/交付未变，已核对既有验证仍适用"}
+   ```
+
+   填真实指纹，不保留占位符；affected/preserved 无重复且不重叠，覆盖当前所有任务及已删除旧任务。
+   affected 当前任务必须未勾选，包含人工项或 human 验证模式时 human-review 必须 pending；done 有 affected 先恢复非 done。
+   内容/完成条件已改变的 task 不得列 preserved；旧无编号任务先由 Propose 显式核实编号、依赖、现有进度，
+   不自动重编或全量撤销。evidence 不保存完整对话、敏感正文、个人信息、凭据或临时 URL。
+4. 回退落盘后由当前 owner 运行上述 `--record --owner`，程序在协调锁内核对版本、影响清单、回退状态、
+   父 DAG 非基线错误、文件 hash 与当前输入，再仅更新本 comate 的 baseline；不自动改 checkbox、owner/status、
+   人工状态或兄弟记录。其他 owner 的旧版本仍单独阻断，不能更新父指纹来替子通过。
+5. 复核后重新运行 `coordination validate`；有基线错误不得继续实施、宣称 all_done 有效或交付完成。
+   --record 只证明结构与已登记影响清单一致，不能证明范围判断正确、验证真实或人工已经通过；完成仍须当前证据。
+
 ## 任务和检查点
 
 - task 须能在一次实施上下文完成；过大则返回 Propose 拆分，强耦合任务须返回 Propose 合并为
@@ -59,7 +104,7 @@
   用户在同一 Apply 会话回复“继续”后无需重新调用 Apply；下一轮先复核当前状态与依赖，当前 task
   未完成时只恢复本 task，不借澄清答复切换任务；已完成时才选择下一个 ready task。
 - 集成验证失败时保持集成任务未完成；仅当失败证据推翻实施任务的完成条件，才将该任务恢复未完成。
-- 已勾选任务被新的构建或运行证据推翻时，更新 handoff 的失败证据和恢复条件，复验后重勾，
+- 已勾选任务被 PRD/已确认决定、spec/design/task 完成条件的实质修订或新的构建/运行证据推翻时，更新 handoff 的失败证据和恢复条件，复验后重勾，
   不保留失效结论。
 - 若受影响 change 已是 `done`，先确认未归档并暂停下游执行。parallel 中先通知各 owner，按逆依赖
   顺序把已启动的下游子 change 设为 `blocked`，记录失效证据与待复验项；父 owner 将父 `done` 同步恢复
@@ -84,7 +129,7 @@
 - `hybrid` 且 tasks 没有 `[人工]` 项时可设 `human-review: not-required`；有人工项时不得使用
   `not-required`，等待期间保持 `in-progress` 和 `pending`，失败为 `failed`，全部通过后为 `passed`。
   `human` 模式即使没有显式 `[人工]` task，也必须有人工确认及反馈。
-- 相关代码、资源、配置或验证环境变化后，受影响的人工验证恢复 pending。
+- 相关需求/设计/完成条件、代码、资源、配置或验证环境变化后，受影响的人工验证恢复 pending；不保留旧版本的 passed 结论。
 
 ## Doctor 边界
 

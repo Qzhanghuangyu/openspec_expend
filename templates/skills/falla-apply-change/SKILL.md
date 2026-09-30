@@ -38,8 +38,9 @@ disable-model-invocation: true
    openspec instructions apply --change "<physical>" --json
    ```
 
-4. 按阶段规则加载当前 task 的 context 与必需参考，复核设计和规则门禁。
-5. `blocked` 时停止，`all_done` 时只核对交接，`ready` 时认领：
+4. 执行 `falla-openspec coordination baseline "<change>" --json`；基线变化或旧证据未核验先按
+   coordination 的影响复核协议处理，不直接刷新指纹。再加载当前 task 的 context 与必需参考，复核设计和规则门禁。
+5. `blocked` 时停止，`all_done` 时也核对基线、当前完成证据与交接，`ready` 时认领：
 
    ```bash
    falla-openspec coordination claim "<change>" --owner "<id>" --json

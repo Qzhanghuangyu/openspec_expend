@@ -67,6 +67,12 @@
 `references/design-tools.md` 定向补读。静态设计可证明存在及层级，不得推断点击行为或动态参数；
 未知交互保留待确认，不能以猜测补齐规格。
 
+## 重规划与旧进度
+
+已有 owner、checkbox 或人工验收证据时，不从模板重建 comate/tasks，不用更新指纹消除旧证据失效。
+必读 coordination 的“实施基线与完成证据失效”，先列受影响任务及验收范围，按各自 owner/父子依赖回退，
+保留有依据的不受影响进度，再显式复核记录。仅已确认需求内的方案变动留在 Propose；需求/决定不明确先回 Preflight。
+
 ## 何时暂停
 
 - preflight 未完成、准入未通过、确认依据无法核实，或页面结构、核心契约及 required 基线无法确定。
@@ -76,7 +82,7 @@
 ## 完成标准
 
 - 父 artifacts 由官方 status 判定为 done 或合法 skipped，已创建子 change 的规划也完成。
-- tasks 的范围、依赖和完成条件明确；`coordination validate` 通过。
+- tasks 的范围、依赖和完成条件明确；按 coordination 初始化/显式复核基线，`coordination validate` 通过。
 - 适用 UI 的结构覆盖核对已完成；OpenSpec 的 `planningComplete` 不证明设计事实到 spec/task 的语义覆盖。
 - 没有修改业务代码。
 - 完成规划后停止并等待用户审阅或修改 design/tasks；不得自动进入 Apply。

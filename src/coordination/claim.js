@@ -9,15 +9,9 @@ import { validateCoordination } from './dag.js';
 import { readChangeRecordFile } from './health.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
-
-const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._@-]{0,63})$/;
-
-function assertOwner(owner) {
-  if (typeof owner !== 'string' || !OWNER_PATTERN.test(owner) || owner === 'unassigned') {
-    throw new FallaError(1, 'owner 必须为 1-64 位字母、数字或 ._@- 字符');
-  }
-  return owner;
-}
+import { assertOwner } from './owner.js';
+import { loadBaselineState } from './baseline-files.js';
+import { baselineError, writeBaselineField } from './baseline.js';
 
 function updateClaimFields(markdown, owner) {
   let ownerCount = 0;
@@ -157,9 +151,17 @@ export async function claimChange(rootInput, reference, options) {
         kind: 'preflight-admission-failed', errors: preflightErrors,
       });
     }
+    if (validation.errors.some(error => !error.kind.startsWith('preflight-') && !error.kind.startsWith('baseline-'))) {
+      throw new FallaError(1, '协作验证未通过，不能认领');
+    }
+    const baselineErrors = validation.errors.filter(error => error.kind.startsWith('baseline-'));
+    if (baselineErrors.length > 0) throw baselineError('baseline-admission-failed');
     if (!validation.ok) throw new FallaError(1, '协作验证未通过，不能认领');
     if (record.status === 'in-progress') return claimResult(resolved.logical, false, true);
-    const updated = updateClaimFields(markdown, owner);
+    const baseline = await loadBaselineState(root, reference);
+    if (baseline.errors.length > 0 || baseline.markdown !== markdown) throw baselineError('baseline-input-changed');
+    const initialized = baseline.snapshot ? markdown : writeBaselineField(markdown, baseline.current);
+    const updated = updateClaimFields(initialized, owner);
     const relativePath = path.relative(root, path.join(resolved.path, 'comate.md'))
       .split(path.sep).join('/');
     await writeAtomicFile(root, relativePath, updated, { expectedHash: sha256(markdown) });
