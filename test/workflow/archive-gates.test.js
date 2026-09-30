@@ -117,7 +117,7 @@ const targets = [
 ];
 
 for (const target of targets) {
-  test(`${target.name} 归档流程拒绝依赖错误、人工证据缺失及 done 状态冲突，不移动目录`, async t => {
+  test(`${target.name} 归档流程拒绝依赖错误、人工结果缺失及 done 状态冲突，不移动目录`, async t => {
     const p = await fixture(t, target.mode);
     const reference = target.reference(p);
     const record = target.record(p);
@@ -129,8 +129,8 @@ for (const target of targets) {
     assert.equal((await publishedGate(p, reference)).ok, true);
     for (const [tasks, comate, kind] of [
       [beforeTasks.replace('依赖：无', '依赖：9.9'), beforeComate, 'task-dependency-missing'],
-      [beforeTasks, beforeComate.replace('human-review): not-required', 'human-review): passed')
-        .replace('  - 人工验证反馈：合成人工已明确确认', '  - 人工验证反馈：'), 'human-review-evidence-required'],
+      [beforeTasks.replace('1.1 合成任务', '1.1 [人工] 合成任务'),
+        beforeComate.replace('human-review): not-required', 'human-review): passed'), 'human-task-result-required'],
       [beforeTasks.replace('[x]', '[ ]'), beforeComate, 'tasks-incomplete'],
     ]) {
       await writeFile(tasksFile, tasks);

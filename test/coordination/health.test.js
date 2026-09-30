@@ -170,8 +170,8 @@ test('doctor 工作流对 agent 人工任务和 hybrid 多行人工任务使用�
   const root = await createProject();
   for (const [name, validationMode] of [['agent', 'agent'], ['hybrid', 'hybrid']]) {
     const record = comate({ mode: 'single', status: 'done', handoff: '  - 已完成：验证' })
-      .replace('- 依赖 (depends-on):', `- 验证模式 (validation-mode): ${validationMode}\n- 人工验证状态 (human-review): not-required\n- 依赖 (depends-on):`);
-    await writeRecord(root, name, record, '- [x] 完成\n  [人工] 真机反馈\n');
+      .replace('- 依赖 (depends-on):', `- 验证模式 (validation-mode): ${validationMode}\n- 人工验证状态 (human-review): not-required\n- 人工任务结果 (human-task-results): [["1.1","passed"]]\n- 依赖 (depends-on):`);
+    await writeRecord(root, name, record, '- [x] 1.1 完成\n  [人工] 真机反馈\n');
   }
   const report = await validateChangeRecords(root, [
     officialStatus('agent', 'falla-spec-driven'),

@@ -46,7 +46,7 @@ async function project(t) {
   async function set(reference, {
     mode = reference.includes('/') ? null : 'parallel', status = 'todo',
     owner = status === 'todo' ? 'unassigned' : 'alice', dependencies = [],
-    validation = 'hybrid', review = 'not-required', feedback = '',
+    validation = 'hybrid', review = 'not-required', feedback = '', humanResults = [],
     tasks = `- [${status === 'done' ? 'x' : ' '}] 1.1 实施\n`,
   } = {}) {
     const directory = files.get(reference);
@@ -57,6 +57,7 @@ ${mode ? `- 执行模式 (execution-mode): ${mode}\n` : ''}- 负责人 (owner): 
 - 状态 (status): ${status}
 - 验证模式 (validation-mode): ${validation}
 - 人工验证状态 (human-review): ${review}
+- 人工任务结果 (human-task-results): ${JSON.stringify(humanResults)}
 - 依赖 (depends-on): [${dependencies.join(', ')}]
 - 交接 (handoff):
   - 已完成：记录当前验证结果
@@ -224,13 +225,13 @@ test('任务内部块后的人工标记贯穿完成校验、健康检查和下�
     assert.equal(has(await p.health(), 'human-review-required'), true, continuation);
     await assert.rejects(() => p.claim('page/release'), /依赖验证/);
     await p.set('page/review', { status: 'done', tasks, review: 'passed' });
-    assert.equal(has(await p.validate(), 'human-review-evidence-required'), true);
+    assert.equal(has(await p.validate(), 'human-task-result-required'), true);
     await assert.rejects(() => p.claim('page/release'), /依赖验证/);
   }
   assert.equal((await p.doctor()).ok, false);
   await p.set('page/review', {
     status: 'done', tasks: '- [x] 1.1 [人工] 页面验收\n', review: 'passed',
-    feedback: '人工确认页面默认态，测试设备配置下目标区域符合预期，通过。',
+    humanResults: [['1.1', 'passed']],
   });
   await p.refreshFixtureEvidence('page/release');
   assert.equal((await p.claim('page/release')).claimed, true);

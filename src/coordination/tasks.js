@@ -2,7 +2,7 @@
 const ID = /^(?:[1-9]\d*(?:\.[1-9]\d*)*|T[1-9]\d*)$/u;
 const CHAPTER_ID = /^[1-9]\d*\.[1-9]\d*$/u;
 
-function readId(text) {
+export function readTaskId(text) {
   const match = text.match(/^(?:\[人工\][ \t]*)?([1-9]\d*(?:\.[1-9]\d*)*|T[1-9]\d*)[.)]?(?=[ \t]|$)/u);
   return match && match[1].length <= 64 ? match[1] : null;
 }
@@ -67,7 +67,7 @@ function scanTasks(markdown) {
     if (checkbox) {
       while (parents.length && parents.at(-1).indent >= indent) parents.pop();
       const task = {
-        line: index + 1, indent, section, id: readId(checkbox[2]),
+        line: index + 1, indent, section, id: readTaskId(checkbox[2]),
         done: checkbox[1].toLowerCase() === 'x', fields: dependencyFields(checkbox[2]), contentLines: [line],
       };
       tasks.push(task);

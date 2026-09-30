@@ -116,10 +116,11 @@ test('无子映射的 single 父正常通过；父自身验收和官方规划缺
 - 状态 (status): done
 - 验证模式 (validation-mode): hybrid
 - 人工验证状态 (human-review): not-required
+- 人工任务结果 (human-task-results): [["1.1","passed"]]
 - 依赖 (depends-on): []
 - 交接 (handoff): SENSITIVE_HANDOFF_BODY
 `);
-  await writeFile(path.join(parent, 'tasks.md'), '- [x] 完成\n  [人工] 真机反馈\n');
+  await writeFile(path.join(parent, 'tasks.md'), '- [x] 1.1 完成\n  [人工] 真机反馈\n');
   await writeTestBaseline(root, 'medal');
   const report = await validateCoordination(root, {
     change: 'medal', statusProvider: async () => ({ isPlanningComplete: false }),
@@ -136,6 +137,7 @@ test('无子映射的 single 父正常通过；父自身验收和官方规划缺
 - 依赖 (depends-on): []
 - 交接 (handoff):
 `);
+  await writeFile(path.join(parent, 'tasks.md'), '- [ ] 1.1 普通任务\n');
   await writeTestBaseline(root, 'medal');
   assert.equal((await validateCoordination(root, { change: 'medal' })).ok, true);
 });

@@ -21,9 +21,10 @@ artifacts:
     template: comate.md
     instruction: |
       执行前必须读取 .falla/skill-spec/references/coordination.md。
-      保存 format-version: 2、validation-mode、human-review、owner、status、depends-on 和 handoff。
+      保存 format-version: 2、validation-mode、human-review、human-task-results、owner、status、depends-on 和 handoff。
       子 change 不保存 execution-mode。
       保留 baseline: unrecorded / baseline-review: none；按 coordination 的基线协议记录快照，旧进度不得直接刷新。
+      human-task-results 仅保存编号和人工结果，不从勾选推断通过；人工反馈可选。
       使用模板的结构化 handoff；字段取值、人工验收、完成及回退门禁以 coordination 为准。
     requires:
       - tasks

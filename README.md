@@ -149,6 +149,19 @@ Propose 前执行 `coordination preflight <change> --json`，Apply 认领时在�
 [Preflight](templates/skill-spec/[分析必读]preflight.md)“阻塞项准入记录”。此检查不替代官方 artifact 状态，
 也不能证明填写的确认依据真实有效；原有确认需由 Agent 核实，不能自动填成“已确认”。
 
+### 人工验收只记录结果
+
+每项人工任务只在本 change 的 comate 中记录任务编号和结果：
+
+```text
+- 人工任务结果 (human-task-results): [["1.1","passed"],["1.3","pending"]]
+```
+
+`pending` / `passed` / `failed` 分别为待验收、通过、不通过。只有本项通过后才勾选人工任务，
+程序检查结果与勾选一致，不验证验收真实性，不要求截图、过程材料、反馈正文或逐项指纹。
+允许部分通过、其余待验收；总 human-review 为 pending 不阻断已通过项。结果撤销或基线变化时按
+协作规则回退受影响项及其后继，保留其他有效结果。旧笼统反馈不自动转换为逐项通过。
+
 ## OpenSpec 1.12 兼容
 
 - doctor 使用 `openspec status --all --json` 批量读取状态，避免逐 change 启动进程。

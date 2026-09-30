@@ -55,9 +55,9 @@ disable-model-invocation: true
 
    claim 会在项目锁内重新检查官方状态和依赖；不得绕过该复核。父暂停/恢复走 coordination 的 transition 编排，
    blocked 不重复 claim 自动重启；子实施另行认领。
-6. 按阶段规则执行当前任务、验证并落盘检查点。
+6. 按阶段规则执行当前任务、验证并落盘检查点；人工任务遵循 coordination 的逐项结果契约，不额外索要验收材料。
 7. 当前 task 检查点落盘后运行 `falla-openspec coordination validate --change "<parent>" --json`。
-   若要将 single/子 change 设为 done，先核齐任务、handoff 和人工验收证据并落盘最终状态，再校验。
+   若要将 single/子 change 设为 done，先核齐任务、handoff 和人工验收结果并落盘最终状态，再校验。
    parallel 父先落盘真实里程碑与 handoff，再由当前协调者调用：
 
    ```bash

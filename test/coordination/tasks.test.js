@@ -15,7 +15,10 @@ test('任务依赖解析同一行和续行，允许未完成前置等待并保�
 - [ ] 2.1 [人工] 核对
   - **前置依赖**: \`1.1\`、\`1.2\`
 - [ ] 2.2 接线（依赖：2.1）
-`)), { total: 4, complete: 2, pending: 2, humanTasks: 1, issues: [] });
+`)), { total: 4, complete: 2, pending: 2, humanTasks: 1, taskStates: [
+    { id: '1.1', done: true, human: false }, { id: '1.2', done: true, human: false },
+    { id: '2.1', done: false, human: true }, { id: '2.2', done: false, human: false },
+  ], issues: [] });
 });
 
 test('新任务契约拒绝非法编号、缺失依赖字段、章节不符和前向依赖', () => {
@@ -80,7 +83,7 @@ test('旧任务不重编；新格式不允许把 checkbox 示例当真实任务'
   assert.deepEqual(kinds('- [ ] 旧任务\n- [x] 其他任务'), []);
   const code = '```md\n- [ ] 1.1 示例（依赖：9.9）\n```';
   assert.deepEqual(parseTaskProgress(code), {
-    total: 1, complete: 0, pending: 1, humanTasks: 0, issues: [],
+    total: 1, complete: 0, pending: 1, humanTasks: 0, taskStates: [{ id: '1.1', done: false, human: false }], issues: [],
   });
   assert.ok(kinds(strict(code)).includes('task-checkbox-in-code'));
 });

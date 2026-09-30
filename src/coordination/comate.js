@@ -1,6 +1,7 @@
 import { FallaError } from '../errors.js';
 import { assertChangeSegment, parseLogicalReference } from './naming.js';
-import { validateTaskDependencies } from './tasks.js';
+import { readTaskId, validateTaskDependencies } from './tasks.js';
+import { parseHumanTaskResults, validateHumanTaskResults } from './human-results.js';
 
 const MAX_COMATE_BYTES = 256 * 1024;
 const STATUSES = new Set(['todo', 'in-progress', 'blocked', 'done']);
@@ -12,6 +13,7 @@ const FIELDS = {
   executionMode: /^- 执行模式 \(execution-mode\):[ \t]*(.*)$/gm,
   validationMode: /^- 验证模式 \(validation-mode\):[ \t]*(.*)$/gm,
   humanReview: /^- 人工验证状态 \(human-review\):[ \t]*(.*)$/gm,
+  humanTaskResults: /^- 人工任务结果 \(human-task-results\):[ \t]*(.*)$/gm,
   owner: /^- 负责人 \(owner\):[ \t]*(.*)$/gm,
   status: /^- 状态 \(status\):[ \t]*(.*)$/gm,
   dependsOn: /^- 依赖 \(depends-on\):[ \t]*(.*)$/gm,
@@ -130,6 +132,8 @@ export function parseComate(markdown, source = 'comate.md') {
     FIELDS.humanReview,
     source
   );
+  const humanTaskResultsRaw = readOptionalSingleField(markdown, 'human-task-results', FIELDS.humanTaskResults, source);
+  const humanTaskResults = humanTaskResultsRaw === null ? null : parseHumanTaskResults(humanTaskResultsRaw);
   const owner = readSingleField(markdown, 'owner', FIELDS.owner, source);
   const status = readSingleField(markdown, 'status', FIELDS.status, source);
   const dependsOnRaw = readSingleField(markdown, 'depends-on', FIELDS.dependsOn, source);
@@ -162,6 +166,7 @@ export function parseComate(markdown, source = 'comate.md') {
     ...(executionMode === null ? {} : { executionMode }),
     ...(validationMode === null ? {} : { validationMode }),
     ...(humanReview === null ? {} : { humanReview }),
+    ...(humanTaskResults === null ? {} : { humanTaskResults }),
     owner,
     status,
     dependsOn: parseReferenceList(dependsOnRaw, `${source}.depends-on`),
@@ -172,19 +177,17 @@ export function parseComate(markdown, source = 'comate.md') {
 }
 
 export function parseTaskProgress(markdown) {
-  let total = 0;
-  let complete = 0;
+  // 人工归属保留逐 checkbox 的旧进度语义，不用基线正文收集推导，避免示例标记扩散。
   const tasks = [];
   const parents = [];
   let separated = false;
   for (const line of String(markdown).split('\n')) {
-    const indent = line.match(/^\s*/)[0].length;
-    const match = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/);
+    const indent = line.match(/^\s*/u)[0].length;
+    const match = line.match(/^\s*[-*]\s*\[([\sxX])\]\s*(.*)/u);
     if (match) {
       while (parents.length && parents.at(-1).indent >= indent) parents.pop();
-      total += 1;
-      if (match[1].toLowerCase() === 'x') complete += 1;
-      const task = { indent, human: match[2].includes('[人工]') };
+      const task = { indent, id: readTaskId(match[2]),
+        done: match[1].toLowerCase() === 'x', human: match[2].includes('[人工]') };
       tasks.push(task);
       parents.push(task);
       separated = false;
@@ -194,22 +197,24 @@ export function parseTaskProgress(markdown) {
       separated = true;
       continue;
     }
-    // 嵌套任务结束后恢复外层归属；任务内的空行、标题和代码块不终止任务。
-    // checkbox 仍逐行计数，与官方 OpenSpec 一致（包括围栏中的 checkbox）。
+    // 内部块不切断归属；嵌套任务结束后恢复父任务，与旧进度及官方 checkbox 计数一致。
     while (parents.length > 1 && parents.at(-1).indent >= indent) parents.pop();
     const block = /^\s*(?:#{1,6}\s|`{3,}|~{3,}|[-*+]\s+|\d+[.)]\s+)/u.test(line);
     if (parents.length && indent <= parents.at(-1).indent && (separated || block)) parents.length = 0;
     if (parents.length && line.includes('[人工]')) parents.at(-1).human = true;
     separated = false;
   }
+  const taskStates = tasks.map(({ id, done, human }) => ({ id, done, human }));
+  const complete = taskStates.filter(task => task.done).length;
   return {
-    total, complete, pending: total - complete, humanTasks: tasks.filter(task => task.human).length,
-    issues: validateTaskDependencies(markdown),
+    total: taskStates.length, complete, pending: taskStates.length - complete,
+    humanTasks: taskStates.filter(task => task.human).length,
+    taskStates, issues: validateTaskDependencies(markdown),
   };
 }
 
-export function validateComateRecord(record, { pendingTasks, humanTasks, taskIssues = [] }) {
-  const issues = [...taskIssues];
+export function validateComateRecord(record, { pendingTasks, humanTasks, taskIssues = [], taskStates }) {
+  const issues = [...taskIssues, ...validateHumanTaskResults(record, { humanTasks, taskStates })];
   if (record.validationMode === 'agent' && humanTasks > 0) {
     issues.push({ kind: 'validation-mode-conflict' });
   }
@@ -240,11 +245,6 @@ export function validateComateRecord(record, { pendingTasks, humanTasks, taskIss
         field => !handoffFieldHasValue(record.handoff, field)
       );
       if (missing.length > 0) issues.push({ kind: 'done-handoff-incomplete', fields: missing });
-      if (['hybrid', 'human'].includes(record.validationMode)
-        && record.humanReview === 'passed'
-        && !handoffFieldHasValue(record.handoff, '人工验证反馈')) {
-        issues.push({ kind: 'human-review-evidence-required' });
-      }
     }
   }
   return issues;

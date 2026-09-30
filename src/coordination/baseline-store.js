@@ -22,9 +22,9 @@ export async function recordBaseline(rootInput, reference, options = {}) {
       throw new FallaError(1, '基线仅可由当前 owner/负责人复核，不覆盖他人记录');
     }
     if (!(await checkPreflight(root, state.parent.physical)).ok) throw new FallaError(1, 'Preflight 准入未通过，不能记录实施基线');
-    const local = validateComateRecord(state.record, { pendingTasks: state.progress.pending, humanTasks: state.progress.humanTasks, taskIssues: state.progress.issues });
+    const local = validateComateRecord(state.record, { pendingTasks: state.progress.pending, humanTasks: state.progress.humanTasks, taskIssues: state.progress.issues, taskStates: state.progress.taskStates });
     if (local.length > 0) throw baselineError('baseline-record-invalid');
-    if (state.errors.length > 0 && validateBaselineReview(state.snapshot, state.current, state.review, state.state, state.record).length > 0) {
+    if (state.errors.length > 0 && validateBaselineReview(state.snapshot, state.current, state.review, state.state, state.record, state.progress.taskStates).length > 0) {
       throw baselineError('baseline-review-required');
     }
     const validation = await validateCoordination(root, { change: state.parent.physical, ignoreBaseline: true });

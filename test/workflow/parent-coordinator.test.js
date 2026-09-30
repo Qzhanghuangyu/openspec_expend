@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { promisify } from 'node:util';
 import { parseComate } from '../../src/coordination/comate.js';
+import { withHumanTaskResults } from '../helpers/human-results.js';
 
 const execute = promisify(execFile);
 const repo = process.cwd();
@@ -121,8 +122,8 @@ test('真实 CLI 从默认父模板认领、暂停/交接、汇总验收到父�
   const beforeHuman = await p.record(p.parent);
   await p.fails(p.falla('transition', 'team', '--owner', 'PRIVATE_NEXT', '--status', 'done'));
   assert.equal(await p.record(p.parent), beforeHuman);
-  await p.save(p.parent, beforeHuman.replace('human-review): pending', 'human-review): passed')
-    .replace('  - 人工验证反馈：', '  - 人工验证反馈：用户明确确认当前合成里程碑通过'));
+  await p.save(p.parent, withHumanTaskResults(
+    beforeHuman.replace('human-review): pending', 'human-review): passed'), [['1.2', 'passed']]));
   await p.succeeds(p.falla('transition', 'team', '--owner', 'PRIVATE_NEXT', '--status', 'done'));
   assert.equal(parseComate(await p.record(p.parent)).status, 'done');
   for (const [reference, physical, directory] of [

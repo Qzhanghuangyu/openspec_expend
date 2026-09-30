@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { withHumanTaskResults } from '../helpers/human-results.js';
 
 import {
   parseComate,
@@ -87,15 +88,17 @@ test('多行 handoff 读取到下一个顶级字段为止且空模板标签不�
 });
 
 test('存在人工任务的 hybrid 与 human 模式必须由人工确认后才能 done', () => {
-  const human = valid.replace(
+  const confirmedTask = { pendingTasks: 0, humanTasks: 1, taskStates: [{ id: '1.1', done: true, human: true }] };
+  const human = withHumanTaskResults(valid.replace(
     '- 状态 (status): in-progress',
     `- 状态 (status): in-progress
 - 验证模式 (validation-mode): human
 - 人工验证状态 (human-review): pending`
-  );
+  ), [['1.1', 'passed']]);
   assert.deepEqual(parseComate(human), {
     validationMode: 'human',
     humanReview: 'pending',
+    humanTaskResults: [['1.1', 'passed']],
     owner: 'alice',
     status: 'in-progress',
     dependsOn: ['medal/view-model'],
@@ -103,26 +106,26 @@ test('存在人工任务的 hybrid 与 human 模式必须由人工确认后才�
     handoff: '已完成数据绑定，待视觉校准',
   });
   assert.deepEqual(
-    validateComateRecord({ ...parseComate(human), status: 'done' }, { pendingTasks: 0 })
+    validateComateRecord({ ...parseComate(human), status: 'done' }, confirmedTask)
       .map(({ kind }) => kind),
     ['human-review-required']
   );
   assert.deepEqual(
     validateComateRecord({
       ...parseComate(human), status: 'done', validationMode: 'hybrid', humanReview: 'pending',
-    }, { pendingTasks: 0, humanTasks: 1 }).map(({ kind }) => kind),
+    }, confirmedTask).map(({ kind }) => kind),
     ['human-review-required']
   );
   assert.deepEqual(
     validateComateRecord({
       ...parseComate(human), status: 'done', validationMode: 'hybrid', humanReview: 'not-required',
-    }, { pendingTasks: 0, humanTasks: 1 }).map(({ kind }) => kind),
+    }, confirmedTask).map(({ kind }) => kind),
     ['human-review-required']
   );
   assert.deepEqual(
     validateComateRecord({
       ...parseComate(human), status: 'done', humanReview: 'passed',
-    }, { pendingTasks: 0 }),
+    }, confirmedTask),
     []
   );
   assert.throws(
@@ -135,15 +138,16 @@ test('存在人工任务的 hybrid 与 human 模式必须由人工确认后才�
   );
 });
 
-test('视觉反馈占位不算人工验收证据', async () => {
+test('总 passed 和视觉反馈占位不能替代逐项人工结果', async () => {
   for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
     const template = await readFile(`templates/openspec/schemas/${schema}/templates/comate.md`, 'utf8');
     const record = parseComate(template
       .replace('owner): unassigned', 'owner): alice')
       .replace('status): todo', 'status): done')
       .replace('human-review): pending', 'human-review): passed'));
-    const issues = validateComateRecord(record, { pendingTasks: 0, humanTasks: 1 });
-    assert.ok(issues.some(({ kind }) => kind === 'human-review-evidence-required'));
+    const issues = validateComateRecord(record, { pendingTasks: 0, humanTasks: 1,
+      taskStates: [{ id: '1.1', done: true, human: true }] });
+    assert.ok(issues.some(({ kind, task }) => kind === 'human-task-result-required' && task === '1.1'));
   }
 });
 
@@ -157,7 +161,8 @@ test('hybrid 无人工任务可标记 not-required，有人工任务不能跳过
   };
   assert.deepEqual(validateComateRecord(record, { pendingTasks: 0, humanTasks: 0 }), []);
   assert.deepEqual(
-    validateComateRecord(record, { pendingTasks: 0, humanTasks: 1 }).map(({ kind }) => kind),
+    validateComateRecord({ ...record, humanTaskResults: [['1.1', 'passed']] }, { pendingTasks: 0, humanTasks: 1,
+      taskStates: [{ id: '1.1', done: true, human: true }] }).map(({ kind }) => kind),
     ['human-review-required']
   );
   assert.deepEqual(
@@ -166,7 +171,7 @@ test('hybrid 无人工任务可标记 not-required，有人工任务不能跳过
   );
   assert.deepEqual(
     validateComateRecord({ ...record, validationMode: 'human' }, {
-      pendingTasks: 0, humanTasks: 0,
+      pendingTasks: 0, humanTasks: 0, taskStates: [],
     }).map(({ kind }) => kind),
     ['human-review-required']
   );
@@ -184,6 +189,13 @@ test('任务进度与 OpenSpec 1.12 一致统计嵌套、星号和宽松 checkbo
     complete: 3,
     pending: 2,
     humanTasks: 0,
+    taskStates: [
+      { id: '1.1', done: true, human: false },
+      { id: '1.1.1', done: false, human: false },
+      { id: '1.2', done: true, human: false },
+      { id: '1.3', done: true, human: false },
+      { id: '1.4', done: false, human: false },
+    ],
     issues: [],
   });
   assert.equal(parseTaskProgress('- [x] 1.1 implement\n- [x] 2.1 [人工] verify\n').humanTasks, 1);
@@ -202,20 +214,25 @@ test('人工任务识别任务续行，重复标记只计一次，隔离相邻�
 - [x] 1.5 自动检查
 ## [人工] 下一章节不属于任务
 `);
-  assert.deepEqual(progress, { total: 5, complete: 5, pending: 0, humanTasks: 2, issues: [] });
+  assert.deepEqual(progress, { total: 5, complete: 5, pending: 0, humanTasks: 2, taskStates: [
+    { id: '1.1', done: true, human: true }, { id: '1.2', done: true, human: true },
+    { id: '1.3', done: true, human: false }, { id: '1.4', done: true, human: false },
+    { id: '1.5', done: true, human: false },
+  ], issues: [] });
 });
 
 test('agent 模式含人工任务立即冲突，hybrid 续行人工任务不得跳过验收', () => {
   const progress = parseTaskProgress('- [x] 1.1 校验\n  [人工] 设备反馈\n');
-  const agent = { ...parseComate(valid), validationMode: 'agent', humanReview: 'not-required' };
+  const agent = { ...parseComate(valid), validationMode: 'agent', humanReview: 'not-required',
+    humanTaskResults: [['1.1', 'passed']] };
   assert.deepEqual(
-    validateComateRecord(agent, { pendingTasks: progress.pending, humanTasks: progress.humanTasks })
+    validateComateRecord(agent, { pendingTasks: progress.pending, humanTasks: progress.humanTasks, taskStates: progress.taskStates })
       .map(({ kind }) => kind),
     ['validation-mode-conflict']
   );
   const hybrid = { ...agent, status: 'done', validationMode: 'hybrid' };
   assert.ok(validateComateRecord(hybrid, {
-    pendingTasks: progress.pending, humanTasks: progress.humanTasks,
+    pendingTasks: progress.pending, humanTasks: progress.humanTasks, taskStates: progress.taskStates,
   }).some(({ kind }) => kind === 'human-review-required'));
 });
 
@@ -231,7 +248,10 @@ test('人工任务归属恢复外层任务，内部块不截断，独立块不�
 [人工] 独立示例
 \`\`\`
 ## [人工] 独立章节
-`), { total: 3, complete: 3, pending: 0, humanTasks: 1, issues: [] });
+`), { total: 3, complete: 3, pending: 0, humanTasks: 1, taskStates: [
+    { id: '1', done: true, human: true }, { id: '1.1', done: true, human: false },
+    { id: '2', done: true, human: false },
+  ], issues: [] });
 });
 
 test('新 comate 可省略 blocks，旧 blocks 仅作为兼容字段读取', () => {
@@ -269,7 +289,9 @@ test('v2 comate 将结构化完成证据下沉为机器门禁', () => {
     []
   );
   assert.deepEqual(
-    validateComateRecord(parseComate(noHumanTasks), { pendingTasks: 0, humanTasks: 1 })
+    validateComateRecord({ ...parseComate(noHumanTasks), humanTaskResults: [['1.1', 'passed']] }, {
+      pendingTasks: 0, humanTasks: 1, taskStates: [{ id: '1.1', done: true, human: true }],
+    })
       .map(({ kind }) => kind),
     ['human-review-required']
   );

@@ -132,13 +132,14 @@ export function writeBaselineField(markdown, snapshot) {
 export function baselineIssues(previous, current, record, progress) {
   if (!previous) {
     return record.status !== 'todo' || progress.complete > 0 || record.humanReview === 'passed'
+      || record.humanTaskResults?.some(([, result]) => result === 'passed')
       ? [issue('baseline-unverified')] : [];
   }
   return previous.fingerprint === current.fingerprint ? [] : [issue('baseline-review-required')];
 }
 
 /** 结构化影响清单不代替语义判断：仅校验版本、已完成保留项和受影响回退的一致性。 */
-export function validateBaselineReview(previous, current, review, state, record) {
+export function validateBaselineReview(previous, current, review, state, record, taskStates = []) {
   if (!validReview(review) || review.from !== (previous?.fingerprint ?? null) || review.to !== current.fingerprint
     || state.anonymous > 0) return [issue('baseline-review-invalid')];
   const affected = new Set(review.affected);
@@ -148,15 +149,20 @@ export function validateBaselineReview(previous, current, review, state, record)
   const known = new Set([...Object.keys(previous?.tasks ?? {}), ...Object.keys(current.tasks)]);
   if ([...affected, ...preserved].some(id => !known.has(id))) return [issue('baseline-review-invalid')];
   const errors = [];
+  const manualResults = new Map(record.humanTaskResults ?? []);
+  const manualTaskIds = new Set(taskStates.filter(task => task.human).map(task => task.id));
+  // 结果关联采用进度解析的人工归属；即使基线正文归属不同，affected 也不能保留旧 passed。
+  for (const id of affected) {
+    if (manualResults.get(id) === 'passed') errors.push(issue('baseline-human-task-result-not-reverted', id));
+  }
   for (const task of state.tasks) {
     if (!affected.has(task.id) && !preserved.has(task.id)) errors.push(issue('baseline-task-unreviewed', task.id));
     if (affected.has(task.id) && task.done) errors.push(issue('baseline-task-not-reverted', task.id));
     if (preserved.has(task.id) && previous && previous.tasks[task.id] !== current.tasks[task.id]) {
       errors.push(issue('baseline-task-changed', task.id));
     }
-    if (affected.has(task.id) && (task.human || record.validationMode === 'human') && record.humanReview !== 'pending') {
-      errors.push(issue('baseline-human-review-required', task.id));
-    }
+    if (affected.has(task.id) && (task.human || manualTaskIds.has(task.id) || record.validationMode === 'human')
+      && record.humanReview !== 'pending') errors.push(issue('baseline-human-review-required', task.id));
   }
   for (const id of Object.keys(previous?.tasks ?? {})) {
     if (!Object.hasOwn(current.tasks, id) && !affected.has(id)) errors.push(issue('baseline-task-unreviewed', id));

@@ -97,7 +97,7 @@ export async function validateCoordination(root, options) {
     for (const localIssue of validateComateRecord(parentNode.comate, {
       pendingTasks: parentNode.tasks.pending,
       humanTasks: parentNode.tasks.humanTasks,
-      taskIssues: parentNode.tasks.issues,
+      taskIssues: parentNode.tasks.issues, taskStates: parentNode.tasks.taskStates,
     })) {
       const { kind, ...details } = localIssue;
       errors.push(issue(kind, parent, undefined,
@@ -129,7 +129,7 @@ export async function validateCoordination(root, options) {
       for (const localIssue of validateComateRecord(node.comate, {
         pendingTasks: node.tasks.pending,
         humanTasks: node.tasks.humanTasks,
-        taskIssues: node.tasks.issues,
+        taskIssues: node.tasks.issues, taskStates: node.tasks.taskStates,
       })) {
         const { kind, ...details } = localIssue;
         errors.push(issue(kind, logical, undefined,
@@ -169,7 +169,7 @@ export async function validateCoordination(root, options) {
         dependencies.set(dependency, normalize(node.comate));
         for (const localIssue of validateComateRecord(node.comate, {
           pendingTasks: node.tasks.pending, humanTasks: node.tasks.humanTasks,
-          taskIssues: node.tasks.issues,
+          taskIssues: node.tasks.issues, taskStates: node.tasks.taskStates,
         })) {
           const { kind, ...details } = localIssue;
           errors.push(issue(kind, dependency, undefined, details));
@@ -234,7 +234,9 @@ export async function validateCoordination(root, options) {
       if (record !== null) errors.push(...(await inspectBaseline(root, reference)).errors);
     }
   }
-  const admissionBlocked = errors.some(error => error.kind.startsWith('preflight-') || error.kind.startsWith('baseline-'));
+  const admissionBlocked = errors.some(error => error.kind.startsWith('preflight-')
+    || error.kind.startsWith('baseline-') || error.kind.startsWith('human-task-')
+    || error.kind === 'human-review-required');
 
   const ready = [];
   const blocked = [];

@@ -48,7 +48,7 @@ async function assertDependenciesDone(root, dependencies, statusProvider) {
     if (progress === null || validateComateRecord(record, {
       pendingTasks: progress.pending,
       humanTasks: progress.humanTasks,
-      taskIssues: progress.issues,
+      taskIssues: progress.issues, taskStates: progress.taskStates,
     }).length > 0) {
       throw new FallaError(1, `依赖验证未完成：${dependency}`);
     }
@@ -137,7 +137,7 @@ export async function claimChange(rootInput, reference, options) {
     // 新认领和幂等重试共用完成校验器，拒绝已知冲突且不落盘任何部分状态。
     if (progress === null || validateComateRecord(record, {
       pendingTasks: progress.pending, humanTasks: progress.humanTasks,
-      taskIssues: progress.issues,
+      taskIssues: progress.issues, taskStates: progress.taskStates,
     }).length > 0) {
       throw new FallaError(1, '当前 change 验证未通过，不能认领');
     }

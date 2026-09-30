@@ -98,7 +98,7 @@
 - `[人工]` 可出现在 checkbox 同行或所属任务续行；任务内部缩进的空行、标题和代码块不切断归属。
   独立章节、同级普通列表或空行后的独立段落不属于上一任务；checkbox 总数遵循官方 OpenSpec 语义。
 - done 要求全部 tasks 完成，handoff 的“已完成、注释审计、验证证据、安全与敏感信息结论、
-  遗留风险与恢复条件”均有实际内容；人工验收 passed 还须填写“人工验证反馈”。字段结构见 comate 模板。
+  遗留风险与恢复条件”均有实际内容；人工任务以逐项结果为准，“人工验证反馈”仅作可选备注，不要求验收材料。字段结构见 comate 模板。
 - 父 done 要求所有子 change done；认领前也检查当前记录的验证模式冲突与必需字段。
 - `coordination validate`、doctor 和 claim 共用本地任务图校验：拦截重复编号、无效/缺失/自身依赖、
   依赖环，以及前置未完成却已勾选后续任务。新格式另校验章节编号、依赖字段与拓扑顺序；格式及
@@ -115,7 +115,7 @@
   子 change 使用父公共来源/父任务和本地任务，不用子自己的 preflight/design 覆盖父。
   可达上游按规范引用与已记录 fingerprint 关联，上游重新完成不自动恢复消费者旧完成证据；外部子依赖也核对其父前置，
   不虚构父必须先 done。代码、资源和外部环境变化的证据回退仍按下文处理，指纹不证明代码、人工反馈或远端内容未变。
-- 忽略 checkbox、owner/status/human-review/handoff 更新；BOM、CRLF、非代码区普通空行和无语义行尾空白
+- 忽略 checkbox、owner/status/human-review/human-task-results/handoff 更新；BOM、CRLF、非代码区普通空行和无语义行尾空白
   不算实质变更。代码块、缩进代码、Markdown 硬换行、YAML 字面量保留空白；不确定的排版差异只触发复核，
   不自动撤销全部进度。文件 256 KiB、specs 最多 64 个 Markdown 文件/128 个目录/2 MiB，不截断后继续。
 - 只读检查：`falla-openspec coordination baseline "<change>" --json`；返回当前/已记录指纹、固定来源名、
@@ -141,7 +141,8 @@
    ```
 
    填真实指纹，不保留占位符；affected/preserved 无重复且不重叠，覆盖当前所有任务及已删除旧任务。
-   affected 当前任务必须未勾选，包含人工项或 human 验证模式时 human-review 必须 pending；done 有 affected 先恢复非 done。
+   affected 当前任务必须未勾选，包含人工项或 human 验证模式时 human-review 必须 pending，
+   对应 human-task-results 不得保留 passed（改为 pending 或移除）；不受影响的人工通过结果可保留。done 有 affected 先恢复非 done。
    内容/完成条件已改变的 task 不得列 preserved；旧无编号任务先由 Propose 显式核实编号、依赖、现有进度，
    不自动重编或全量撤销。evidence 不保存完整对话、敏感正文、个人信息、凭据或临时 URL。
 4. 回退落盘后由当前 owner 运行上述 `--record --owner`，程序在协调锁内核对版本、影响清单、回退状态、
@@ -164,7 +165,7 @@
 - 若受影响 change 已是 `done`，先确认未归档并暂停下游执行。parallel 中先通知各 owner，按逆依赖
   顺序把已启动的受影响下游子 change 设为 `blocked`，记录失效证据与待复验项；父协调者先用
   `transition blocked` 阻断任务组的新执行，不代改子记录。仅各自 owner 修改自己的子 comate，
-  不覆盖他人 owner；先恢复失效 task 的 checkbox/handoff，相关人工验证退回 `pending`。
+  不覆盖他人 owner；先恢复失效 task 的 checkbox/handoff，相关人工验证及逐项结果退回 `pending`。
   需求/设计变化时先在 blocked 状态完成各自基线复核；父协调者核齐门禁后用 `transition in-progress`
   恢复父，再由原子 change 的 owner 恢复受影响记录。父最终 done 同样走 transition；不受影响证据保留。
   `done` 有未完成 task、父 `done` 有未完成子 change、或运行中的子 change 依赖未完成上游时，
@@ -181,12 +182,31 @@
   具体构建、测试、生命周期与资源释放门禁以 `android-quality.md` 为准。
 - `human`：Agent 只整理包含上述风险触发项的具体验证清单，实际结果由人工提供；`agent`：执行
   工具能够完成的验证。
-- `[人工]` task 只能根据人工明确反馈勾选。
-- UI 视觉验收的执行与反馈内容以 `android-quality.md` 的“UI 文本核对与视觉边界”为准。
+- `[人工]` task 只能根据人工明确的通过结果勾选；`human` 模式中全部任务均由人工确认。
+  每项只保存任务编号和结果，不要求截图、验收过程、反馈正文或逐项基线指纹：
+
+  ```text
+  - 人工任务结果 (human-task-results): [["1.1","passed"],["1.3","pending"]]
+  ```
+
+  结果仅为 `pending`（待验收）、`passed`（通过）或 `failed`（不通过）；一项恰好是 `[编号,结果]`，
+  编号沿用 tasks 的稳定编号，不重复、不引用不存在或非人工任务。新模板默认空数组，缺失旧字段按无逐项结果读取，
+  不从总 passed、勾选或笼统反馈自动生成通过。用于验收关联的任务编号在正文及旧围栏中也须唯一；
+  旧未编号或编号歧义人工任务须由 Propose 显式核对编号/引用/进度，不共用结果、不自动重编。
+- 人工结果与 checkbox 在同一检查点由当前 owner 显式维护；通过后才勾选。每个已勾选人工任务必须有本项 passed，
+  pending/failed/缺项/错误关联均不能支撑完成。`coordination validate`、doctor、claim、基线记录和父 transition
+  共用此门禁，不等整个 change done 才检查。存在无效人工完成记录时不报告依赖子 ready。
+  程序只检查一致性，不证明验收真实性；只有编号和 passed 已足够，反馈正文为空不影响通过。
+- 允许部分人工任务通过，其余 pending；总 human-review 仍可 pending，不阻断已通过任务及其合法后继。
+  结果改为 pending/failed 或撤销时，各 owner 先暂停受影响执行，撤销失效任务及其后继 checkbox，
+  保留其他有效人工结果；不要清空全部进度或把失败改成 passed 来解锁。
+- UI 视觉验收的执行边界以 `android-quality.md` 的“UI 文本核对与视觉边界”为准；结果记录按本节执行，
+  页面/设备/差异等备注仅在人工愿意补充或定位失败时按需保存，不作为程序准入条件。
 - `hybrid` 且 tasks 没有 `[人工]` 项时可设 `human-review: not-required`；有人工项时不得使用
   `not-required`，等待期间保持 `in-progress` 和 `pending`，失败为 `failed`，全部通过后为 `passed`。
-  `human` 模式即使没有显式 `[人工]` task，也必须有人工确认及反馈。
-- 相关需求/设计/完成条件、代码、资源、配置或验证环境变化后，受影响的人工验证恢复 pending；不保留旧版本的 passed 结论。
+  `human` 模式即使没有显式 `[人工]` task，也必须逐任务有人工通过结果；不额外要求反馈材料。
+- 相关需求/设计/完成条件、代码、资源、配置或验证环境变化后，仍走现有基线/影响复核协议；
+  受影响的人工任务结果及总人工状态恢复 pending，不保留失效 passed；有依据的不受影响结果保留，不新增逐项证据或指纹要求。
 
 ## 归档阶段复用门禁
 

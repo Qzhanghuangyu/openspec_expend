@@ -172,3 +172,46 @@ test('快照来源只允许固定名称，不把用户构造的来源键带入�
   const serialized = { ...malicious, fingerprint: createHash('sha256').update(JSON.stringify(malicious)).digest('hex') };
   assert.throws(() => readBaselineFields(`- 实施基线 (baseline): ${JSON.stringify(serialized)}\n`), /基线/);
 });
+
+test('影响复核只撤销受影响人工结果，保留其他通过项不需要逐项基线或材料', () => {
+  const manualTasks = '- [ ] 1.1 [人工] 页面一\n- [x] 1.2 [人工] 页面二\n';
+  const initial = createBaselineSnapshot(source, manualTasks);
+  const current = createBaselineSnapshot({ ...source, design: '# 页面一修订\n' }, manualTasks);
+  const review = { from: initial.fingerprint, to: current.fingerprint,
+    affected: ['1.1'], preserved: ['1.2'], evidence: '仅页面一变化，页面二核对仍适用' };
+  const state = baselineTaskState(manualTasks);
+  const keptAffected = { status: 'in-progress', validationMode: 'hybrid', humanReview: 'pending',
+    humanTaskResults: [['1.1', 'passed'], ['1.2', 'passed']] };
+  assert.ok(validateBaselineReview(initial, current, review, state, keptAffected)
+    .some(issue => issue.kind === 'baseline-human-task-result-not-reverted' && issue.task === '1.1'));
+  assert.deepEqual(validateBaselineReview(initial, current, review, state,
+    { ...keptAffected, humanTaskResults: [['1.1', 'pending'], ['1.2', 'passed']] }), []);
+});
+
+test('旧无快照的逐项 passed 即使未勾选也属已有验收结果，不能直接初始化追认', () => {
+  const unchecked = '- [ ] 1.1 [人工] 页面验收\n';
+  const state = baselineTaskState(unchecked);
+  const current = createBaselineSnapshot(source, unchecked);
+  assert.deepEqual(baselineIssues(null, current, { status: 'todo', humanReview: 'pending',
+    humanTaskResults: [['1.1', 'passed']] }, state), [{ kind: 'baseline-unverified' }]);
+});
+
+test('人工归属与基线正文归属不同时，affected 的旧 passed 也必须撤销', () => {
+  const tasks = '<!-- falla-tasks-format: 1 -->\n## 1. 验收\n- [ ] 1.1 页面验收（依赖：无）\n ## 本项验收\n [人工] 页面确认\n';
+  const initial = createBaselineSnapshot({ design: '# 旧设计\n' }, tasks);
+  const current = createBaselineSnapshot({ design: '# 新设计\n' }, tasks);
+  const state = baselineTaskState(tasks);
+  assert.equal(state.tasks[0].human, false);
+  const review = { from: initial.fingerprint, to: current.fingerprint,
+    affected: ['1.1'], preserved: [], evidence: '页面一设计变化需重新验收' };
+  const record = { status: 'in-progress', validationMode: 'hybrid', humanReview: 'pending',
+    humanTaskResults: [['1.1', 'passed']] };
+  const taskStates = [{ id: '1.1', done: false, human: true }];
+  assert.ok(validateBaselineReview(initial, current, review, state, record, taskStates)
+    .some(issue => issue.kind === 'baseline-human-task-result-not-reverted' && issue.task === '1.1'));
+  assert.ok(validateBaselineReview(initial, current, review, state,
+    { ...record, humanTaskResults: [['1.1', 'pending']], humanReview: 'passed' }, taskStates)
+    .some(issue => issue.kind === 'baseline-human-review-required' && issue.task === '1.1'));
+  assert.deepEqual(validateBaselineReview(initial, current, review, state,
+    { ...record, humanTaskResults: [['1.1', 'pending']] }, taskStates), []);
+});
