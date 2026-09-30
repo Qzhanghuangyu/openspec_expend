@@ -31,9 +31,9 @@ test('安装手册只保留安装、更新、可选集成和排障', async () =>
     assert.match(section, /falla-openspec --version/);
   }
   assert.match(quickStart, /openspec init --tools none "\$TARGET_PROJECT"/);
-  assert.match(quickStart, /falla-openspec install "\$TARGET_PROJECT" \\\n  --tools claude,codex --with-figma --with-codegraph --with-lark --non-interactive/);
+  assert.match(quickStart, /falla-openspec install "\$TARGET_PROJECT" \\\n  --tools claude,codex --with-figma --with-codegraph --with-lark --with-webp --non-interactive/);
   assert.match(upgrade, /falla-openspec install "\$TARGET_PROJECT" --tools claude,codex --non-interactive/);
-  assert.doesNotMatch(upgrade, /--with-(figma|codegraph|lark) --non-interactive/);
+  assert.doesNotMatch(upgrade, /--with-(figma|codegraph|lark|webp) --non-interactive/);
   assert.match(upgrade, /cat "\$TARGET_PROJECT\/\.falla\/install-manifest\.json"/);
   assert.match(upgrade, /少传一个工具/);
   assert.match(manual, /只用 `node bin\/falla-openspec\.js`.*不会建立 Skill 所需的命令入口/);
@@ -41,6 +41,7 @@ test('安装手册只保留安装、更新、可选集成和排障', async () =>
   assert.match(manual, /--with-figma/);
   assert.match(manual, /--with-codegraph/);
   assert.match(manual, /--with-lark/);
+  assert.match(manual, /--with-webp/);
   assert.match(manual, /codegraph telemetry status/);
   assert.match(manual, /\.falla\/ui-knowledge\/\.index/);
   assert.match(manual, /没有 `--force`/);

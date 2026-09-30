@@ -37,7 +37,7 @@ flowchart LR
 以后更新：查看 `.falla/install-manifest.json`，用原来的 `--tools` 重跑 `install`。
 两次都要运行 `doctor`，结束后重开 Agent 会话。命令和排障方法见[安装手册](docs/installation-and-update.md)；它也会复制到目标项目的 `.falla/installation-and-update.md`。
 
-安装手册的首次安装示例带了 Figma、CodeGraph 和 Lark；用不到就删掉对应的 `--with-*` 参数。受管文件有冲突时，安装器会停止，不会用 `--force` 覆盖你的修改。
+安装手册的首次安装示例带了 Figma、CodeGraph、Lark 和 WebP 工具；用不到就删掉对应的 `--with-*` 参数。受管文件有冲突时，安装器会停止，不会用 `--force` 覆盖你的修改。
 UI 知识库的具体用法见 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md) 或目标项目的 `.falla/ui-knowledge/README.md`。
 
 设计授权、跨阶段复用、`design-source.md` 取证和资源取得遵循

@@ -74,6 +74,7 @@ async function install(argv, io) {
     '--with-figma': 'boolean',
     '--with-codegraph': 'boolean',
     '--with-lark': 'boolean',
+    '--with-webp': 'boolean',
     '--non-interactive': 'boolean',
     '--json': 'boolean',
   });
@@ -86,6 +87,7 @@ async function install(argv, io) {
     withFigma: options.with_figma,
     withCodeGraph: options.with_codegraph,
     withLark: options.with_lark,
+    withWebp: options.with_webp,
     executable: io.openSpecExecutable ?? 'openspec',
     env: io.env,
   });

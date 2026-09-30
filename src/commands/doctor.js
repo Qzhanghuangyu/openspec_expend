@@ -17,6 +17,7 @@ import { getFallaVersion, loadInstallManifest } from '../install/manifest.js';
 import { validateChangeRecords } from '../coordination/health.js';
 import { validateKnowledge } from '../knowledge/validate.js';
 import { inspectCodeGraph } from '../ui/codegraph.js';
+import { inspectWebp } from '../ui/webp.js';
 
 const SCHEMA_NAMES = [
   'falla-spec-driven',
@@ -226,11 +227,13 @@ export async function doctorProject(options) {
     enabled: manifest?.integrations?.codegraph === true, env: options.env,
   });
   checks.push({ id: 'codegraph-availability', group: 'integrations', ok: codegraph.ok, state: codegraph.state });
+  const webp = await inspectWebp({ enabled: manifest?.integrations?.webp === true, env: options.env });
+  checks.push({ id: 'cwebp-availability', group: 'integrations', ok: webp.ok, state: webp.state });
   const groups = {
     installation: { ok: installationOk },
     workflow: { ...workflow, ok: workflow.ok && coordinationErrors === 0, coordinationErrors },
     knowledge,
-    integrations: { ok: codegraph.ok, codegraph, figma: { state: 'not-checked' }, lark: { state: 'not-checked' } },
+    integrations: { ok: codegraph.ok && webp.ok, codegraph, webp, figma: { state: 'not-checked' }, lark: { state: 'not-checked' } },
   };
 
   return {

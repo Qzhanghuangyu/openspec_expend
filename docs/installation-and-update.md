@@ -6,7 +6,7 @@
 ## 第一次安装
 
 需要 Node.js 20.19 或更高版本，以及 OpenSpec 1.12.x（目前支持 `>=1.12.0 <1.13.0`）。
-业务项目必须已存在，CodeGraph CLI 也要先装好。下面的例子同时安装 Claude Code 和 Codex，并启用 Figma、CodeGraph、Lark；只用一个 Agent，就把 `--tools` 改成 `claude` 或 `codex`。
+业务项目必须已存在，CodeGraph CLI 也要先装好。下面的例子同时安装 Claude Code 和 Codex，并启用 Figma、CodeGraph、Lark、WebP 工具；只用一个 Agent，就把 `--tools` 改成 `claude` 或 `codex`。
 
 ```bash
 export FALLA_HOME="/path/to/falla-openspec"
@@ -23,7 +23,7 @@ falla-openspec --version
 openspec init --tools none "$TARGET_PROJECT"
 
 falla-openspec install "$TARGET_PROJECT" \
-  --tools claude,codex --with-figma --with-codegraph --with-lark --non-interactive
+  --tools claude,codex --with-figma --with-codegraph --with-lark --with-webp --non-interactive
 falla-openspec doctor "$TARGET_PROJECT" --json
 ```
 
@@ -58,11 +58,12 @@ falla-openspec doctor "$TARGET_PROJECT" --json
 
 ## 需要外部工具时
 
-首次安装的示例把三个集成都带上了。不需要某项，就删掉对应参数；以后补装时也要沿用 manifest 中的 `--tools`：
+首次安装的示例把四个可选集成都带上了。不需要某项，就删掉对应参数；以后补装时也要沿用 manifest 中的 `--tools`：
 
 - `--with-figma`：给所选 Agent 配 Figma MCP/插件。登录和设计稿权限还要单独确认。
 - `--with-codegraph`：先在本机装好 CodeGraph CLI。敏感项目先检查 `codegraph telemetry status`，再启用索引。
 - `--with-lark`：只安装 Lark CLI，不会替你申请权限。飞书 PRD 的正文与评论需要 `docs`、`drive` 业务域，可用 `lark-cli auth login --domain docs --domain drive --no-wait --json` 按需授权；别无参数运行 `lark-cli auth login`。
+- `--with-webp`：检查 `cwebp`；已可用时不重复安装，缺失且 Homebrew 可用时尝试安装。Homebrew 不可用或安装后仍不可用会给 warning，并由 `doctor` 报告；此选项不自动转换业务项目资源。
 
 这些集成安装失败会给 warning，不会撤销已安装的工作流文件。CodeGraph 的 `.codegraph/` 和 UI 知识索引 `.falla/ui-knowledge/.index/` 都是项目本地缓存，不要提交或跨项目共用。
 

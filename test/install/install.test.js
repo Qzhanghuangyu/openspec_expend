@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
@@ -16,6 +17,7 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 
 import { installProject } from '../../src/commands/install.js';
+import { assertInstallManifest } from '../../src/install/manifest.js';
 import {
   applyManagedFileRemovalPlan,
   planManagedFileRemovals,
@@ -467,6 +469,7 @@ test('交互安装通过欢迎页和选择器决定工具及可选集成', async
       selectFigma: async () => { calls.push('select-figma'); return true; },
       selectCodeGraph: async () => { calls.push('select-codegraph'); return true; },
       selectLark: async () => { calls.push('select-lark'); return false; },
+      selectWebp: async () => { calls.push('select-webp'); return false; },
     },
     integrations: {
       installFigma: async (tools) => { calls.push(['figma', ...tools]); return []; },
@@ -480,7 +483,7 @@ test('交互安装通过欢迎页和选择器决定工具及可选集成', async
   assert.equal(report.ok, true);
   assert.deepEqual(report.tools, ['codex']);
   assert.deepEqual(calls, [
-    'welcome', 'tools', 'select-figma', 'select-codegraph', 'select-lark',
+    'welcome', 'tools', 'select-figma', 'select-codegraph', 'select-lark', 'select-webp',
     ['figma', 'codex'], ['codegraph', 'codex', true],
   ]);
 });
@@ -526,4 +529,57 @@ test('已有活动安装锁时安装器在写文件前停止', async () => {
     () => readFile(path.join(root, '.falla', 'install-manifest.json')),
     (error) => error.code === 'ENOENT'
   );
+});
+
+test('WebP 只有显式启用才写入 manifest，普通更新保留意图而不重复安装', async () => {
+  const root = await createProject();
+  const first = await installProject(installOptions(root));
+  assert.deepEqual(first.integrations, { codegraph: false });
+  assert.equal(first.doctor.groups.integrations.webp.state, 'disabled');
+
+  const calls = [];
+  const enabled = await installProject(installOptions(root, {
+    withWebp: true,
+    integrations: { installWebp: async () => { calls.push('install'); } },
+  }));
+  assert.equal(enabled.ok, true);
+  assert.equal(enabled.doctor.groups.integrations.webp.enabled, true);
+  const updated = await installProject(installOptions(root, {
+    integrations: { installWebp: async () => { calls.push('unexpected'); } },
+  }));
+  const manifest = JSON.parse(await readFile(path.join(root, '.falla', 'install-manifest.json'), 'utf8'));
+  assert.deepEqual(calls, ['install']);
+  assert.deepEqual(manifest.integrations, { codegraph: false, webp: true });
+  assert.deepEqual(updated.integrations, manifest.integrations);
+});
+
+test('WebP 安装失败保留意图，doctor 报不可用且不泄露诊断内容', async () => {
+  const root = await createProject();
+  const bin = path.join(root, 'bin');
+  await mkdir(bin);
+  await writeFile(path.join(bin, 'cwebp'), '#!/bin/sh\nexit 1\n');
+  await chmod(path.join(bin, 'cwebp'), 0o755);
+  const result = await installProject(installOptions(root, {
+    withWebp: true,
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, FIGMA_ACCESS_TOKEN: 'PRIVATE_WEBP_TOKEN' },
+    integrations: { installWebp: async () => { throw new Error('PRIVATE_WEBP_FAILURE'); } },
+  }));
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.warnings, [{ integration: 'webp' }]);
+  assert.equal(result.integrations.webp, true);
+  assert.equal(result.doctor.groups.installation.ok, true);
+  assert.equal(result.doctor.groups.integrations.ok, false);
+  assert.equal(result.doctor.groups.integrations.webp.state, 'cli-unavailable');
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE_WEBP_FAILURE|PRIVATE_WEBP_TOKEN/);
+});
+
+test('manifest 兼容旧结构，只接受可选的 WebP 布尔值', () => {
+  const legacy = {
+    formatVersion: 3, fallaVersion: '0.6.2', openSpecVersion: '1.12.0',
+    installedAt: FIXED_TIME, tools: ['codex'], integrations: { codegraph: false }, files: {},
+  };
+  assert.equal(assertInstallManifest(legacy), legacy);
+  assert.equal(assertInstallManifest({ ...legacy, integrations: { codegraph: false, webp: true } }).integrations.webp, true);
+  assert.throws(() => assertInstallManifest({ ...legacy, integrations: { codegraph: false, webp: 'true' } }));
+  assert.throws(() => assertInstallManifest({ ...legacy, integrations: { codegraph: false, webp: false, extra: true } }));
 });

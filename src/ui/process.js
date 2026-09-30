@@ -6,13 +6,26 @@ export function runProcess(command, args, options = {}) {
     let timedOut = false;
     let timer;
     let killTimer;
+    let parentExited = false;
+    const killTree = options.killTreeOnTimeout === true && process.platform !== 'win32';
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env ?? process.env,
       stdio: options.stdio ?? 'inherit',
       shell: false,
+      detached: killTree,
     });
 
+    const signalChild = (signal) => {
+      if (!killTree) return child.kill(signal);
+      try {
+        process.kill(-child.pid, signal);
+        return true;
+      } catch (error) {
+        if (error?.code === 'ESRCH') return false;
+        throw error;
+      }
+    };
     const cleanup = () => {
       child.removeListener('error', onError);
       child.removeListener('exit', onExit);
@@ -27,6 +40,8 @@ export function runProcess(command, args, options = {}) {
     };
     const onExit = (code, signal) => {
       if (settled) return;
+      parentExited = true;
+      if (timedOut && killTree && killTimer !== undefined) return;
       settled = true;
       cleanup();
       if (timedOut) {
@@ -43,9 +58,15 @@ export function runProcess(command, args, options = {}) {
     timer = setTimeout(() => {
       if (settled) return;
       timedOut = true;
-      child.kill('SIGTERM');
+      signalChild('SIGTERM');
       killTimer = setTimeout(() => {
-        if (!settled) child.kill('SIGKILL');
+        killTimer = undefined;
+        if (killTree || !settled) signalChild('SIGKILL');
+        if (killTree && parentExited && !settled) {
+          settled = true;
+          cleanup();
+          reject(new Error('外部工具执行超时，已终止'));
+        }
       }, options.killGraceMs ?? 1_000);
     }, options.timeoutMs ?? 5 * 60_000);
   });

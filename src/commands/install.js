@@ -39,6 +39,7 @@ import {
   installLarkCli,
   selectLarkCliInstallation,
 } from '../ui/lark-cli.js';
+import { installWebp, selectWebpInstallation } from '../ui/webp.js';
 import { selectTools } from '../ui/tool-select.js';
 import { showWelcomeScreen } from '../ui/welcome-screen.js';
 
@@ -102,6 +103,7 @@ export async function installProject(options) {
     selectFigma: selectFigmaMcpInstallation,
     selectCodeGraph: selectCodeGraphInstallation,
     selectLark: selectLarkCliInstallation,
+    selectWebp: selectWebpInstallation,
     ...options.ui,
   };
   if (interactive) await ui.showWelcomeScreen({ interactive: true });
@@ -117,6 +119,9 @@ export async function installProject(options) {
     : false);
   const withLark = options.withLark ?? (interactive
     ? await ui.selectLark({ interactive: true })
+    : false);
+  const withWebp = options.withWebp ?? (interactive
+    ? await ui.selectWebp({ interactive: true, env: options.env })
     : false);
 
   return withProjectLock(root, 'install', async () => {
@@ -151,13 +156,17 @@ export async function installProject(options) {
 
   const codeGraphEnabled = withCodeGraph === true
     || previous?.integrations?.codegraph === true;
+  const integrationsState = { codegraph: codeGraphEnabled };
+  if (withWebp === true || previous?.integrations?.webp !== undefined) {
+    integrationsState.webp = withWebp === true || previous?.integrations?.webp === true;
+  }
   const candidateManifest = {
     formatVersion: 3,
     fallaVersion: await getFallaVersion(),
     openSpecVersion: version.raw,
     installedAt: String(options.now?.() ?? new Date().toISOString()),
     tools: [...tools].sort(),
-    integrations: { codegraph: codeGraphEnabled },
+    integrations: integrationsState,
     files: sortedFiles(files),
   };
   if (manifestsMatch(previous, candidateManifest)) {
@@ -193,6 +202,14 @@ export async function installProject(options) {
       await (integrations.installLark ?? defaultLarkIntegration)();
     } catch {
       warnings.push({ integration: 'lark' });
+    }
+  }
+
+  if (withWebp === true) {
+    try {
+      await (integrations.installWebp ?? installWebp)(undefined, { env: options.env });
+    } catch {
+      warnings.push({ integration: 'webp' });
     }
   }
 

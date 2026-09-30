@@ -45,8 +45,10 @@ export function assertInstallManifest(value) {
   }
   if (value.formatVersion === 3) {
     if (!isRecord(value.integrations)
-      || JSON.stringify(Object.keys(value.integrations).sort()) !== JSON.stringify(['codegraph'])
-      || typeof value.integrations.codegraph !== 'boolean') {
+      || typeof value.integrations.codegraph !== 'boolean'
+      || (value.integrations.webp !== undefined && typeof value.integrations.webp !== 'boolean')
+      || ![['codegraph'], ['codegraph', 'webp']].some((keys) =>
+        JSON.stringify(Object.keys(value.integrations).sort()) === JSON.stringify(keys))) {
       throw new FallaError(1, 'install-manifest.json integrations 字段无效');
     }
   }
