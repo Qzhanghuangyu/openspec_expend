@@ -159,6 +159,10 @@ test('parallel 逻辑子 change 在依赖完成后可认领', async () => {
   await writeRecord(root, mapping.physical, comate({ mode: null, dependsOn: ['foundation'] }));
 
   await writeTestBaseline(root, 'foundation');
+  await claimChange(root, 'medal', {
+    owner: 'coordinator', coordinator: true,
+    statusProvider: async physical => officialStatus(physical, physical === mapping.physical ? 'falla-task-driven' : 'falla-spec-driven'),
+  });
   const result = await claimChange(root, 'medal/card', {
     owner: 'bob',
     statusProvider: async (physical) => officialStatus(physical, physical === mapping.physical ? 'falla-task-driven' : 'falla-spec-driven'),
@@ -259,4 +263,96 @@ test('子 change 规划完成但父规划未完成时不能提前认领', async 
     owner: 'bob', statusProvider: async physical => physical === 'medal'
       ? officialStatus('medal', 'falla-spec-driven', false) : officialStatus(physical, 'falla-task-driven'),
   }), /父.*规划/);
+});
+
+async function pendingParallelProject() {
+  const root = await createProject();
+  const parent = await writeRecord(root, 'team', comate({ mode: 'parallel' }));
+  const mapping = await registerMapping(root, 'team/worker');
+  const child = await writeRecord(root, mapping.physical, comate({ mode: null }));
+  const statusProvider = async physical => officialStatus(physical,
+    physical === mapping.physical ? 'falla-task-driven' : 'falla-spec-driven');
+  return { root, parent, child, statusProvider };
+}
+
+test('默认 parallel 父通过显式协调认领获得责任，子 owner/status 不被改写', async () => {
+  const { root, parent, child, statusProvider } = await pendingParallelProject();
+  const beforeChild = await readFile(path.join(child, 'comate.md'), 'utf8');
+  const result = await claimChange(root, 'team', {
+    owner: 'SECRET_COORDINATOR', coordinator: true, statusProvider,
+  });
+  assert.deepEqual(result, {
+    change: 'team', role: 'coordinator', status: 'in-progress', claimed: true, idempotent: false,
+  });
+  assert.doesNotMatch(JSON.stringify(result), /SECRET_COORDINATOR|SENSITIVE_HANDOFF_BODY/);
+  assert.match(await readFile(path.join(parent, 'comate.md'), 'utf8'), /owner\): SECRET_COORDINATOR/);
+  assert.equal(await readFile(path.join(child, 'comate.md'), 'utf8'), beforeChild);
+  assert.deepEqual(await claimChange(root, 'team', {
+    owner: 'SECRET_COORDINATOR', coordinator: true, statusProvider,
+  }), { ...result, claimed: false, idempotent: true });
+});
+
+test('父协调者未就位时子认领失败且父子均不写部分状态', async () => {
+  const { root, parent, child, statusProvider } = await pendingParallelProject();
+  const beforeParent = await readFile(path.join(parent, 'comate.md'), 'utf8');
+  const beforeChild = await readFile(path.join(child, 'comate.md'), 'utf8');
+  await assert.rejects(claimChange(root, 'team/worker', { owner: 'worker', statusProvider }), /父协调者/);
+  assert.equal(await readFile(path.join(parent, 'comate.md'), 'utf8'), beforeParent);
+  assert.equal(await readFile(path.join(child, 'comate.md'), 'utf8'), beforeChild);
+});
+
+test('协调认领标志不能用于 single 或逻辑子，也不能隐式授予子实施权', async () => {
+  const soloRoot = await createProject();
+  const solo = await writeRecord(soloRoot, 'solo');
+  const soloBefore = await readFile(path.join(solo, 'comate.md'), 'utf8');
+  await assert.rejects(claimChange(soloRoot, 'solo', {
+    owner: 'alice', coordinator: true, statusProvider: async physical => officialStatus(physical),
+  }), /协调|parallel/);
+  assert.equal(await readFile(path.join(solo, 'comate.md'), 'utf8'), soloBefore);
+  const { root, child, statusProvider } = await pendingParallelProject();
+  const before = await readFile(path.join(child, 'comate.md'), 'utf8');
+  await assert.rejects(claimChange(root, 'team/worker', {
+    owner: 'alice', coordinator: true, statusProvider,
+  }), /协调|parallel/);
+  assert.equal(await readFile(path.join(child, 'comate.md'), 'utf8'), before);
+});
+
+test('parallel 父协调认领并发不同 owner 只成功一方，子保持默认未认领', async () => {
+  const { root, parent, child, statusProvider } = await pendingParallelProject();
+  const beforeChild = await readFile(path.join(child, 'comate.md'), 'utf8');
+  let release;
+  let entered;
+  const gate = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  const first = claimChange(root, 'team', {
+    owner: 'leader-a', coordinator: true,
+    statusProvider: async physical => { entered(); await gate; return statusProvider(physical); },
+  });
+  try {
+    await started;
+    await assert.rejects(claimChange(root, 'team', {
+      owner: 'leader-b', coordinator: true, statusProvider,
+    }), /正在进行/);
+  } finally { release(); }
+  await first;
+  await assert.rejects(claimChange(root, 'team', {
+    owner: 'leader-b', coordinator: true, statusProvider,
+  }), /不可抢占/);
+  assert.match(await readFile(path.join(parent, 'comate.md'), 'utf8'), /owner\): leader-a/);
+  assert.equal(await readFile(path.join(child, 'comate.md'), 'utf8'), beforeChild);
+});
+
+test('父协调认领后的 owner/status 会使记录超限时须落盘前拒绝，原父子文件不变', async () => {
+  const { root, parent, child, statusProvider } = await pendingParallelProject();
+  await writeTestBaseline(root, 'team');
+  const file = path.join(parent, 'comate.md');
+  const current = await readFile(file, 'utf8');
+  await writeFile(file, current + ' '.repeat(256 * 1024 - Buffer.byteLength(current)));
+  const before = await readFile(file, 'utf8');
+  const beforeChild = await readFile(path.join(child, 'comate.md'), 'utf8');
+  await assert.rejects(claimChange(root, 'team', {
+    owner: 'x'.repeat(64), coordinator: true, statusProvider,
+  }), /无效|限制|过大/);
+  assert.ok(await readFile(file, 'utf8') === before, '超限认领必须保留原父记录，不先写 owner/status');
+  assert.equal(await readFile(path.join(child, 'comate.md'), 'utf8'), beforeChild);
 });

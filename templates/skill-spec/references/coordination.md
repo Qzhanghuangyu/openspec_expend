@@ -2,7 +2,7 @@
 
 ## 何时读取
 
-需要选择 single/parallel、创建或认领子 change、维护依赖和 handoff、处理人工验证、重规划基线复核、所有模式归档或恢复长任务时读取。
+需要选择 single/parallel、认领父协调职责或子实施职责、维护依赖和 handoff、处理人工验证、重规划基线复核、所有模式归档或恢复长任务时读取。
 
 ## 执行模式
 
@@ -24,7 +24,8 @@
 - 父 comate 保存 execution-mode；每个 comate 保存 validation-mode、human-review、owner、status、
   depends-on 和 handoff。
 - 只保存正向 `depends-on`，反向 blocks 由协调器推导。
-- single 和 parallel 都必须通过 coordination claim 认领；不得手工覆盖其他 owner。
+- single 实施、parallel 父协调和子实施都必须通过 coordination claim 认领；父须显式使用
+  `--coordinator`，子实施不带此标志。不得手工指定/覆盖其他 owner；职责和操作见下节。
 - 认领在项目锁内检查父 preflight 准入；Blocker 状态与确认依据契约见 `[分析必读]preflight.md`
   的“阻塞项准入记录”，依赖该检查时必须加载该权威章节。子任务共用父记录，物理名不能绕过。
   未核验的旧记录和缺依据的决定都阻断首次认领及同 owner 重试，失败不写 owner/status。
@@ -33,8 +34,62 @@
 - 认领前在项目锁内校验当前父 DAG 及可达依赖，包含被依赖父 change 的子记录；逻辑名和物理名
   归一后检测环，并计入父完成对子完成的隐含依赖。首次认领和同 owner 重试采用同一门禁，
   兄弟节点记录失效也须先修复，失败不修改认领字段。
-- blocked/done 不通过重复 claim 自动重启。
+- blocked/done 不通过重复 claim 自动重启；父由当前协调者显式 transition，子由其 owner 按回退协议恢复。
 - 本地锁只覆盖同一真实项目目录；跨机器或不同工作树仍需预先划分文件责任和合并策略。
+
+## Parallel 父协调职责与交接
+
+- Propose 明确父协调里程碑、子代码/资源责任及总体验收范围，但新父模板仍是
+  `owner: unassigned` / `status: todo`；不能为了规划完成预填负责人或自动开始实施。
+  用户明确进入协调/实施回合后，指定的父协调者认领：
+
+  ```bash
+  falla-openspec coordination claim "<parent>" --coordinator --owner "<id>" --json
+  ```
+
+  父须为有已规划子映射的 parallel；锁内复用官方规划、Preflight、父 DAG、上游完成与基线门禁，
+  仅写本父 owner/status 和初始基线。同 owner 重试重新校验；不同 owner 不抢占。
+- 父协调者推进父 tasks 的一个协调里程碑、核对并汇总子交付/人工验收、维护父 handoff、
+  暂停与恢复任务组、设父 done，并在用户明确授权后发起父归档。汇总引用子记录，不复制子 handoff 正文。
+  父角色从 execution-mode 和显式操作确定，不另存一份负责人台账；父协调权不授予子代码实施权、
+  代勾子任务或修改子 owner 的权限。确需实施子代码仍须另行认领该子 change，并遵守已划分的编辑范围。
+- 子首次认领及同 owner 重试须父为已分配 owner 的 `in-progress`；父 todo/未认领时子只列为 blocked，
+  不是可执行 ready，Propose 仍可保存这组合法待认领记录。已有子进度但父 todo/未分配时，validate/doctor
+  报 `parent-coordinator-required`，不能手填父 owner 来绕过。旧已明确分配且合法的父记录不强制重写。
+- 父当前 owner 用以下命令更新状态，不手工写父 status：
+
+  ```bash
+  falla-openspec coordination transition "<parent>" --owner "<id>" --status blocked --json
+  falla-openspec coordination transition "<parent>" --owner "<id>" --status in-progress --json
+  falla-openspec coordination transition "<parent>" --owner "<id>" --status done --json
+  ```
+
+  暂停前在父 handoff 的“遗留风险与恢复条件”写触发证据、受影响范围和恢复条件。
+  blocked 是安全阻断，不批准旧证据；基线/依赖失效时也允许先暂停，不因失效门禁形成恢复死结。
+  命令只暂停父，不代改子；活动子尚未由各 owner 暂停时 `parent-blocked` 校验仍失败，禁止继续执行或归档。
+  未受影响且有效的 done 子保留进度，不为暂停全量回退。恢复与 done 在锁内验证候选父状态、
+  当前基线、全部子/可达上游和实际输入；done 还须父里程碑、结构化 handoff 与人工验收满足完成契约。
+  只改父 status，不自动勾任务、置人工 passed、刷新基线或修复子。重复 transition 同样复核，失败不写状态。
+- 接管须用户明确确认，原父 owner 先在“下一步准确操作”记录精简确认依据、接手操作及新负责人，随后执行：
+
+  ```bash
+  falla-openspec coordination transfer "<parent>" --owner "<current-id>" --to "<next-id>" --json
+  ```
+
+  锁内核对原 owner、活动父及官方模式，只替换父 owner；任务、状态、基线、验收和子记录原样保留。
+  交接不追认失效证据，允许新负责人接手恢复工作；候选者不能用自己的 ID 发起抢占。
+  原 owner 不可参与或只有残留恢复锁时停止，请用户核实旧会话已停止、文件责任及残留状态后明确处理；
+  不提供强制接管/自动回收身份，不用死亡 PID、超时或“继续”推断交接授权。
+- 旧父仍 unassigned/todo 而子已有进度或缺基线时，不手填父身份：先通知旧子 owner 停止会话，
+  按逆依赖顺序把需恢复的旧子记录设为 blocked，保留各自 owner，并回退已失效的 checkbox/人工结论。
+  若父无基线，先用 `coordination baseline "<parent>" --record --owner "<id>" --json` 初始化父，
+  仍保持父 unassigned/todo；否则父认领时新增 fingerprint 会再次使已复核子失效。
+  然后各子 owner 按依赖顺序填写真实 baseline-review 并 --record，不受影响进度只凭明确证据保留。
+  父及子证据都核齐后再 claim --coordinator，最后各子 owner 按依赖恢复自己的有效状态。
+  无法满足这些门禁时保留 blocked 并补证，不以更换父 owner 或直接刷新 hash 追认旧完成。
+- owner 是协作标识，不是身份认证。项目锁只覆盖 CLI 写入，同一文件的 handoff/tasks 编辑也须遵守
+  所有权与停止旧会话的约定；不遵守协议的直接文件改写、跨工作树和跨机器协作不能由本地锁保证。
+  CLI 仅返回规范 change、角色、状态和结果，不输出 owner、新负责人、确认正文或 handoff。
 
 ## 记录契约
 
@@ -76,7 +131,7 @@
 1. 需求未明确、PRD 已确认决定改变/冲突或来源缺失：回 Preflight 核实及获得明确决定；已确认需求内的
    design/spec/task 技术修订回 Propose。仅“继续”或更新指纹不等于新需求被批准。归档内容不原地重开，使用新 change。
 2. 修改基线前后列受影响 task、后继依赖、集成/生命周期/人工验收项及不受影响证据；按下文回退协议先暂停下游，
-   各 owner 只回退自己记录，父状态同步恢复。仅受影响 checkbox 撤销，相关人工验证恢复 pending，保留不受影响进度。
+   各 owner 只回退自己记录；父协调者先用 transition blocked 阻断新认领，父状态按下文恢复。仅受影响 checkbox 撤销，相关人工验证恢复 pending，保留不受影响进度。
 3. 在自己的 comate 顶部写单行 `baseline-review` JSON，字段固定为 `from`（旧指纹，旧记录无快照为 null）、
    `to`（只读检查的当前指纹）、`affected`（需回退的稳定任务编号）、`preserved`（有依据保留的其余任务编号）、
    `evidence`（精简可追溯复核依据）。例如两项任务中仅第二项改变：
@@ -107,9 +162,11 @@
 - 已勾选任务被 PRD/已确认决定、spec/design/task 完成条件的实质修订或新的构建/运行证据推翻时，更新 handoff 的失败证据和恢复条件，复验后重勾，
   不保留失效结论。
 - 若受影响 change 已是 `done`，先确认未归档并暂停下游执行。parallel 中先通知各 owner，按逆依赖
-  顺序把已启动的下游子 change 设为 `blocked`，记录失效证据与待复验项；父 owner 将父 `done` 同步恢复
-  `in-progress`。仅各自 owner 修改自己的子 comate，不覆盖他人 owner。然后由原 owner 将受影响
-  change 设为 `in-progress`、恢复失效 task 的 checkbox 和 handoff；受影响的人工验证退回 `pending`。
+  顺序把已启动的受影响下游子 change 设为 `blocked`，记录失效证据与待复验项；父协调者先用
+  `transition blocked` 阻断任务组的新执行，不代改子记录。仅各自 owner 修改自己的子 comate，
+  不覆盖他人 owner；先恢复失效 task 的 checkbox/handoff，相关人工验证退回 `pending`。
+  需求/设计变化时先在 blocked 状态完成各自基线复核；父协调者核齐门禁后用 `transition in-progress`
+  恢复父，再由原子 change 的 owner 恢复受影响记录。父最终 done 同样走 transition；不受影响证据保留。
   `done` 有未完成 task、父 `done` 有未完成子 change、或运行中的子 change 依赖未完成上游时，
   协调校验均不通过，不得只撤销 checkbox。已归档 change 不原地重开，返回 Propose 规划新 change。
 - 修复上游后按依赖顺序由各 owner 手动解除 `blocked` 并复验受影响任务；`blocked`/`done` 不可通过
@@ -135,7 +192,8 @@
 
 所有模式的归档均由 `[任务选读]archive.md` 强制调用父 DAG 协调校验，single、parallel 父及子 change
 都不能省略。归档的目标归一化、官方命令、等待后重新校验和告警/错误区分由该阶段规则负责，
-不另建归档状态机；本节的任务、基线、父子及人工完成契约不因官方归档选项而放宽。
+不另建归档状态机；parallel 父由当前协调者发起最终归档，子归档由其 owner 配合依赖顺序。
+本节的任务、基线、父子及人工完成契约不因官方归档选项而放宽。
 
 ## Doctor 边界
 

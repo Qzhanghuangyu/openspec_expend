@@ -9,6 +9,7 @@
 - 官方 strict validate、status 和 instructions archive。
 - 当前 change 的 tasks/comate，以及对应父 change 的协作图和实施基线。
 - 用户对未完成告警、跳过同步或能力退役的明确选择。
+- parallel 最终父归档由当前父协调者发起，子 owner 配合其依赖顺序；身份交接先按 coordination 执行，不覆盖 owner。
 
 ## 必须执行
 

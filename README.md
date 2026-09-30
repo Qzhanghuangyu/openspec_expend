@@ -107,6 +107,10 @@ falla-openspec coordination register "medal/achievement-detail" --json
 openspec new change "medal-child-achievement-detail" --schema falla-task-driven --json
 falla-openspec coordination resolve "medal/achievement-detail" --json
 falla-openspec coordination validate --change "medal" --json
+# 父子规划完成、用户明确进入协调回合后，先认领父协调职责
+falla-openspec coordination claim "medal" --coordinator --owner coordinator-a --json
+# 子代码实施独立认领；父协调身份不自动授予子代码权限
+falla-openspec coordination claim "medal/achievement-detail" --owner developer-a --json
 ```
 
 如果官方 `new change` 失败且没有创建物理目录，可安全清理本次孤儿映射：
@@ -116,6 +120,24 @@ falla-openspec coordination unregister "medal/achievement-detail" --json
 ```
 
 物理 change 已存在时 unregister 会拒绝，不会删除任何 change 文件。
+
+parallel 父协调者负责父里程碑、汇总验收、暂停/恢复和最终归档，不代改子记录。
+新父保留 `unassigned/todo`；子认领须父协调者已就位。状态流转和经用户确认的交接使用：
+
+```bash
+# 先在父 handoff 写暂停证据、受影响范围与恢复条件
+falla-openspec coordination transition "medal" --owner coordinator-a --status blocked --json
+# 各 owner 回退/复核自己的记录后，父才可恢复；不会自动勾任务或通过人工验收
+falla-openspec coordination transition "medal" --owner coordinator-a --status in-progress --json
+falla-openspec coordination transition "medal" --owner coordinator-a --status done --json
+# 原 owner 先在 handoff 写交接确认依据与接手操作，候选者不能抢占
+falla-openspec coordination transfer "medal" --owner coordinator-a --to coordinator-b --json
+```
+
+暂停可以在证据失效时先行阻断，恢复/完成仍检查全部门禁。命令只写父字段，不自动撤销子进度；
+旧合法父身份无需重写；旧未分配父却有子进度时，先由子 owner 暂停，初始化待认领父基线，
+按依赖复核子基线，最后认领父；详见协作规则，不手填身份或刷新 hash 追认。owner 是协作标识而非认证，
+锁只覆盖同一真实项目内 CLI 写入；直接文件编辑及跨机器协作仍须约定责任与停止旧会话。
 
 映射只保存在 `.falla/coordination.yaml`。负责人、状态、正向依赖和交接以各 change 的
 `comate.md` 为唯一事实来源；反向 blocks 由正向依赖推导。`coordination validate` 检查缺失节点、环、

@@ -61,12 +61,13 @@ async function assertDependenciesDone(root, dependencies, statusProvider) {
   }
 }
 
-function claimResult(change, claimed, idempotent) {
-  return { change, status: 'in-progress', claimed, idempotent };
+function claimResult(change, claimed, idempotent, coordinator) {
+  return { change, ...(coordinator ? { role: 'coordinator' } : {}), status: 'in-progress', claimed, idempotent };
 }
 
 export async function claimChange(rootInput, reference, options) {
   const owner = assertOwner(options?.owner);
+  const coordinator = options?.coordinator === true;
   if (typeof options?.statusProvider !== 'function') {
     throw new FallaError(1, 'claim 缺少官方 status provider');
   }
@@ -100,8 +101,11 @@ export async function claimChange(rootInput, reference, options) {
     const record = parseComate(markdown, `${resolved.logical}/comate.md`);
     const coordination = await loadCoordination(root);
     const hasChildren = Object.values(coordination.mappings).some(mapping => mapping.parent === resolved.physical);
-    if (!logicalChild && (record.executionMode === 'parallel' || hasChildren)) {
-      throw new FallaError(1, 'parallel 父 change 必须认领逻辑子 change');
+    if (coordinator && (logicalChild || record.executionMode !== 'parallel' || !hasChildren)) {
+      throw new FallaError(1, '协调认领仅接受有子映射的 parallel 父 change');
+    }
+    if (!coordinator && !logicalChild && (record.executionMode === 'parallel' || hasChildren)) {
+      throw new FallaError(1, 'parallel 父 change 须显式使用 --coordinator 认领协调职责；实施应认领逻辑子 change');
     }
     if (logicalChild && record.executionMode !== undefined) {
       throw new FallaError(1, '子 change 的 execution-mode 字段无效');
@@ -118,6 +122,10 @@ export async function claimChange(rootInput, reference, options) {
       const parentRecord = parseComate(parentMarkdown);
       if (parentRecord.executionMode === 'single' || ['blocked', 'done'].includes(parentRecord.status)) {
         throw new FallaError(1, '父 change 模式或状态不允许认领子 change');
+      }
+      if (parentRecord.executionMode !== 'parallel' || parentRecord.owner === 'unassigned'
+        || parentRecord.status !== 'in-progress') {
+        throw new FallaError(1, '父协调者尚未就位，先由父负责人显式认领协调职责');
       }
       await assertDependenciesDone(root, parentRecord.dependsOn, statusProvider);
     }
@@ -144,6 +152,7 @@ export async function claimChange(rootInput, reference, options) {
     await assertDependenciesDone(root, record.dependsOn, statusProvider);
     const validation = await validateCoordination(root, {
       change: logicalChild ? resolved.parent : resolved.physical, statusProvider,
+      ...(coordinator ? { parentState: { owner, status: 'in-progress' } } : {}),
     });
     const preflightErrors = validation.errors.filter(error => error.kind.startsWith('preflight-'));
     if (preflightErrors.length > 0) {
@@ -157,11 +166,13 @@ export async function claimChange(rootInput, reference, options) {
     const baselineErrors = validation.errors.filter(error => error.kind.startsWith('baseline-'));
     if (baselineErrors.length > 0) throw baselineError('baseline-admission-failed');
     if (!validation.ok) throw new FallaError(1, '协作验证未通过，不能认领');
-    if (record.status === 'in-progress') return claimResult(resolved.logical, false, true);
+    if (record.status === 'in-progress') return claimResult(resolved.logical, false, true, coordinator);
     const baseline = await loadBaselineState(root, reference);
     if (baseline.errors.length > 0 || baseline.markdown !== markdown) throw baselineError('baseline-input-changed');
     const initialized = baseline.snapshot ? markdown : writeBaselineField(markdown, baseline.current);
     const updated = updateClaimFields(initialized, owner);
+    // 字段替换可能使原本合法的上限记录超限；必须在写入身份前校验最终文本。
+    try { parseComate(updated); } catch { throw new FallaError(1, '认领后的协作记录无效或超过大小限制'); }
     const relativePath = path.relative(root, path.join(resolved.path, 'comate.md'))
       .split(path.sep).join('/');
     await writeAtomicFile(root, relativePath, updated, { expectedHash: sha256(markdown) });
@@ -173,6 +184,6 @@ export async function claimChange(rootInput, reference, options) {
     if (verified.owner !== owner || verified.status !== 'in-progress') {
       throw new FallaError(1, '认领写入复核失败');
     }
-    return claimResult(resolved.logical, true, false);
+    return claimResult(resolved.logical, true, false, coordinator);
   });
 }

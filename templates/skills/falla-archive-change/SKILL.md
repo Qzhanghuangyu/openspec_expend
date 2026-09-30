@@ -35,7 +35,8 @@ description: Use when closing and archiving a completed or explicitly accepted A
    openspec instructions archive --change "<physical>" --json
    ```
 
-3. 按阶段规则汇总未完成告警、人工验证、handoff 和 delta spec 影响。
+3. 按阶段规则核对发起责任并汇总未完成告警、人工验证、handoff 和 delta spec 影响。
+   parallel 父最终归档由当前父协调者发起，子 owner 配合依赖顺序；交接先走 coordination，不手改 owner。
    归档任何目标前都执行，不能仅在 parallel 父归档时检查：
 
    ```bash

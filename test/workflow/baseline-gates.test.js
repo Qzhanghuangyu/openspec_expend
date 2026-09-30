@@ -40,6 +40,11 @@ async function fixture(t) {
     return { dir, physical };
   }
   async function finish(reference) {
+    if (reference.includes('/')) {
+      const parent = reference.split('/')[0];
+      const parentText = await readFile(path.join(files.get(parent), 'comate.md'), 'utf8');
+      if (parentText.includes('status): todo')) await command('claim', parent, '--coordinator', '--owner', 'alice');
+    }
     const dir = files.get(reference);
     await writeFile(path.join(dir, 'tasks.md'), tasks.replace('[ ]', '[x]'));
     const file = path.join(dir, 'comate.md');

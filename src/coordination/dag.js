@@ -1,9 +1,10 @@
 import { FallaError } from '../errors.js';
+import { sha256 } from '../install/files.js';
 import { assertChangeSegment } from './naming.js';
 import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
 import { checkPreflight, readChangeRecordFile, validateParentRecord } from './health.js';
 import { resolveChange } from './resolver.js';
-import { loadCoordination } from './store.js';
+import { loadCoordinationSnapshot } from './store.js';
 import { inspectBaseline } from './baseline-files.js';
 
 function issue(kind, change, related = undefined, details = undefined) {
@@ -47,7 +48,7 @@ function findCycle(records) {
   return null;
 }
 
-async function readNode(root, logical, mapping, statusProvider) {
+async function readNode(root, logical, mapping, statusProvider, snapshot) {
   const resolved = await resolveChange(root, logical);
   const markdown = await readChangeRecordFile(root, resolved.path, 'comate.md', true);
   if (markdown === null) throw new FallaError(1, `缺少 comate.md：${logical}`);
@@ -59,12 +60,16 @@ async function readNode(root, logical, mapping, statusProvider) {
   const officialStatus = statusProvider && resolved.lifecycle === 'active'
     ? await statusProvider(mapping.physical)
     : null;
+  // 写命令仅在内存保留本轮读取的摘要，不把 tasks/handoff 正文加入公共报告。
+  snapshot?.files.set(logical, { resolved, comateHash: sha256(markdown), tasksHash: sha256(taskMarkdown) });
   return { logical, mapping, resolved, comate, tasks, officialStatus };
 }
 
 export async function validateCoordination(root, options) {
   const parent = assertChangeSegment(options.change, 'parent change');
-  const document = await loadCoordination(root);
+  const stored = await loadCoordinationSnapshot(root);
+  const document = stored.document;
+  if (options.inputSnapshot) options.inputSnapshot.coordinationHash = stored.hash;
   const logicalByPhysical = new Map(Object.entries(document.mappings)
     .map(([logical, mapping]) => [mapping.physical, logical]));
   const childrenByParent = new Map();
@@ -84,7 +89,11 @@ export async function validateCoordination(root, options) {
 
   let parentNode = null;
   try {
-    parentNode = await readNode(root, parent, { physical: parent }, options.statusProvider);
+    parentNode = await readNode(root, parent, { physical: parent }, options.statusProvider, options.inputSnapshot);
+    // 写命令在锁内先核对原 owner，再验证候选父状态；只读 CLI 不接受此内部选项。
+    if (options.parentState) {
+      parentNode.comate = { ...parentNode.comate, ...options.parentState };
+    }
     for (const localIssue of validateComateRecord(parentNode.comate, {
       pendingTasks: parentNode.tasks.pending,
       humanTasks: parentNode.tasks.humanTasks,
@@ -115,7 +124,7 @@ export async function validateCoordination(root, options) {
 
   for (const [logical, mapping] of mappings) {
     try {
-      const node = await readNode(root, logical, mapping, options.statusProvider);
+      const node = await readNode(root, logical, mapping, options.statusProvider, options.inputSnapshot);
       nodes.set(logical, normalize(node.comate));
       for (const localIssue of validateComateRecord(node.comate, {
         pendingTasks: node.tasks.pending,
@@ -156,7 +165,7 @@ export async function validateCoordination(root, options) {
       if (dependencies.has(dependency)) continue;
       try {
         const resolved = await resolveChange(root, dependency);
-        const node = await readNode(root, dependency, { physical: resolved.physical }, options.statusProvider);
+        const node = await readNode(root, dependency, { physical: resolved.physical }, options.statusProvider, options.inputSnapshot);
         dependencies.set(dependency, normalize(node.comate));
         for (const localIssue of validateComateRecord(node.comate, {
           pendingTasks: node.tasks.pending, humanTasks: node.tasks.humanTasks,
@@ -184,8 +193,6 @@ export async function validateCoordination(root, options) {
   for (const [logical, record] of dependencies) {
     if (!record) continue;
     const contextParent = document.mappings[logical]?.parent;
-    if (contextParent && dependencies.get(contextParent)?.status === 'blocked'
-      && ['in-progress', 'done'].includes(record.status)) errors.push(issue('parent-blocked', logical, contextParent));
     errors.push(...validateParentRecord(logical, record,
       (childrenByParent.get(logical) ?? []).map(child => [child, dependencies.get(child)?.status])));
     const inherited = contextParent ? dependencies.get(contextParent)?.dependsOn ?? [] : [];
@@ -236,8 +243,11 @@ export async function validateCoordination(root, options) {
     const dependenciesDone = [...record.dependsOn, ...inherited].every(
       (dependency) => dependencies.get(dependency)?.status === 'done'
     );
-    if (record.status === 'todo' && dependenciesDone && !admissionBlocked) ready.push(logical);
-    if (record.status === 'blocked' || (record.status === 'todo' && (!dependenciesDone || admissionBlocked))) {
+    const parentRecord = dependencies.get(document.mappings[logical]?.parent);
+    const coordinatorReady = parentRecord?.executionMode === 'parallel'
+      && parentRecord.owner !== 'unassigned' && parentRecord.status === 'in-progress';
+    if (record.status === 'todo' && dependenciesDone && coordinatorReady && !admissionBlocked) ready.push(logical);
+    if (record.status === 'blocked' || (record.status === 'todo' && (!dependenciesDone || !coordinatorReady || admissionBlocked))) {
       blocked.push(logical);
     }
   }

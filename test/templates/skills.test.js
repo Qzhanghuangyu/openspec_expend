@@ -444,7 +444,7 @@ test('日常任务轻量检查，集成时构建 APK 并保留失败证据', asy
   assert.match(quality, /成功已覆盖依赖模块的资源打包和代码编译/);
   assert.match(coordination, /恢复未完成/);
   assert.match(coordination, /先通知各 owner，按逆依赖/);
-  assert.match(coordination, /父 owner 将父 `done` 同步恢复/);
+  // 父恢复的运行行为由 parent-coordinator 集成回归覆盖，不再锁定旧手工回退措辞。
   assert.match(coordination, /已归档 change 不原地重开/);
 });
 

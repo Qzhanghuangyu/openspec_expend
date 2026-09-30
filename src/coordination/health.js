@@ -25,9 +25,17 @@ export function validateParentRecord(reference, comate, children) {
   if (children.length > 0 && comate.executionMode !== 'parallel') {
     errors.push(issue('execution-mode-conflict', reference));
   }
-  if (comate.status === 'done') {
-    for (const [logical, status] of children) {
-      if (status !== 'done') errors.push(issue('child-not-done', reference, logical));
+  for (const [logical, status] of children) {
+    if (['in-progress', 'done'].includes(status)
+      && (comate.owner === 'unassigned' || comate.status === 'todo')) {
+      errors.push(issue('parent-coordinator-required', logical, reference));
+    }
+    // 暂停任务组不撤销未受影响的交付；活动子必须由其 owner 单独暂停。
+    if (comate.status === 'blocked' && status === 'in-progress') {
+      errors.push(issue('parent-blocked', logical, reference));
+    }
+    if (comate.status === 'done' && status !== 'done') {
+      errors.push(issue('child-not-done', reference, logical));
     }
   }
   return errors;

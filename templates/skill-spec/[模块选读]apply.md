@@ -11,12 +11,14 @@
   官方 `status` 和 `instructions apply`、当前 change 的 `tasks.md`、`comate.md` 为事实依据；
   Propose 完成或任务 ready 不构成自动实施授权。
 - 父 change 的 design、项目规则审计和用户已确认决定。
+- parallel 父协调回合只推进父里程碑和整体状态；子代码实施仍须另认领子 change，不因协调身份扩大范围。
 
 ## 必须执行
 
 1. 必读 `references/coordination.md`，按“执行模式”“协作状态”确定实施目标并认领。
    先执行 `coordination baseline` 核对当前与已记录版本；官方 `blocked` 停止，`all_done` 也须基线及完成证据复核，
-   `ready` 且基线有效才认领；基线变化/旧证据未核验按该文档的复核回退协议处理，不自动刷新或清空任务。
+   `ready` 且基线有效才认领；parallel 父使用显式 `claim --coordinator`，子实施须父协调者已就位。
+   父的安全暂停按 coordination 执行，不以旧基线失效阻止暂停。基线变化/旧证据未核验按复核回退协议处理，不自动刷新或清空任务。
 2. 必读 `references/project-rules.md`，执行 Apply 项目规则门禁。遗漏、条件变化或偏离时不修改代码，
    返回 Propose。
 3. 读取 `operationGuidance`；只采纳不与官方状态、范围锁、Soul 和用户决定冲突的建议，
@@ -50,6 +52,7 @@
 
 - 当前 task 通过 android-quality 的适用门禁和 coordination 的完成门禁后落盘。
 - 全部 tasks 完成、handoff 完整且人工验收满足 coordination 规则后，才可设为 done。
+  parallel 父由当前协调者以 `coordination transition --status done` 在锁内核验并更新，不手写父状态。
 - 完成前运行 `coordination validate`；parallel 校验父 change。
 
 ## 按需参考

@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { FallaError } from '../errors.js';
 import { claimChange } from '../coordination/claim.js';
+import { transitionParent, transferParent } from '../coordination/parent-lifecycle.js';
 import { validateCoordination } from '../coordination/dag.js';
 import { checkPreflight } from '../coordination/health.js';
 import { inspectBaseline } from '../coordination/baseline-files.js';
@@ -18,11 +19,16 @@ import { runOpenSpecJson } from '../openspec/runner.js';
 function parseArguments(argv) {
   const [command, ...rest] = argv;
   const options = {
-    json: false, record: false, project: null, change: null, owner: null, positional: [],
+    json: false, record: false, coordinator: false, project: null, change: null, owner: null, status: null, to: null, positional: [],
   };
 
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index];
+    if (argument === '--coordinator') {
+      if (command !== 'claim' || options.coordinator) throw new FallaError(1, '仅 claim 接受单个 --coordinator');
+      options.coordinator = true;
+      continue;
+    }
     if (argument === '--record') {
       if (command !== 'baseline' || options.record) throw new FallaError(1, '仅 baseline 接受单个 --record');
       options.record = true;
@@ -32,7 +38,9 @@ function parseArguments(argv) {
       options.json = true;
       continue;
     }
-    if (argument === '--project' || argument === '--change' || argument === '--owner') {
+    if (['--project', '--change', '--owner', '--status', '--to'].includes(argument)) {
+      if (argument === '--status' && command !== 'transition') throw new FallaError(1, '仅 transition 接受 --status');
+      if (argument === '--to' && command !== 'transfer') throw new FallaError(1, '仅 transfer 接受 --to');
       const value = rest[index + 1];
       if (!value || value.startsWith('--')) {
         throw new FallaError(1, `参数 ${argument} 缺少值`);
@@ -162,11 +170,30 @@ export async function coordinationCommand(argv, io) {
     return result;
   }
 
+  if (command === 'transition' || command === 'transfer') {
+    const reference = requireSingleReference(command, options);
+    if (!options.owner) throw new FallaError(1, `${command} 需要 --owner <id>`);
+    if (command === 'transition' && !options.status) throw new FallaError(1, 'transition 需要 --status <status>');
+    if (command === 'transfer' && !options.to) throw new FallaError(1, 'transfer 需要 --to <id>');
+    const operation = command === 'transition' ? transitionParent : transferParent;
+    const result = await operation(root, reference, {
+      owner: options.owner, status: options.status, to: options.to,
+      statusProvider: async physical => assertStatusContract(await runOpenSpecJson(
+        ['status', '--change', physical, '--json'],
+        { cwd: root, executable: io.openSpecExecutable ?? 'openspec', env: io.env }
+      )),
+    });
+    writeResult(io, result, options.json, command === 'transition'
+      ? `父协调状态已核对：${result.change}（${result.status}）`
+      : `父协调职责已交接：${result.change}`);
+    return result;
+  }
+
   if (command === 'claim') {
     const reference = requireSingleReference(command, options);
     if (!options.owner) throw new FallaError(1, 'claim 需要 --owner <id>');
     const result = await claimChange(root, reference, {
-      owner: options.owner,
+      owner: options.owner, coordinator: options.coordinator,
       statusProvider: async (physical) => assertStatusContract(await runOpenSpecJson(
         ['status', '--change', physical, '--json'],
         {
@@ -176,7 +203,7 @@ export async function coordinationCommand(argv, io) {
         }
       )),
     });
-    writeResult(io, result, options.json, `已认领 change：${result.change}`);
+    writeResult(io, result, options.json, `${result.role === 'coordinator' ? '已认领父协调职责' : '已认领 change'}：${result.change}`);
     return result;
   }
 

@@ -78,7 +78,7 @@ ${mode ? `- 执行模式 (execution-mode): ${mode}\n` : ''}- 负责人 (owner): 
   const record = reference => readFile(path.join(files.get(reference), 'comate.md'), 'utf8');
   // 只核对 workflow 分组：这个最小夹具没有安装工具/Hook，不声称 installation 通过。
   const doctor = async () => (await doctorProject({ root })).groups.workflow;
-  return { create, set, validate, health, claim, record, doctor, refreshFixtureEvidence };
+  return { create, set, validate, health, claim, command, record, doctor, refreshFixtureEvidence };
 }
 
 const has = (result, kind) => result.errors.some(error => error.kind === kind);
@@ -105,6 +105,7 @@ test('官方规划 → 认领 → 协调与健康校验一致；跨父依赖不�
   await p.create('foundation', { status: 'done' });
   await p.create('page', { mode: 'parallel' });
   await p.create('page/view', { dependencies: ['foundation'] });
+  await p.command('claim', 'page', '--coordinator', '--owner', 'alice');
   assert.equal((await p.claim('page/view')).claimed, true);
   assert.equal((await p.validate()).ok, true);
   assert.equal((await p.health()).ok, true);
@@ -162,7 +163,8 @@ test('外部父依赖和当前兄弟节点都受完成门禁约束，认领失�
   const p = await project(t);
   await p.create('foundation', { mode: 'parallel', status: 'done' });
   await p.create('foundation/core');
-  await p.create('page', { mode: 'parallel' });
+  // 已就位父用于隔离上游错误门禁；默认父认领另由完整闭环回归验证。
+  await p.create('page', { mode: 'parallel', status: 'in-progress' });
   await p.create('page/view', { dependencies: ['foundation'] });
   assert.equal(has(await p.validate(), 'child-not-done'), true);
   const before = await p.record('page/view');
@@ -207,7 +209,7 @@ test('父子完成 → 错误回退被拒绝 → 暂停下游并恢复父状态 
 
 test('任务内部块后的人工标记贯穿完成校验、健康检查和下游认领', async t => {
   const p = await project(t);
-  await p.create('page', { mode: 'parallel' });
+  await p.create('page', { mode: 'parallel', status: 'in-progress' });
   await p.create('page/review');
   await p.create('page/release', { dependencies: ['page/review'] });
   const continuations = [

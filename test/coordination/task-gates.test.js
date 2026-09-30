@@ -52,7 +52,7 @@ test('任务编号或依赖错误在父、子记录中阻断校验和首次/幂�
   for (const target of ['page', 'page/view']) {
     for (const status of ['todo', 'in-progress']) {
       const p = await project(t);
-      if (target.includes('/')) await p.create('page', { mode: 'parallel' });
+      if (target.includes('/')) await p.create('page', { mode: 'parallel', status: 'in-progress' });
       await p.create(target, { status, tasks: '- [ ] 1.1 SECRET_BODY（依赖：9.9）\n- [ ] 1.1 A' });
       for (const report of [await p.validate('page'), await p.health()]) {
         assert.equal(report.ok, false);
@@ -71,7 +71,7 @@ test('任务编号或依赖错误在父、子记录中阻断校验和首次/幂�
 test('跨 change 的已完成依赖仍检查本地任务图，兄弟任务错误也阻止认领', async t => {
   const p = await project(t);
   await p.create('foundation', { status: 'done', tasks: '- [x] 1.1 A（依赖：9.9）' });
-  await p.create('page', { mode: 'parallel' });
+  await p.create('page', { mode: 'parallel', status: 'in-progress' });
   await p.create('page/view', { dependsOn: ['foundation'] });
   assert.ok((await p.validate('page')).errors.some(error =>
     error.kind === 'task-dependency-missing' && error.change === 'foundation'));

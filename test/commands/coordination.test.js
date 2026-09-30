@@ -163,6 +163,7 @@ test('coordination claim 认领逻辑子 change 且输出不含 owner/handoff', 
 - 被依赖 (blocks): []
 - 交接 (handoff): SENSITIVE_HANDOFF_BODY
 `, 'utf8');
+  await coordinationCommand(['claim', 'medal', '--coordinator', '--owner', 'coordinator', '--json'], memoryIo(root));
   const io = memoryIo(root);
 
   const result = await coordinationCommand([
@@ -268,4 +269,30 @@ test('父 DAG 同时包含 archived 和 active 子 change 时仍可校验', asyn
   assert.equal(validation.ok, true);
   assert.deepEqual(validation.errors, []);
   assert.deepEqual(validation.ready, ['medal/pending']);
+});
+
+test('父协调认领必须显式声明，CLI 不把状态/转移参数误用于其他命令', async () => {
+  const root = await createProject();
+  await cp(path.resolve('templates/openspec/schemas/falla-spec-driven'), path.join(root, 'openspec/schemas/falla-spec-driven'), { recursive: true });
+  const directory = path.join(root, 'openspec/changes/medal');
+  await writeFile(path.join(directory, '.openspec.yaml'), 'schema: falla-spec-driven\nskip_specs: true\n');
+  for (const artifact of ['proposal', 'design']) await writeFile(path.join(directory, `${artifact}.md`), `# ${artifact}\n合成协调任务。\n`);
+  const mapping = await coordinationCommand(['register', 'medal/worker'], memoryIo(root));
+  await execFileAsync('openspec', ['new', 'change', mapping.physical, '--schema', 'falla-task-driven', '--json'], { cwd: root });
+  const child = path.join(root, 'openspec/changes', mapping.physical);
+  await writeFile(path.join(child, 'tasks.md'), '- [ ] 1.1 实施（依赖：无）\n');
+  await writeFile(path.join(child, 'comate.md'), '# comate\n- 负责人 (owner): unassigned\n- 状态 (status): todo\n- 依赖 (depends-on): []\n- 交接 (handoff):\n');
+  await writeTestBaseline(root, 'medal');
+  for (const args of [
+    ['resolve', 'medal', '--coordinator'],
+    ['baseline', 'medal', '--status', 'done'],
+    ['claim', 'medal', '--owner', 'alice', '--to', 'bob'],
+    ['transition', 'medal', '--owner', 'alice'],
+    ['transfer', 'medal', '--owner', 'alice'],
+  ]) {
+    await assert.rejects(main(['coordination', ...args, '--json'], memoryIo(root)), error => error.code === 1);
+  }
+  const io = memoryIo(root);
+  assert.equal(await main(['coordination', 'claim', 'medal', '--coordinator', '--owner', 'alice', '--json'], io), 0);
+  assert.equal(JSON.parse(io.output().stdout).role, 'coordinator');
 });

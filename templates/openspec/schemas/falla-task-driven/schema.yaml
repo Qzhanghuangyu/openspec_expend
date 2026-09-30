@@ -33,6 +33,7 @@ apply:
   tracks: tasks.md
   instruction: |
     执行前必须读取 .falla/skill-spec/[Must Read]soul.md、.falla/skill-spec/[模块选读]apply.md，
-    并加载阶段规则触发的参考文件。只执行当前子 change的 tasks，引用父 design，
+    并加载阶段规则触发的参考文件。只执行当前子 change的 tasks，引用父 design；
+    子认领须父协调者已就位，不代改父/兄弟的 owner、status 或任务，
     官方 all_done 不证明完成证据仍适用；先检查当前实施基线，变化返回复核，不自动清空任务。
     模式和协作状态从当前 comate 读取；任务循环、验收、检查点和回退遵循 Apply 阶段规则。

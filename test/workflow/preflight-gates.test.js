@@ -117,6 +117,7 @@ test('旧记录、未核对模板、非法或无依据确认均不放行；明�
 test('子任务只使用父 preflight，不能以子文件或物理名绕过阻塞', async t => {
   const p = await project(t, 'parallel');
   const child = await p.create('page/view');
+  await p.command('claim', 'page', '--coordinator', '--owner', 'coordinator');
   await writeFile(p.preflight, pending);
   await writeFile(path.join(child.dir, 'preflight.md'), clear);
   const before = await readFile(path.join(child.dir, 'comate.md'), 'utf8');

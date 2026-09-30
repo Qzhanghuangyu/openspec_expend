@@ -1,7 +1,7 @@
 import { writeTestBaseline } from '../helpers/baseline.js';
 import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rmdir, symlink, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rmdir, symlink, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -237,4 +237,27 @@ test('DAG 校验拒绝通过 comate 符号链接读取项目外内容', async ()
   const report = await validateCoordination(root, { change: 'medal' });
   assert.equal(report.ok, false);
   assert.deepEqual(report.errors.map(({ kind }) => kind), ['invalid-node']);
+});
+
+test('默认父未认领时子仅待协调，旧手填子进度不能绕过父责任门禁', async () => {
+  const root = await createGraph([{ name: 'card', status: 'todo', pending: true, dependsOn: [], blocks: [] }]);
+  const parent = path.join(root, 'openspec/changes/medal/comate.md');
+  const original = await readFile(parent, 'utf8');
+  await writeFile(parent, original.replace(/owner\): alice/, 'owner): unassigned').replace(/status\): in-progress/, 'status): todo'));
+  let report = await validateCoordination(root, { change: 'medal' });
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.ready, []);
+  assert.deepEqual(report.blocked, ['medal/card']);
+  const child = path.join(root, 'openspec/changes/medal-child-card/comate.md');
+  await writeFile(child, (await readFile(child, 'utf8')).replace(/status\): todo/, 'status): in-progress'));
+  report = await validateCoordination(root, { change: 'medal' });
+  assert.ok(report.errors.some(({ kind, change }) => kind === 'parent-coordinator-required' && change === 'medal/card'));
+});
+
+test('父暂停只阻断活动子执行，未受影响的已完成子无需回退', async () => {
+  const root = await createGraph([{ name: 'card', status: 'done', dependsOn: [], blocks: [] }]);
+  const parent = path.join(root, 'openspec/changes/medal/comate.md');
+  await writeFile(parent, (await readFile(parent, 'utf8')).replace(/status\): in-progress/, 'status): blocked'));
+  const report = await validateCoordination(root, { change: 'medal' });
+  assert.equal(report.ok, true);
 });

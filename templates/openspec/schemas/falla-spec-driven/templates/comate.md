@@ -1,6 +1,7 @@
 # comate
 
 > 填写前必须读取 `.falla/skill-spec/references/coordination.md` 的记录契约与验证模式。
+> parallel 父保留默认待认领状态；明确进入协调回合后显式 claim --coordinator。状态更新/交接遵循同文档，不预填 owner。
 
 - 格式版本 (format-version): 2
 - 实施基线 (baseline): unrecorded

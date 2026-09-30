@@ -57,7 +57,7 @@ function hasMeaningfulHandoff(value) {
   });
 }
 
-function handoffFieldHasValue(value, field) {
+export function handoffFieldHasValue(value, field) {
   const lines = String(value).split('\n');
   for (let index = 0; index < lines.length; index += 1) {
     const match = lines[index].match(/^(\s*)[-*]\s+([^:：]+)[:：][ \t]*(.*)$/);
