@@ -23,6 +23,8 @@ disable-model-invocation: true
 ## 编排
 
 1. 执行 `openspec status --change "<parent>" --json`；`preflight` 未完成时停止。
+   按阶段规则核对确认依据，再执行 `falla-openspec coordination preflight "<parent>" --json`；
+   准入失败时停止，不生成或覆盖下游 artifact。
 2. 按官方状态依次执行：
 
    ```bash

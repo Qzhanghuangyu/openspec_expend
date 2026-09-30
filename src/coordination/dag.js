@@ -1,7 +1,7 @@
 import { FallaError } from '../errors.js';
 import { assertChangeSegment } from './naming.js';
 import { parseComate, parseTaskProgress, validateComateRecord } from './comate.js';
-import { readChangeRecordFile, validateParentRecord } from './health.js';
+import { checkPreflight, readChangeRecordFile, validateParentRecord } from './health.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
 
@@ -204,14 +204,26 @@ export async function validateCoordination(root, options) {
   const cycle = findCycle(completionGraph);
   if (cycle) errors.push(issue('cycle', cycle[0], undefined, { path: cycle }));
 
+  // 每个可达父记录只检查一次；子 change 不能用自己的 preflight 覆盖父需求决定。
+  const gateParents = new Set([...dependencies].filter(([, record]) => record !== null)
+    .map(([reference]) => document.mappings[reference]?.parent ?? reference));
+  for (const reference of gateParents) {
+    try {
+      errors.push(...(await checkPreflight(root, reference)).errors);
+    } catch {
+      errors.push(issue('preflight-unreadable', reference));
+    }
+  }
+  const preflightBlocked = errors.some(error => error.kind.startsWith('preflight-'));
+
   const ready = [];
   const blocked = [];
   for (const [logical, record] of nodes) {
     const dependenciesDone = record.dependsOn.every(
       (dependency) => dependencies.get(dependency)?.status === 'done'
     );
-    if (record.status === 'todo' && dependenciesDone) ready.push(logical);
-    if (record.status === 'blocked' || (record.status === 'todo' && !dependenciesDone)) {
+    if (record.status === 'todo' && dependenciesDone && !preflightBlocked) ready.push(logical);
+    if (record.status === 'blocked' || (record.status === 'todo' && (!dependenciesDone || preflightBlocked))) {
       blocked.push(logical);
     }
   }

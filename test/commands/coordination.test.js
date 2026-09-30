@@ -1,3 +1,4 @@
+import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { cp, mkdtemp, writeFile } from 'node:fs/promises';
@@ -33,6 +34,7 @@ async function createProject() {
   );
   await execFileAsync('openspec', ['new', 'change', 'medal', '--json'], { cwd: root });
   const parentDir = path.join(root, 'openspec', 'changes', 'medal');
+  await writeReviewedPreflight(parentDir);
   await writeFile(path.join(parentDir, 'tasks.md'), '- [ ] 1.1 integrate\n');
   await writeFile(path.join(parentDir, 'comate.md'), `# comate
 
@@ -132,6 +134,7 @@ test('coordination claim 认领逻辑子 change 且输出不含 owner/handoff', 
   for (const artifact of ['preflight', 'proposal', 'design']) {
     await writeFile(path.join(parentDirectory, `${artifact}.md`), `# ${artifact}\n\nAndroid 组件内部重构。\n`);
   }
+  await writeReviewedPreflight(parentDirectory);
   await writeFile(path.join(parentDirectory, 'tasks.md'), '- [ ] 1.1 完成 medal/card\n');
   await writeFile(path.join(parentDirectory, 'comate.md'), `# comate
 

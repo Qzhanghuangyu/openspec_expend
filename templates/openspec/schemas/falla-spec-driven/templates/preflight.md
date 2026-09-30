@@ -1,4 +1,14 @@
+---
+falla-preflight: 1
+reviewed: false
+blockers: []
+---
+
 # Preflight
+
+> 顶部 YAML 是阻塞项的唯一准入台账。必须按 `.falla/skill-spec/[分析必读]preflight.md` 的
+> “阻塞项准入记录”填写；模板的 reviewed: false 不可直接放行。
+> blockers 中记录所有 Blocker；正文按编号描述问题，不重复维护决定状态。
 
 ## PRD 与范围
 
@@ -43,6 +53,7 @@
 - 建议确认项：
 - 可选方案：
 - 阻塞级别：Blocker / Major / Minor
+- 阻塞项编号（Blocker 必填，与顶部台账对应；其他级别不适用）：
 
 ## 结论
 

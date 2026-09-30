@@ -1,3 +1,4 @@
+import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -61,6 +62,7 @@ ${handoff}
 async function writeRecord(root, physical, record, tasks = '- [ ] 1.1 pending\n') {
   const directory = path.join(root, 'openspec', 'changes', physical);
   await mkdir(directory, { recursive: true });
+  await writeReviewedPreflight(directory);
   await writeFile(path.join(directory, 'comate.md'), record, 'utf8');
   await writeFile(path.join(directory, 'tasks.md'), tasks, 'utf8');
 }

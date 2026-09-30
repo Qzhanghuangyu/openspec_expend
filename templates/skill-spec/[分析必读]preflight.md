@@ -56,8 +56,44 @@
 8. 涉及授权设计节点时，必须读取 `references/design-tools.md`，按其中取证交接规则创建或更新父
    `design-source.md`；本阶段仅填必要的分析事实和缺口，不冒充完整设计。
 9. 写入官方 `resolvedOutputPath`，运行 status 确认 preflight 为 `done`。
+   按下节维护准入台账；官方 done 只说明产物已生成，不证明 Blocker 已解决。
    用户答复阻塞问题后只更新当前 `preflight.md` 的结论与取证文件，复核 status 后结束本阶段；
    不以 Blocker 已解决或 proposal 就绪为由自动运行 Propose/Apply。
+
+## 阻塞项准入记录
+
+父 `preflight.md` 顶部使用 YAML frontmatter，作为当前 change 阻塞项状态的唯一事实源：
+
+```yaml
+---
+falla-preflight: 1
+reviewed: true
+blockers:
+  - id: B1
+    scope: 默认选中行为，影响规格及任务完成条件
+    status: pending
+    decision: ''
+    evidence: ''
+---
+```
+
+- `reviewed` 为是否已经完整核对本次需求及阻塞项清单；核对完成才设 true，不代表用户已批准所有决定。
+  未核对保持 false；只有核对后确实没有 Blocker 才可保留 `blockers: []`，不得为通过校验而清空台账。
+- 每个 Blocker 使用唯一编号 B1、B2 等（B 后为 1–6 位正整数）、非空 `scope` 和明确 `status`。
+  正文以编号关联问题、影响和建议确认项；Major/Minor 仍记正文，不强制全部提前解决。
+  准入读取上限为文件 256 KiB、台账 256 项；超限、重复编号、无效 YAML 或别名均不放行，不截断后继续。
+- `pending`：待确认，阻断当前 change 的 Propose 准入及 Apply 认领；不依赖该问题的只读调查可以继续。
+- `confirmed`：已有明确决定；`decision` 写精简决定，`evidence` 写可追溯的用户答复或已核实的权威需求依据。
+- `excluded`：用户明确排除本次范围；`decision` 说明排除范围，`evidence` 记录明确依据。
+  不删除已排除的问题；下游规格和任务不得继续包含该范围。延期仍在本次范围内的问题不能标为 excluded。
+- confirmed/excluded 的 decision/evidence 都必须非空；不得把猜测、“继续”、调用 Skill、沉默或评论已解决当成确认。
+  不保存完整对话、原始链接、个人信息或凭据。程序只校验格式、状态与依据存在，Agent 必须核实依据内容真实有效。
+- 不从自然语言里的“无问题”或 Blocker 数量推断准入；缺少字段的旧 change 显示未核验。
+  显式核对原文与既有决定后再补台账，不自动改写旧结论；已归档记录不原地补写，需要恢复工作时新建 change。
+- 只读检查命令：`falla-openspec coordination preflight "<parent>" --json`。
+  `preflight-unverified` 表示需核对补齐；`preflight-invalid` 表示结构无效；`preflight-blocker-unresolved`
+  表示仍有待确认项；`preflight-decision-evidence-required` 表示决定或依据缺失；`preflight-unreadable` 表示安全读取失败。
+  任何一种错误都不得按准入通过处理；仅反馈问题编号和恢复条件，不回显敏感正文。
 
 ## 何时暂停
 

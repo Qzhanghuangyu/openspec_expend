@@ -6,6 +6,7 @@ import { parseComate, parseTaskProgress, validateComateRecord } from './comate.j
 import { assertChangeSegment } from './naming.js';
 import { resolveChange } from './resolver.js';
 import { loadCoordination } from './store.js';
+import { validatePreflight } from './preflight.js';
 
 const FALLA_SCHEMAS = new Set(['falla-spec-driven', 'falla-task-driven']);
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -81,6 +82,23 @@ function comateReached(status) {
   return status.isPlanningComplete === true || artifact?.status === 'done';
 }
 
+/** 父 change 的 preflight 是唯一准入台账；逻辑/物理子引用均归一到父记录。只读，不迁移旧文件。 */
+export async function checkPreflight(root, reference) {
+  const document = await loadCoordination(root);
+  const mapping = document.mappings[reference]
+    ?? Object.values(document.mappings).find(entry => entry.physical === reference);
+  const parent = mapping?.parent ?? reference;
+  const resolved = await resolveChange(root, parent);
+  let issues;
+  try {
+    issues = validatePreflight(await readChangeRecordFile(root, resolved.path, 'preflight.md', true));
+  } catch {
+    issues = [{ kind: 'preflight-unreadable' }];
+  }
+  const errors = issues.map(entry => ({ ...entry, change: resolved.physical }));
+  return { ok: errors.length === 0, parent: resolved.physical, errors };
+}
+
 async function readRecord(root, reference, officialStatus, errors) {
   let resolved;
   try {
@@ -144,6 +162,7 @@ export async function validateChangeRecords(root, statuses) {
   const errors = [];
   const records = new Map();
   const officialByReference = new Map();
+  const gateParents = new Set();
   for (const status of statuses) {
     if (!FALLA_SCHEMAS.has(status?.schemaName)) continue;
     const physical = assertChangeSegment(status.changeName, 'status.changeName');
@@ -161,7 +180,14 @@ export async function validateChangeRecords(root, statuses) {
 
     const record = await readRecord(root, reference, status, errors);
     if (record) records.set(reference, record);
+    // 分析阶段允许记录未决事项；生成下游产物或协作记录后才把未通过准入视为工作流错误。
+    if (record || status.isPlanningComplete || status.artifacts?.some(artifact =>
+      artifact.id !== 'preflight' && artifact.status === 'done')) {
+      gateParents.add(mapped ? document.mappings[mapped].parent : physical);
+    }
   }
+
+  for (const parent of gateParents) errors.push(...(await checkPreflight(root, parent)).errors);
 
   for (const [parent, children] of childrenByParent) {
     for (const logical of children.sort()) {

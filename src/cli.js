@@ -19,6 +19,7 @@ export function usage() {
     '  coordination register <change>    注册逻辑父子 change 映射',
     '  coordination unregister <change>  清理未落盘的孤儿 change 映射',
     '  coordination resolve <change>     解析逻辑 change 引用',
+    '  coordination preflight <change>   只读检查父需求阻塞项与确认依据',
     '  coordination validate --change X  校验协作依赖图',
     '  coordination claim X --owner ID   排他认领现有 Android change',
     '  ui-knowledge validate             校验项目 Android UI 知识',

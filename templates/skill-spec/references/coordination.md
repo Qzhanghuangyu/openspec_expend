@@ -25,6 +25,11 @@
   depends-on 和 handoff。
 - 只保存正向 `depends-on`，反向 blocks 由协调器推导。
 - single 和 parallel 都必须通过 coordination claim 认领；不得手工覆盖其他 owner。
+- 认领在项目锁内检查父 preflight 准入；Blocker 状态与确认依据契约见 `[分析必读]preflight.md`
+  的“阻塞项准入记录”，依赖该检查时必须加载该权威章节。子任务共用父记录，物理名不能绕过。
+  未核验的旧记录和缺依据的决定都阻断首次认领及同 owner 重试，失败不写 owner/status。
+  定向 validate 与 doctor 的下游规划/实施检查也使用此门禁；Preflight 分析期可正常保存待确认问题。
+  可达依赖的父记录同样受检，包括归档依赖；旧归档缺少证据时不原地改写，应通过新 change 重新核实所需契约。
 - 认领前在项目锁内校验当前父 DAG 及可达依赖，包含被依赖父 change 的子记录；逻辑名和物理名
   归一后检测环，并计入父完成对子完成的隐含依赖。首次认领和同 owner 重试采用同一门禁，
   兄弟节点记录失效也须先修复，失败不修改认领字段。

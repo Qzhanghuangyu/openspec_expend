@@ -65,6 +65,7 @@ falla-openspec ui-knowledge index clear --json
 # 阶段开始或源码变化后，准备已启用的图谱；失败可有界降级
 falla-openspec codegraph prepare --json
 # single 父 change 或 parallel 逻辑子 change 均使用排他认领
+falla-openspec coordination preflight medal --json
 falla-openspec coordination claim medal --owner developer-a --json
 ```
 
@@ -112,6 +113,11 @@ falla-openspec coordination unregister "medal/achievement-detail" --json
 `comate.md` 为唯一事实来源；反向 blocks 由正向依赖推导。`coordination validate` 检查缺失节点、环、
 前置状态、tasks 完成度、本地任务编号与依赖图、结构化 handoff 和 OpenSpec artifact 状态。
 任务格式与已有 change 的兼容规则见 Propose“任务拆解”；doctor 与 claim 使用同一任务校验结果。
+
+Propose 前执行 `coordination preflight <change> --json`，Apply 认领时在锁内重新检查父 `preflight.md`
+的准入台账；未决 Blocker、未核验旧记录及缺少决定依据均不放行。字段与迁移规则见
+[Preflight](templates/skill-spec/[分析必读]preflight.md)“阻塞项准入记录”。此检查不替代官方 artifact 状态，
+也不能证明填写的确认依据真实有效；原有确认需由 Agent 核实，不能自动填成“已确认”。
 
 ## OpenSpec 1.12 兼容
 

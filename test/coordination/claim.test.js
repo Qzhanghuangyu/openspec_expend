@@ -1,3 +1,4 @@
+import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -59,6 +60,7 @@ ${mode ? `- 执行模式 (execution-mode): ${mode}\n` : ''}- 负责人 (owner): 
 async function writeRecord(root, physical, record = comate()) {
   const directory = path.join(root, 'openspec', 'changes', physical);
   await mkdir(directory, { recursive: true });
+  await writeReviewedPreflight(directory);
   await writeFile(path.join(directory, 'comate.md'), record, 'utf8');
   await writeFile(path.join(directory, 'tasks.md'), '- [ ] 1.1 pending\n', 'utf8');
   return directory;

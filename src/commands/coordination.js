@@ -3,6 +3,7 @@ import path from 'node:path';
 import { FallaError } from '../errors.js';
 import { claimChange } from '../coordination/claim.js';
 import { validateCoordination } from '../coordination/dag.js';
+import { checkPreflight } from '../coordination/health.js';
 import {
   registerMapping,
   resolveChange,
@@ -72,6 +73,16 @@ function writeResult(io, result, json, summary) {
 export async function coordinationCommand(argv, io) {
   const { command, options } = parseArguments(argv);
   const root = await resolveRoot(options, io);
+
+  if (command === 'preflight') {
+    rejectOwner(command, options);
+    const reference = requireSingleReference(command, options);
+    const result = await checkPreflight(root, reference);
+    writeResult(io, result, options.json, result.ok
+      ? `Preflight 准入通过：${result.parent}`
+      : `Preflight 准入未通过：${result.parent}；请核对 preflight.md 的阻塞项和确认依据`);
+    return result;
+  }
 
   if (command === 'register') {
     rejectOwner(command, options);

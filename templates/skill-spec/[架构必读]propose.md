@@ -12,7 +12,9 @@
 
 ## 必须执行
 
-1. 用官方 status 确认 preflight 已完成，按 instructions 的依赖顺序逐个生成 artifact。
+1. 用官方 status 确认 preflight 已完成；必读 `[分析必读]preflight.md` 的“阻塞项准入记录”，
+   逐项核对当前范围的 Blocker 状态及确认依据，并执行 `coordination preflight` 准入检查。
+   官方 done/ready 和用户调用 Propose 都不代表未决需求已获确认；检查通过后才按依赖顺序生成 artifact。
 2. 必读 `references/project-rules.md`，执行 Propose 项目规则审计门禁。
 3. 复用有效的 preflight 证据；不得重新执行一次完整 preflight。需要核对评论或正文版本时，
    按需读取父 change 的 `prd-source.md`；取证和结论分离规则见 `[分析必读]preflight.md`。
@@ -67,7 +69,8 @@
 
 ## 何时暂停
 
-- preflight 未完成，或页面结构、核心契约及 required 基线无法确定。
+- preflight 未完成、准入未通过、确认依据无法核实，或页面结构、核心契约及 required 基线无法确定。
+  返回 Preflight 核对并补齐当前记录，不以生成后续文件消除阻塞，不自行选择未确认的业务行为。
 - 项目规则审计或 coordination 的模式、依赖门禁未满足。
 
 ## 完成标准

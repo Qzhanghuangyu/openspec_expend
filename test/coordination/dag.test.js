@@ -1,3 +1,4 @@
+import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rmdir, symlink, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -11,6 +12,7 @@ async function createGraph(nodes) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'falla-coordination-dag-'));
   const changes = path.join(root, 'openspec', 'changes');
   await mkdir(path.join(changes, 'medal'), { recursive: true });
+  await writeReviewedPreflight(path.join(changes, 'medal'));
   await writeFile(path.join(changes, 'medal', 'comate.md'), `# comate
 
 - 执行模式 (execution-mode): parallel
@@ -69,6 +71,7 @@ test('父缺失、父记录缺失以及无映射的不存在父均不能通过',
   await unlink(record);
   assert.equal((await validateCoordination(root, { change: 'medal' })).ok, false);
   await unlink(path.join(path.dirname(record), 'tasks.md'));
+  await unlink(path.join(path.dirname(record), 'preflight.md'));
   await rmdir(path.dirname(record));
   assert.equal((await validateCoordination(root, { change: 'medal' })).ok, false);
   assert.equal((await validateCoordination(root, { change: 'not-there' })).ok, false);

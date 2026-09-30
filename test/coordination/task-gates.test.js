@@ -1,3 +1,4 @@
+import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -25,6 +26,7 @@ ${child ? '' : `- 执行模式 (execution-mode): ${mode}\n`}- 负责人 (owner):
 - 依赖 (depends-on): [${dependsOn.join(', ')}]
 - 交接 (handoff): 已检查
 `;
+    await writeReviewedPreflight(directory);
     await writeFile(path.join(directory, 'comate.md'), record);
     await writeFile(path.join(directory, 'tasks.md'), tasks);
     records.set(reference, path.join(directory, 'comate.md'));

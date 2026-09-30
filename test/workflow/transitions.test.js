@@ -1,3 +1,4 @@
+import { writeReviewedPreflight } from '../helpers/preflight.js';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -34,6 +35,7 @@ async function project(t) {
         await writeFile(path.join(directory, `${artifact}.md`), `# ${artifact}\n内部重构，无规格变化。\n`);
       }
     }
+    if (!child) await writeReviewedPreflight(directory);
     await set(reference, { mode: child ? null : 'single', ...options });
     const status = await official('status', '--change', physical);
     assert.equal(status.isPlanningComplete, true);

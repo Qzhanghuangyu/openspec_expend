@@ -151,6 +151,12 @@ export async function claimChange(rootInput, reference, options) {
     const validation = await validateCoordination(root, {
       change: logicalChild ? resolved.parent : resolved.physical, statusProvider,
     });
+    const preflightErrors = validation.errors.filter(error => error.kind.startsWith('preflight-'));
+    if (preflightErrors.length > 0) {
+      throw new FallaError(1, 'Preflight 准入未通过：请核对父 preflight.md 的阻塞项与确认依据', {
+        kind: 'preflight-admission-failed', errors: preflightErrors,
+      });
+    }
     if (!validation.ok) throw new FallaError(1, '协作验证未通过，不能认领');
     if (record.status === 'in-progress') return claimResult(resolved.logical, false, true);
     const updated = updateClaimFields(markdown, owner);
