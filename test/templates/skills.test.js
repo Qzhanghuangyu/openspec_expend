@@ -412,6 +412,36 @@ test('父子 tasks 使用章节.序号且前置只引用精确编号', async () 
   assert.match(childSchema, /任务和前置依赖.*章节\.序号/s);
 });
 
+// 文本契约回归只检查随包规则和字段，不能代替 Agent 的场景消费测试。
+test('Preflight 规则允许有范围依据且影响完成条件的必要边界缺口', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  assert.match(preflight, /本次需求、已核实的接口契约、明确的平台约束或当前实现路径/);
+  assert.match(preflight, /影响本次完成条件的必要边界/);
+  assert.match(preflight, /新增功能没有源码.*缺少产品决定.*待确认/s);
+  assert.doesNotMatch(preflight, /只核对方法主干|只有 PRD 明确要求或源码已证实的问题才记录/);
+});
+
+test('Preflight 必要边界规则保留有界分析且不替产品选择行为', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  assert.match(preflight, /不套通用清单、不无限枚举/);
+  assert.match(preflight, /不预设生命周期或 NPE 检查清单/);
+  assert.match(preflight, /范围依据、触发条件、缺少的决定、影响和待确认项/);
+  assert.match(preflight, /不自行选择默认值、重试、兜底、弹窗或降级方案/);
+  assert.match(preflight, /资源所有权、页面销毁后回调.*可核实.*工程约束/s);
+  assert.match(preflight, /不把.*取消业务请求.*当作工程惯例/s);
+  assert.match(preflight, /只读调查可以继续/);
+});
+
+test('Preflight 问题模板容纳必要边界并只记录缺口而非自选方案', async () => {
+  const template = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  assert.match(template, /检查维度：主干 \/ 兼容差额 \/ 必要边界/);
+  assert.match(template, /范围依据：/);
+  assert.match(template, /触发条件（必要边界填写）：/);
+  assert.match(template, /缺少的决定或冲突点：/);
+  assert.doesNotMatch(template, /可选方案：/);
+  assert.match(template, /阻塞项编号.*顶部台账/);
+});
+
 test('生命周期与资源释放只在代码完成后集中检查，必要缺口交人工', async () => {
   const preflight = await read('skill-spec/[分析必读]preflight.md');
   const quality = await read('skill-spec/references/android-quality.md');
