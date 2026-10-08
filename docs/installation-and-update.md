@@ -69,9 +69,8 @@ falla-openspec doctor "$TARGET_PROJECT" --json
 
 Figma 还有一条使用限制：工作流不会打开 PRD 正文里的设计链接。首次授权时，用户需在对话中提供带 node id、用于当前 change 的链接。
 Preflight 先把节点引用记入 `preflight.md`；Propose 归并到 `design.md`，后续窗口读记录即可，不必重贴链接。
-新节点或范围扩大时重新确认；默认只通过 Figma MCP 读取，不用浏览器或截图绕过权限。仅 MCP
-无法原生导出且另获授权时允许受限 REST 降级，规则见 `templates/skill-spec/references/design-tools.md`。
-`get_design_context` 使用 `excludeScreenshot=true`。
+新节点或范围扩大时重新确认。读设计默认通过 Figma MCP 提取结构（`get_design_context` 显式传 `excludeScreenshot=true`）；
+工程切图优先使用带 `FIGMA_ACCESS_TOKEN` 的官方 REST API 原生导出 3x PNG（`res/drawable-xxhdpi/`），保证 Alpha 透明通道与真实倍率，规则见 `templates/skill-spec/references/design-tools.md`。
 
 ## 出问题了
 
