@@ -57,12 +57,21 @@ test('规则目录包含五个入口文档和六个参考规则，忽略 macOS �
   assert.match(content, /openspec\/specs/);
 });
 
-test('Soul 保持精简并只定义全局原则与事实源', async () => {
+test('Soul 保持精简并只定义全局原则、编码原则与事实源', async () => {
   const soul = await read('skill-spec/[Must Read]soul.md');
-  assert.ok(soul.split('\n').length <= 80, 'Soul 不应重新膨胀为全量操作手册');
+  assert.ok(soul.split('\n').length <= 90, 'Soul 只保留精简编码原则，不应膨胀为全量操作手册');
   assert.match(soul, /当前阶段读什么/);
   assert.match(soul, /唯一事实源/);
   assert.match(soul, /五条原则/);
+  assert.match(soul, /## 5\. 编码原则/);
+  assert.match(soul, /## 6\. 全局底线/);
+  assert.match(soul, /实现前说明关键假设/);
+  assert.match(soul, /不同理解会影响行为或范围.*停止相关实施并提问.*不静默选择/);
+  assert.match(soul, /最小实现.*不为单次使用预建抽象、配置.*无关依赖.*投机性兜底/);
+  assert.match(soul, /只清理本次产生的无用代码.*无关重构、风格统一或死代码删除.*用户明确要求/s);
+  assert.match(soul, /修 bug.*复现与验证方式.*新增能力.*可测试完成条件.*多步骤任务.*简短计划/);
+  assert.match(soul, /编码后检查本次改动.*安全边界、泄露、泄漏、生命周期.*NPE.*依据、结论和未验证项/);
+  assert.match(soul, /完整功能.*收尾任务集中检查资源所有权.*普通 task 不重复套整页清单/);
   for (const file of expectedReferences) assert.match(soul, new RegExp(file.replace('.', '\\.')));
   assert.doesNotMatch(soul, /excludeScreenshot=true|KDoc\/JavaDoc|source-hashes/);
 });
