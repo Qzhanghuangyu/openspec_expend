@@ -28,6 +28,16 @@ function assertStructuredHandoff(comate) {
     '已修改文件', '已完成', '人工验证清单', '人工验证反馈', '验证证据',
     '安全与敏感信息结论', '下一步准确操作', '遗留风险与恢复条件',
   ]) assert.match(comate, new RegExp(field));
+  const handoff = comate.slice(comate.indexOf('- 交接 (handoff):'));
+  const fields = [...handoff.matchAll(/^( *)- ([^：\n]+)：/gm)]
+    .map(([, indent, label]) => [indent.length, label.replace(/（.*）$/, '')]);
+  assert.deepEqual(fields, [
+    [2, '当前任务'], [2, '已确认事实与关键决策'], [2, '设计基线符合性'], [2, '项目规则符合性'],
+    [2, '注释审计'], [4, '已检查文件/符号'], [4, '已补注释的符号与说明'], [4, '参数与生命周期说明'], [4, '豁免项及原因'],
+    [2, '已修改文件'], [2, '已完成'], [2, '人工验证清单'], [2, '人工验证反馈'], [4, 'UI 视觉'], [2, '验证证据'],
+    [4, '定向测试 / 受影响模块编译'], [4, '生命周期与资源释放收尾检查'], [4, '命令'], [4, 'variant / 设备'], [4, '结果'],
+    [2, '安全与敏感信息结论'], [2, '下一步准确操作'], [2, '遗留风险与恢复条件'],
+  ], '精简提示不能改变 handoff 字段或缩进层级');
 }
 
 test('父模板把模式放在 comate，tasks 只保留实际任务', async () => {

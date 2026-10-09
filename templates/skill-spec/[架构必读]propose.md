@@ -33,7 +33,8 @@
    绑定；规划及实施均以该文档的复用决策为准。
 7. 规划 Android 代码、资源或配置时，必须读取 `references/android-quality.md`，安排其要求的定向验证、
    集成、注释审计、代码收尾与必要人工任务；不在此复制检查清单。
-8. 必读 `references/coordination.md`，确定执行/验证模式、初始化 comate，并按其规则建立并行映射。
+8. 必读 `references/coordination.md`，从“按场景读取”加载通用及当前模式的章节，确定执行/验证模式、
+   初始化 comate；启用 parallel 时再按其规则建立并行映射。
 9. 无规格级行为变化的纯重构、工具或文档变更设置 `skip_specs: true`。
 
 ## 任务拆解

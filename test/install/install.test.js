@@ -94,7 +94,7 @@ test('初装写入两套 Schema、规则、双工具 Skill、Hook 和安全 mani
   assert.doesNotMatch(installedManual, /androidCopy|\$HOME\/android\/|\/Users\/|\/home\//);
   assert.match(
     await readFile(path.join(root, '.falla', 'skill-spec', '[分析必读]preflight.md'), 'utf8'),
-    /Stateful Interactions/
+    /## 需求行为拆分/
   );
   assert.match(
     await readFile(path.join(root, '.falla', 'skill-spec', 'references', 'design-tools.md'), 'utf8'),

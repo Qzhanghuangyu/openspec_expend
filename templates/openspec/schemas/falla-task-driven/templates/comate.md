@@ -1,6 +1,8 @@
 # comate
 
-> 填写前必须读取 `.falla/skill-spec/references/coordination.md` 的记录契约与验证模式。
+> 填写前必须读取 `.falla/skill-spec/references/coordination.md`，按“按场景读取”加载适用章节。
+> handoff 按“handoff 增量更新”填写：字段保留，内容短写；事实、设计与规则引用父 artifact 的章节，只补当前 task 的差异。
+> 保留本子 change 前序任务有效完成及验证证据，不复制父/兄弟 handoff；未执行写待验证，不适用写原因。
 
 - 格式版本 (format-version): 2
 - 实施基线 (baseline): unrecorded
@@ -28,7 +30,7 @@
     - UI 视觉（可选备注；验收只需任务编号与结果，不要求截图或过程材料）：
   - 验证证据：
     - 定向测试 / 受影响模块编译（不适用写原因）：
-    - 生命周期与资源释放收尾检查（有代码改动时填写；无须主动释放写不适用）：
+    - 生命周期与资源释放收尾检查（按规划收尾 task 填写；其他 task 引用待验证任务或有效结果）：
     - 命令：
     - variant / 设备：
     - 结果：
