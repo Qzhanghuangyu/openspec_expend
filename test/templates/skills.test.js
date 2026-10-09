@@ -36,14 +36,15 @@ test('四个 Skill 具备合法元数据且 OpenAI 元数据一致', async () =>
   }
 });
 
-test('规则目录包含五个入口文档、一个强制门禁和五个按需参考', async () => {
-  const entries = await readdir(path.join(root, 'skill-spec'), { withFileTypes: true });
+test('规则目录包含五个入口文档和六个参考规则，忽略 macOS 目录元数据', async () => {
+  const entries = (await readdir(path.join(root, 'skill-spec'), { withFileTypes: true }))
+    .filter(entry => entry.name !== '.DS_Store');
   assert.deepEqual(
     entries.filter(entry => entry.isFile()).map(entry => entry.name).sort(),
     ['[Must Read]soul.md', '[任务选读]archive.md', '[分析必读]preflight.md', '[架构必读]propose.md', '[模块选读]apply.md'].sort()
   );
   assert.deepEqual(
-    (await readdir(path.join(root, 'skill-spec', 'references'))).sort(),
+    (await readdir(path.join(root, 'skill-spec', 'references'))).filter(name => name !== '.DS_Store').sort(),
     expectedReferences
   );
   const contents = await Promise.all([
@@ -413,6 +414,70 @@ test('父子 tasks 使用章节.序号且前置只引用精确编号', async () 
 });
 
 // 文本契约回归只检查随包规则和字段，不能代替 Agent 的场景消费测试。
+test('Preflight 先拆独立行为再调查实现，模板保留依据和核验缺口', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const template = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  assert.match(preflight, /5\. 先按页面、区域或业务对象.*独立行为.*6\. 只调查需求范围.*7\. .*反查完整 PRD/s);
+  assert.match(preflight, /触发条件、可观察结果或实现状态\s+不同的行为分开记录/);
+  assert.match(preflight, /不按代码行、XML 属性或\s+装饰图层拆项/);
+  assert.match(preflight, /简单静态需求允许只有一项/);
+  assert.match(preflight, /关键分支或契约未核实.*无法判断.*核验缺口/s);
+  assert.match(preflight, /不得仅因搜索不到就断言不存在/);
+  assert.match(template, /编号.*页面\/对象.*独立行为.*触发.*可观察结果.*需求依据.*状态.*证据或核验缺口/);
+  assert.doesNotMatch(template, /\| 需求项 \| 状态/);
+  assert.match(template, /## 覆盖核对/);
+  assert.match(template, /当前 Android 明确行为.*对应 R 编号/);
+  assert.match(template, /尚未定义的行为缺口.*问题编号.*不得当作已确认规格/);
+});
+
+test('Preflight 按事实触发覆盖维度，问题按单一决定关联且不增加台账', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const template = await read('openspec/schemas/falla-spec-driven/templates/preflight.md');
+  for (const dimension of ['展示与入口', '状态与交互', '数据与接口', '边界与异常', '兼容与生命周期']) {
+    assert.ok(preflight.includes(`| ${dimension} |`), dimension);
+  }
+  assert.match(preflight, /事件、前后状态、状态来源及适用的持久化要求/);
+  assert.match(preflight, /不要求每个功能都写五段/);
+  assert.match(preflight, /不涉及权限就不加权限问题，没有提交就不加重复提交问题/);
+  assert.match(preflight, /一个问题对应一个可独立答复的决定.*多个行为共享同一决定.*关联多个 R 编号/s);
+  assert.match(preflight, /Blocker.*现有 `B1`.*Major\/Minor.*`Q1`.*不建立第二份决定状态台账/s);
+  assert.match(preflight, /不新增独立台账文件或需求覆盖解析器/);
+  assert.match(preflight, /只保存必要的脱敏结论.*项目内证据.*不复制 PRD 原文、业务数据或凭据/s);
+  assert.match(template, /关联行为：/);
+  assert.deepEqual(parseFrontmatter(template, 'preflight'), {
+    'falla-preflight': 1, reviewed: false, blockers: [],
+  });
+});
+
+test('Propose 逐行为承接并反查去向，父子 task 覆盖引用不改变编号和依赖', async () => {
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const parent = await read('openspec/schemas/falla-spec-driven/templates/tasks.md');
+  const child = await read('openspec/schemas/falla-task-driven/templates/tasks.md');
+  assert.match(propose, /proposal.*业务能力.*不把每个 R 编号变成一个 capability/);
+  assert.match(propose, /specs.*已确认行为.*可测试场景.*skip_specs: true.*design\/tasks.*不.*创建 specs/s);
+  assert.match(propose, /已实现无需改动、由具体任务覆盖、仍待确认或已明确排除.*不得无声遗漏/);
+  assert.match(propose, /一个任务可以覆盖多个行为，一个行为也可由多个任务交付/);
+  assert.match(propose, /缺少产品决定回 Preflight，已确认行为的方案或任务缺口留在 Propose/);
+  assert.match(propose, /语义覆盖由 Agent 核对、人工审阅/);
+  assert.match(parent, /覆盖：R2、R3/);
+  assert.match(child, /覆盖：父 preflight 的 R2、R3/);
+  for (const template of [parent, child]) {
+    assert.match(template, /R 编号.*不能替代任务编号或依赖/);
+    assert.match(template, /<!-- falla-tasks-format: 1 -->/);
+    assert.match(template, /- \[ \] 2\.1 .*依赖：1\.1/);
+  }
+});
+
+test('行为覆盖仍由 Agent 与人工核对，旧进度不因正文编号或排版自动失效', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  assert.match(preflight, /已有记录不因缺少 R 编号而自动失效/);
+  assert.match(preflight, /不自动重写旧 preflight 或重编已开始的 tasks/);
+  assert.match(preflight, /程序只检查现有格式和准入.*不证明自然语言分析质量或行为覆盖完整性/s);
+  assert.match(propose, /不靠改排版刷新基线/);
+  assert.match(propose, /Apply 仍每轮只推进一个 task.*等待用户回复“继续”/);
+});
+
 test('Preflight 规则允许有范围依据且影响完成条件的必要边界缺口', async () => {
   const preflight = await read('skill-spec/[分析必读]preflight.md');
   assert.match(preflight, /本次需求、已核实的接口契约、明确的平台约束或当前实现路径/);

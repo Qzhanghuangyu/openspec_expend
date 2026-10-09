@@ -4,11 +4,11 @@ description: Falla 父需求工作流：preflight、规格、设计、任务与�
 artifacts:
   - id: preflight
     generates: preflight.md
-    description: PRD 实现状态、主干可执行性与兼容性分析
+    description: PRD 独立行为差分、实现证据与待确认决定
     template: preflight.md
     instruction: |
       执行前必须读取 .falla/skill-spec/[分析必读]preflight.md 及其触发的参考规则。
-      记录实现状态、源码证据、问题类型/级别、阻断范围和待确认项，不包含方案或代码修改。
+      记录独立行为差分、实现证据或核验缺口、问题类型/级别、阻断范围与覆盖结论，不包含方案或代码修改。
       按阶段规则填写顶部 falla-preflight/ reviewed/ blockers 准入台账；产物存在不代表阻塞项已解决。
       在线 PRD 的 prd-source.md、授权设计的 design-source.md 使用同目录模板，按阶段规则生成；
       它们是父 change 的取证工作文件，不新增 artifact DAG 节点。

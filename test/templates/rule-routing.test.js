@@ -36,6 +36,36 @@ test('Schema 保留 DAG 和产物契约，通过阶段规则引入操作政策',
   }
 });
 
+test('行为拆分政策由 Preflight 和 Propose 权威入口承担，Schema DAG 与格式版本不变', async () => {
+  const preflight = await read('skill-spec/[分析必读]preflight.md');
+  const propose = await read('skill-spec/[架构必读]propose.md');
+  const parent = YAML.parse(await read('openspec/schemas/falla-spec-driven/schema.yaml'));
+  const child = YAML.parse(await read('openspec/schemas/falla-task-driven/schema.yaml'));
+  assert.match(preflight, /## 需求行为拆分/);
+  assert.match(propose, /## 需求行为覆盖核对/);
+  assert.equal(parent.version, 1);
+  assert.equal(child.version, 1);
+  assert.deepEqual(parent.artifacts.map(({ id, requires }) => [id, requires]), [
+    ['preflight', []], ['proposal', ['preflight']], ['specs', ['proposal']],
+    ['design', ['proposal']], ['tasks', ['specs', 'design']], ['comate', ['tasks']],
+  ]);
+  assert.deepEqual(child.artifacts.map(({ id, requires }) => [id, requires]), [
+    ['tasks', []], ['comate', ['tasks']],
+  ]);
+  assert.match(parent.artifacts[0].description, /独立行为差分/);
+  for (const skill of ['falla-preflight', 'falla-propose']) {
+    assert.doesNotMatch(await read(`skills/${skill}/SKILL.md`), /一条需求应能|一个问题对应|展示与入口|覆盖：R\d/);
+  }
+  for (const schema of [parent, child]) {
+    for (const artifact of schema.artifacts) {
+      assert.doesNotMatch(artifact.instruction, /一条需求应能|一个问题对应|不涉及权限|关键分支或契约未核实/);
+    }
+  }
+  for (const name of ['falla-spec-driven', 'falla-task-driven']) {
+    assert.match(await read(`openspec/schemas/${name}/templates/comate.md`), /format-version\): 2/);
+  }
+});
+
 test('所有安装规则引用可解析，阶段路由显式要求加载对应权威细则', async () => {
   const soul = await read('skill-spec/[Must Read]soul.md');
   assert.match(soul, /规则权威位置/);

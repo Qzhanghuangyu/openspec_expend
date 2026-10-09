@@ -18,6 +18,7 @@
 2. 必读 `references/project-rules.md`，执行 Propose 项目规则审计门禁。
 3. 复用有效的 preflight 证据；不得重新执行一次完整 preflight。需要核对评论或正文版本时，
    按需读取父 change 的 `prd-source.md`；取证和结论分离规则见 `[分析必读]preflight.md`。
+   按“需求行为覆盖核对”承接差分条目；缺少产品决定回 Preflight，已确认行为的方案或任务缺口留在本阶段。
 4. 依赖设计事实、Figma 或工程资源时，必须读取 `references/design-tools.md`，按其规则复用
    父 `design-source.md` 与 design，处理缺口、迁移和授权。不要在阶段入口重新定义取证政策。
 5. 明确各 artifact 职责；字段与格式由官方 instructions 返回的 Schema/模板定义：
@@ -60,6 +61,22 @@
   但不在 Propose 自动认领；父 owner/status 从默认模板保留待认领。子 change 命名、创建、
   依赖及后续父协调者认领遵循 coordination 的“Parallel 父协调职责与交接”。
 
+## 需求行为覆盖核对
+
+- proposal 仍按业务能力组织，不把每个 R 编号变成一个 capability。
+- specs 引用 preflight 的已确认行为并形成可测试场景；合法 `skip_specs: true` 时说明行为在 design/tasks 中的承接，
+  不为填写覆盖引用而创建 specs。尚未定义的行为缺口不能补成已确认规格。
+- design/tasks 用简短的“覆盖：R2、R3”等正文引用表达责任；子 tasks 引用父 preflight 的行为编号，
+  parallel 父通过具体里程碑和子 change 引用落实责任，不复制子任务清单。
+- 任务生成后反查每项行为的去向：已实现无需改动、由具体任务覆盖、仍待确认或已明确排除；不得无声遗漏。
+  需要改动的行为必须有负责的 task/子 change 及完成条件；已排除的行为不继续写入规格或任务。
+- 需求拆分与开发任务拆分分别处理；一个任务可以覆盖多个行为，一个行为也可由多个任务交付，
+  不强制一行为一任务，也不按控件数量增加任务。任务编号和依赖仍遵循“任务拆解”。
+- 只定向核对缺口，不重复分析完整 PRD。缺少产品决定回 Preflight，已确认行为的方案或任务缺口留在 Propose；
+  已开始的 tasks 不因新增覆盖引用批量改编号，不靠改排版刷新基线，旧进度按“重规划与旧进度”处理。
+- 覆盖引用只用于正文追踪，不新增台账、解析器或阶段权限；语义覆盖由 Agent 核对、人工审阅，
+  OpenSpec 和 Falla 的格式与准入校验不证明需求行为覆盖完整性。Apply 仍每轮只推进一个 task 并等待用户回复“继续”。
+
 ## UI 结构覆盖核对（涉及设计页面时）
 
 对当前范围的已授权页面/状态，按有功能或视觉上显著、影响验收的主要区域核对其父层和设计证据；
@@ -85,6 +102,7 @@
 
 - 父 artifacts 由官方 status 判定为 done 或合法 skipped，已创建子 change 的规划也完成。
 - tasks 的范围、依赖和完成条件明确；按 coordination 初始化/显式复核基线，`coordination validate` 通过。
+- 需求行为覆盖核对已完成，每项差分条目有明确去向，需要改动的已确认行为有负责的任务和可测试完成条件。
 - 适用 UI 的结构覆盖核对已完成；OpenSpec 的 `planningComplete` 不证明设计事实到 spec/task 的语义覆盖。
 - 没有修改业务代码。
 - 完成规划后停止并等待用户审阅或修改 design/tasks；不得自动进入 Apply。
