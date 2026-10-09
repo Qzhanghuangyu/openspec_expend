@@ -310,3 +310,47 @@ test('v2 comate 将结构化完成证据下沉为机器门禁', () => {
     true
   );
 });
+
+test('父子模板可用增量摘要与引用完成，必需证据、任务和人工门禁仍拒绝缺项', async () => {
+  const evidence = {
+    '当前任务': '2.1 文档收尾',
+    '已确认事实与关键决策': '见 design.md「范围」，本次无变化',
+    '设计基线符合性': '见 design.md「验证」，本次仅文档调整',
+    '项目规则符合性': '见 design.md「项目规则」，无新增例外',
+    '注释审计': '2.1 仅文档改动，无新增或实质修改代码符号',
+    '已修改文件': 'guide.md',
+    '已完成': '1.1 保留已验证摘要；2.1 指引与当前字段一致',
+    '人工验证清单': '不适用，当前 tasks 无人工项',
+    '验证证据': '1.1 原检查结果仍适用；2.1 合成文本对照完成，无构建影响',
+    '安全与敏感信息结论': '本次仅合成文档，无敏感正文，无运行时代码改动',
+    '下一步准确操作': '全部任务完成，等待用户决定下一阶段',
+    '遗留风险与恢复条件': '未做运行验证；新增代码或输入变化时重新规划与复核',
+  };
+  const required = ['已完成', '注释审计', '验证证据', '安全与敏感信息结论', '遗留风险与恢复条件'];
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const template = await readFile(`templates/openspec/schemas/${schema}/templates/comate.md`, 'utf8');
+    let filled = template.replace('owner): unassigned', 'owner): synthetic-owner')
+      .replace('status): todo', 'status): done').replace('human-review): pending', 'human-review): not-required');
+    for (const [field, value] of Object.entries(evidence)) filled = filled.replace(`  - ${field}：`, `  - ${field}：${value}`);
+    const record = parseComate(filled);
+    const context = { pendingTasks: 0, humanTasks: 0, taskStates: [
+      { id: '1.1', done: true, human: false }, { id: '2.1', done: true, human: false },
+    ] };
+    assert.deepEqual(validateComateRecord(record, context), [], schema);
+    for (const field of required) {
+      const missing = filled.replace(`  - ${field}：${evidence[field]}`, `  - ${field}：`);
+      const issue = validateComateRecord(parseComate(missing), context)
+        .find(({ kind }) => kind === 'done-handoff-incomplete');
+      assert.deepEqual(issue?.fields, [field], `${schema}: ${field} 不可凭空字段放行`);
+    }
+    assert.ok(validateComateRecord(record, { ...context, pendingTasks: 1 })
+      .some(({ kind }) => kind === 'tasks-incomplete'));
+    const humanContext = { ...context, humanTasks: 1, taskStates: [
+      { id: '1.1', done: true, human: true }, { id: '2.1', done: true, human: false },
+    ] };
+    assert.ok(validateComateRecord({ ...record, humanReview: 'pending' }, humanContext)
+      .some(({ kind }) => kind === 'human-review-required'));
+    const pendingResult = { ...record, humanReview: 'passed', humanTaskResults: [['1.1', 'pending']] };
+    assert.ok(validateComateRecord(pendingResult, humanContext).length > 0);
+  }
+});

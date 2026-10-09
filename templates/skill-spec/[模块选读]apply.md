@@ -15,7 +15,7 @@
 
 ## 必须执行
 
-1. 必读 `references/coordination.md`，按“执行模式”“协作状态”确定实施目标并认领。
+1. 必读 `references/coordination.md`，从“按场景读取”加载通用及当前模式的章节，确定实施目标并认领。
    先执行 `coordination baseline` 核对当前与已记录版本；官方 `blocked` 停止，`all_done` 也须基线及完成证据复核，
    `ready` 且基线有效才认领；parallel 父使用显式 `claim --coordinator`，子实施须父协调者已就位。
    父的安全暂停按 coordination 执行，不以旧基线失效阻止暂停。基线变化/旧证据未核验按复核回退协议处理，不自动刷新或清空任务。

@@ -31,6 +31,11 @@ flowchart LR
 图仅显示阶段导航，箭头不表示自动执行。阶段发起权限见 [Soul](templates/skill-spec/[Must%20Read]soul.md)，
 回退顺序见[协作规则](templates/skill-spec/references/coordination.md)。
 
+日常 single：Preflight 核对独立行为，Propose 确认规格、任务和验证安排，用户再手动发起 Apply。
+每轮验证一个 task、更新当前 tasks/comate 并暂停，同一会话回复“继续”恢复下一轮。
+规则按[协作规则的场景导航](templates/skill-spec/references/coordination.md#按场景读取)读取，交接按
+[handoff 增量更新](templates/skill-spec/references/coordination.md#handoff-增量更新)填写；跨 change 依赖、旧记录或基线变化时追加对应章节。
+
 ## 初始化与更新
 
 第一次安装：初始化项目的 OpenSpec，再运行 `falla-openspec install`。
@@ -39,6 +44,7 @@ flowchart LR
 
 安装手册的首次安装示例带了 Figma、CodeGraph、Lark 和 WebP 工具；用不到就删掉对应的 `--with-*` 参数。受管文件有冲突时，安装器会停止，不会用 `--force` 覆盖你的修改。
 UI 知识库的具体用法见 [`docs/ui-component-knowledge-base.md`](docs/ui-component-knowledge-base.md) 或目标项目的 `.falla/ui-knowledge/README.md`。
+历史方案、审计和交接线索见[文档索引](docs/README.md)，按记录日期查阅，现行规则仍以安装版本为准。
 
 设计授权、跨阶段复用、`design-source.md` 取证和资源取得遵循
 [设计源规则](templates/skill-spec/references/design-tools.md)；UI 验证与生命周期要求见

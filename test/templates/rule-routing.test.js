@@ -86,6 +86,29 @@ test('所有安装规则引用可解析，阶段路由显式要求加载对应�
   }
 });
 
+test('协作场景导航指向同一权威章节，single 仍加载依赖、旧记录和基线规则', async () => {
+  const coordination = await read('skill-spec/references/coordination.md');
+  const anchors = new Set([...coordination.matchAll(/^#{2,3} (.+)$/gm)]
+    .map(([, heading]) => heading.toLowerCase().replaceAll(' ', '-')));
+  const links = [...coordination.matchAll(/\]\(#([^)]*)\)/g)];
+  assert.ok(links.length > 10, '适用章节应有可跳转导航');
+  for (const [, anchor] of links) assert.ok(anchors.has(anchor), `未知协作章节 ${anchor}`);
+  assert.match(coordination, /日常 single，无子映射、无跨 change 依赖/);
+  assert.match(coordination, /所有模式均检查，不能因为 single 而跳过/);
+  assert.match(coordination, /single 同样适用；不刷新 hash 追认旧进度/);
+  assert.match(coordination, /不能仅凭新模板默认 single 忽略已有子映射/);
+  assert.match(coordination, /不新增 profile 或配置开关/);
+  for (const phase of ['[架构必读]propose.md', '[模块选读]apply.md']) {
+    assert.match(await read(`skill-spec/${phase}`), /必读 `references\/coordination.md`.*从“按场景读取”加载/s);
+  }
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const template = await read(`openspec/schemas/${schema}/templates/comate.md`);
+    assert.match(template, /coordination.md.*按场景读取/);
+    assert.match(template, /按“handoff 增量更新”填写/);
+    assert.doesNotMatch(template, /affected.*preserved|每个 change 保持一个 handoff/);
+  }
+});
+
 test('Skill、Schema 和模板的权威路径全部指向随包分发的规则文件', async () => {
   async function walk(directory) {
     const files = [];

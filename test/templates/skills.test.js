@@ -186,6 +186,24 @@ test('依赖只保存 depends-on，blocks 由协调器推导', async () => {
   assert.match(coordination, /反向 blocks 由协调器推导/);
 });
 
+test('增量 handoff 保留完成证据，审计当前符号并按规划节点收尾', async () => {
+  const coordination = await read('skill-spec/references/coordination.md');
+  assert.match(coordination, /每个 change 保持一个 handoff.*不新增逐轮日志文件/s);
+  assert.match(coordination, /已完成任务的有效证据保留.*不能切换到下一 task 就删掉旧证据/s);
+  assert.match(coordination, /引用原有 artifact 的章节或 Rule ID.*不复制全文/s);
+  assert.match(coordination, /引用内容变化或不可访问时重新核对/);
+  assert.match(coordination, /注释审计只覆盖本 task 新增或实质修改的符号.*先前未变化的文件不重复审计/s);
+  assert.match(coordination, /收尾尚未执行时注明对应任务和待验证状态.*change done 前必须取得适用收尾证据/);
+  assert.match(coordination, /未运行写未运行，不写通过/);
+  assert.match(coordination, /必需内容不能删除/);
+  assert.match(coordination, /不要求截图或过程材料/);
+  for (const schema of ['falla-spec-driven', 'falla-task-driven']) {
+    const comate = await read(`openspec/schemas/${schema}/templates/comate.md`);
+    assert.match(comate, /字段保留，内容短写/);
+    assert.match(comate, /按规划收尾 task 填写；其他 task 引用待验证任务或有效结果/);
+  }
+});
+
 test('按需参考保留安全、生命周期和工具约束', async () => {
   const design = await read('skill-spec/references/design-tools.md');
   const search = await read('skill-spec/references/code-search.md');

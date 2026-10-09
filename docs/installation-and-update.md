@@ -56,6 +56,16 @@ falla-openspec doctor "$TARGET_PROJECT" --json
 已有 change 不会被安装器改写。旧 change 继续执行前，应核对 `comate.md` 中的执行和验证模式，以及完成时的交接记录；
 已有 `.falla/coordination.yaml` 映射的父 change 仍按 parallel 处理，别因为更新了模板就改成 single。
 
+## 日常执行入口
+
+普通 single 依次手动发起 Preflight、Propose、Apply；每轮只完成一个 task 并暂停，同一 Apply 会话回复“继续”恢复下一轮。
+在目标项目先按 `.falla/skill-spec/references/coordination.md` 的“按场景读取”选择适用章节：
+通用完成/验证与 single 规则用于日常执行，跨 change 依赖、旧记录或基线变化时追加对应规则；有子映射时加载 parallel 规则。
+
+同一个 comate 按“handoff 增量更新”记录当前 task 的修改、验证、下一步与风险，已有效的结论用项目内引用承接。
+保留模板字段和前序任务有效证据，注释只审计本次新增或实质修改的符号，生命周期收尾按规划任务执行。
+具体门禁由上述权威规则定义，本节只作导航；安装更新不重写已有 tasks/comate 或自动刷新实施基线。
+
 ## 需要外部工具时
 
 首次安装的示例把四个可选集成都带上了。不需要某项，就删掉对应参数；以后补装时也要沿用 manifest 中的 `--tools`：
